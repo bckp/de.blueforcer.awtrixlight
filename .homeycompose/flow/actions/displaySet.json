@@ -1,0 +1,26 @@
+{
+  "title": {
+    "en": "Set display [[power]]"
+  },
+  "hint": {
+    "en": "Enable or disable display"
+  },
+  "args": [
+    {
+      "name": "device",
+      "type": "device",
+      "filter": "driver_id=tc001"
+    },
+    {
+      "type": "dropdown",
+      "name": "power",
+      "title": {
+        "en": "state"
+      },
+      "values": [
+        { "id": "1", "title": { "en": "on" } },
+        { "id": "0", "title": { "en": "off" } }
+      ]
+    }
+  ]
+}

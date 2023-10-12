@@ -1,0 +1,10 @@
+{
+    "type": "boolean",
+    "title": {
+        "en": "Display"
+    },
+    "getable": true,
+    "setable": true,
+    "uiComponent": "sensor",
+    "uiQuickAction": false
+  }

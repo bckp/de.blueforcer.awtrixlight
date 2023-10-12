@@ -1,0 +1,15 @@
+{
+  "title": {
+    "en": "Dismiss notification"
+  },
+  "hint": {
+    "en": "Dismiss permanent notification"
+  },
+  "args": [
+    {
+      "name": "device",
+      "type": "device",
+      "filter": "driver_id=tc001"
+    }
+  ]
+}
