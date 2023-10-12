@@ -1,0 +1,196 @@
+[
+    {
+        "type": "group",
+        "label": {
+            "en": "Login details"
+        },
+        "children": [
+            {
+                "id": "username",
+                "type": "text",
+                "label": {
+                    "en": "Username"
+                },
+                "value": "",
+                "hint": {
+                    "en": "The name of the user."
+                }
+            },
+            {
+                "id": "password",
+                "type": "password",
+                "label": {
+                    "en": "Password"
+                },
+                "value": "",
+                "hint": {
+                    "en": "The password of the user."
+                }
+            }
+        ]
+    },
+    {
+        "type": "group",
+        "label": {
+            "en": "Settings"
+        },
+        "children": [
+            {
+                "id": "abri",
+                "type": "checkbox",
+                "value": true,
+                "label": {
+                    "en": "Auto-brightness"
+                }
+            },
+            {
+                "id": "atrans",
+                "type": "checkbox",
+                "value": true,
+                "label": {
+                    "en": "Auto-cycle"
+                }
+            },
+            {
+                "id": "blockn",
+                "type": "checkbox",
+                "value": true,
+                "label": {
+                    "en": "Block buttons"
+                }
+            },
+            {
+                "id": "uppercase",
+                "type": "checkbox",
+                "value": true,
+                "label": {
+                    "en": "Uppercase text"
+                }
+            },
+            {
+                "id": "teff",
+                "type": "dropdown",
+                "value": "0",
+                "label": {
+                    "en": "Transition effect"
+                },
+                "values": [
+                    {
+                        "id": "0",
+                        "label": {
+                            "en": "Random"
+                        }
+                    },
+                    {
+                        "id": "1",
+                        "label": {
+                            "en": "Slide"
+                        }
+                    },
+                    {
+                        "id": "2",
+                        "label": {
+                            "en": "Dim"
+                        }
+                    },
+                    {
+                        "id": "3",
+                        "label": {
+                            "en": "Zoom"
+                        }
+                    },
+                    {
+                        "id": "4",
+                        "label": {
+                            "en": "Rotate"
+                        }
+                    },
+                    {
+                        "id": "5",
+                        "label": {
+                            "en": "Pixelate"
+                        }
+                    },
+                    {
+                        "id": "6",
+                        "label": {
+                            "en": "Curtain"
+                        }
+                    },
+                    {
+                        "id": "7",
+                        "label": {
+                            "en": "Ripple"
+                        }
+                    },
+                    {
+                        "id": "8",
+                        "label": {
+                            "en": "Blink"
+                        }
+                    },
+                    {
+                        "id": "9",
+                        "label": {
+                            "en": "Reloat"
+                        }
+                    },
+                    {
+                        "id": "10",
+                        "label": {
+                            "en": "Fade"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "type": "group",
+        "label": {
+            "en": "Build-in apps"
+        },
+        "children": [
+            {
+                "id": "tim",
+                "type": "checkbox",
+                "value": true,
+                "label": {
+                    "en": "Time app"
+                }
+            },
+            {
+                "id": "dat",
+                "type": "checkbox",
+                "value": true,
+                "label": {
+                    "en": "Date app"
+                }
+            },
+            {
+                "id": "hum",
+                "type": "checkbox",
+                "value": true,
+                "label": {
+                    "en": "Humidity app"
+                }
+            },
+            {
+                "id": "temp",
+                "type": "checkbox",
+                "value": true,
+                "label": {
+                    "en": "Temperature app"
+                }
+            },
+            {
+                "id": "bat",
+                "type": "checkbox",
+                "value": true,
+                "label": {
+                    "en": "Battery app"
+                }
+            }
+        ]
+    }
+]

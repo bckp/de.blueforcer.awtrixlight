@@ -5,27 +5,14 @@ const AwtrixClient = require('../../lib/AwtrixClient');
 
 class TC001 extends Device {
 
+  REBOOT_FIELDS = ['tim', 'dat', 'hum', 'temp', 'bat'];
+
   /**
    * onInit is called when the device is initialized.
    */
   async onInit() {
     this.log('TC001 has been initialized');
-
-    this.log('register run listener');
-    this.driver._notificationTextAction.registerRunListener(async (args, state) => {
-      this.log('action:notificationText', args, state);
-      args.device.api.notify(args.msg, { color: args.color ?? null, duration: args.duration });
-    });
-    this.driver._notificationDismissAction.registerRunListener(async (args, state) => {
-      this.log('action:notificationDismiss', args, state);
-      args.device.api.dismiss();
-    });
-    this.driver._showDisplySetAction.registerRunListener(async (args, state) => {
-      this.log('action:displaySet', args, state);
-      args.device.api.power(args.power === '1');
-    });
-
-    this.log('ready');
+    this.initFlows();
   }
 
   /**
@@ -44,7 +31,29 @@ class TC001 extends Device {
    * @returns {Promise<string|void>} return a custom message that will be displayed
    */
   async onSettings({ oldSettings, newSettings, changedKeys }) {
-    this.log('TC001 settings where changed');
+    this.log('TC001 settings where changed', oldSettings, newSettings, changedKeys);
+
+    // Save settings
+    await this.api.setSettings({
+      TIM: !!newSettings.tim,
+      DAT: !!newSettings.dat,
+      HUM: !!newSettings.hum,
+      TEMP: !!newSettings.temp,
+      BAT: !!newSettings.bat,
+      ABRI: !!newSettings.abri,
+      ATRANS: !!newSettings.atrans,
+      BLOCKN: !!newSettings.blockn,
+      UPPERCASE: !!newSettings.uppercase,
+      TEFF: Number.parseInt(newSettings.teff, 10),
+    });
+
+    // Reboot if needed
+    if (changedKeys.some((key) => this.REBOOT_FIELDS.includes(key))) {
+      this.log('rebooting device');
+      this.api.reboot();
+    }
+
+    return true;
   }
 
   /**
@@ -63,7 +72,7 @@ class TC001 extends Device {
 
     this.api = new AwtrixClient({ ip: discoveryResult.address });
     this.api.setDebug(true);
-    this.refreshCapabilities(this.api);
+    this.refreshCapabilities(this.api, true);
 
     // Reset poll
     this.homey.clearInterval(this.poll);
@@ -87,7 +96,7 @@ class TC001 extends Device {
   }
 
   // Refresh device capabilities, this is expensive so we do not want to poll too often
-  refreshCapabilities(api) {
+  refreshCapabilities(api, full = false) {
     api.getStats().then((stats) => {
       // Battery
       this.setCapabilityValue('measure_battery', stats.bat);
@@ -105,7 +114,44 @@ class TC001 extends Device {
     });
     api.getSettings().then((settings) => {
       this.setCapabilityValue('ulanzi_matrix', !!settings.MATP);
-      //todo, verify other settings?
+
+      if (!full) {
+        return;
+      }
+
+      this.setSettings({
+        tim: !!settings.TIM,
+        dat: !!settings.DAT,
+        hum: !!settings.HUM,
+        temp: !!settings.TEMP,
+        bat: !!settings.BAT,
+        abri: !!settings.ABRI,
+        atrans: !!settings.ATRANS,
+        blockn: !!settings.BLOCKN,
+        uppercase: !!settings.UPPERCASE,
+        teff: settings.TEFF.toString(),
+      });
+    });
+  }
+
+  initFlows() {
+    // Notification flows
+    this.driver._notificationTextAction.registerRunListener(async (args, state) => {
+      this.log('action:notificationText', args, state);
+      args.device.api.notify(args.msg, { color: args.color ?? null, duration: args.duration });
+    });
+    this.driver._notificationDismissAction.registerRunListener(async (args, state) => {
+      this.log('action:notificationDismiss', args, state);
+      args.device.api.dismiss();
+    });
+
+    // App flows
+    //TODO: implement app flows
+
+    // Display flows
+    this.driver._showDisplySetAction.registerRunListener(async (args, state) => {
+      this.log('action:displaySet', args, state);
+      args.device.api.power(args.power === '1');
     });
   }
 
