@@ -5,7 +5,7 @@ const AwtrixClient = require('../../lib/AwtrixClient');
 
 class UlanziAwtrix extends Driver {
 
-  ENABLE_MANUAL_ADD = false;
+  static ENABLE_MANUAL_ADD = true;
 
   /**
    * onInit is called when the driver is initialized.
@@ -16,8 +16,6 @@ class UlanziAwtrix extends Driver {
     this._notificationTextAction = this.homey.flow.getActionCard('notificationText');
     this._notificationDismissAction = this.homey.flow.getActionCard('notificationDismiss');
     this._showDisplySetAction = this.homey.flow.getActionCard('displaySet');
-
-    this.log('register run listener');
   }
 
   /**
@@ -26,16 +24,18 @@ class UlanziAwtrix extends Driver {
    * This should return an array with the data of devices that are available for pairing.
    */
   async onPairListDevices() {
+    this.log('onPairListDevices');
+
     const discoveryStrategy = this.getDiscoveryStrategy();
     const discoveryResults = discoveryStrategy.getDiscoveryResults();
 
-    this.log(discoveryStrategy);
-    this.log(discoveryResults);
+    this.log('discoveryResults', discoveryResults);
 
     const devices = Object.values(discoveryResults).map((discoveryResult) => {
       return {
         name: discoveryResult.id,
         data: {
+          address: discoveryResult.address,
           id: discoveryResult.id,
         },
       };
@@ -46,12 +46,24 @@ class UlanziAwtrix extends Driver {
       devices.push({
         name: 'Manual',
         data: {
+          address: null,
           id: 'custom',
         },
       });
     }
 
+    this.log(devices);
+
     return devices;
+  }
+
+  async onPair(session) {
+    this.log('onPair', session);
+    super.onPair(session);
+
+    session.setHandler('add_my_devices', async () => {
+      this.log('add_my_devices');
+    });
   }
 
 }

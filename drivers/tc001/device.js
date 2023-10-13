@@ -2,10 +2,12 @@
 
 const { Device } = require('homey');
 const AwtrixClient = require('../../lib/AwtrixClient');
+const AwtrixClientResponses = require('../../lib/AwtrixClientResponses');
 
 class TC001 extends Device {
 
-  REBOOT_FIELDS = ['tim', 'dat', 'hum', 'temp', 'bat'];
+  static REBOOT_FIELDS = ['tim', 'dat', 'hum', 'temp', 'bat'];
+  static POLL_INTERVAL = 60000;
 
   /**
    * onInit is called when the device is initialized.
@@ -13,6 +15,28 @@ class TC001 extends Device {
   async onInit() {
     this.log('TC001 has been initialized');
     this.initFlows();
+
+    // Create API
+    this.api = new AwtrixClient({ ip: this.getStoreValue('ip') });
+
+    // Setup user and pass if exists
+    const settings = await this.getSettings();
+    if (settings.user && settings.pass) {
+      this.api.setCredentials(settings.user, settings.pass);
+    }
+
+    // Clear interval and verify device
+    this.testDevice();
+    this.homey.clearInterval(this.poll);
+
+    // Refresh capabilities
+    if (this.getAvailable()) {
+      this.refreshCapabilities(this.api, true);
+      this.initPolling();
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -48,7 +72,7 @@ class TC001 extends Device {
     });
 
     // Reboot if needed
-    if (changedKeys.some((key) => this.REBOOT_FIELDS.includes(key))) {
+    if (changedKeys.some((key) => TC001.REBOOT_FIELDS.includes(key))) {
       this.log('rebooting device');
       this.api.reboot();
     }
@@ -61,6 +85,8 @@ class TC001 extends Device {
    */
   async onDeleted() {
     this.log('TC001 has been deleted');
+
+    this.homey.clearInterval(this.poll);
   }
 
   onDiscoveryResult(discoveryResult) {
@@ -68,18 +94,8 @@ class TC001 extends Device {
   }
 
   async onDiscoveryAvailable(discoveryResult) {
-    this.log(this.getCapabilities());
-
-    this.api = new AwtrixClient({ ip: discoveryResult.address });
-    this.api.setDebug(true);
-    this.refreshCapabilities(this.api, true);
-
-    // Reset poll
-    this.homey.clearInterval(this.poll);
-    this.poll = this.homey.setInterval(async () => {
-      this.log('polling...');
-      this.refreshCapabilities(this.api);
-    }, 60000);
+    this.api.setIp(discoveryResult.address);
+    this.setAvailable();
   }
 
   onDiscoveryAddressChanged(discoveryResult) {
@@ -111,12 +127,16 @@ class TC001 extends Device {
       this.setCapabilityValue('alarm_generic.indicator1', !!stats.indicator1);
       this.setCapabilityValue('alarm_generic.indicator2', !!stats.indicator2);
       this.setCapabilityValue('alarm_generic.indicator3', !!stats.indicator3);
+    }).catch((error) => {
+      this.setUnavailable('Device error!').catch(this.error);
+      return false;
     });
+
     api.getSettings().then((settings) => {
       this.setCapabilityValue('ulanzi_matrix', !!settings.MATP);
 
       if (!full) {
-        return;
+        return true;
       }
 
       this.setSettings({
@@ -129,9 +149,14 @@ class TC001 extends Device {
         atrans: !!settings.ATRANS,
         blockn: !!settings.BLOCKN,
         uppercase: !!settings.UPPERCASE,
-        teff: settings.TEFF.toString(),
+        teff: settings?.TEFF?.toString(),
       });
+    }).catch((error) => {
+      this.setUnavailable('Device error!').catch(this.error);
+      return false;
     });
+
+    return true;
   }
 
   initFlows() {
@@ -152,6 +177,37 @@ class TC001 extends Device {
     this.driver._showDisplySetAction.registerRunListener(async (args, state) => {
       this.log('action:displaySet', args, state);
       args.device.api.power(args.power === '1');
+    });
+  }
+
+  initPolling() {
+    this.homey.clearInterval(this.poll);
+    this.poll = this.homey.setInterval(async () => {
+      this.log('polling...');
+      this.refreshCapabilities(this.api);
+    }, TC001.POLL_INTERVAL);
+  }
+
+  async testDevice() {
+    return this.api.test().then((result) => {
+      switch (result.state) {
+        case AwtrixClientResponses.LoginRequired:
+          this.setWarning('Repair required!').catch(this.error);
+          return false;
+
+        case AwtrixClientResponses.NotFound:
+          this.setWarning('Device not found!').catch(this.error);
+          return false;
+
+        case AwtrixClientResponses.Error:
+          this.setWarning('Network error!').catch(this.error);
+          return false;
+
+        default:
+          this.setAvailable().catch(this.error);
+          this.unsetWarning().catch(this.error);
+      }
+      return true;
     });
   }
 

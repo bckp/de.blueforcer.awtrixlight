@@ -37,7 +37,6 @@
       }
     }
   },
-
   "discovery": "awtrix-mdns",
   "connectivity": [
     "lan"
@@ -50,8 +49,28 @@
       },
       {
         "id": "add_my_devices",
-        "template": "add_devices"
+        "template": "add_devices",
+        "navigation": { "next": "login_credentials" }
+      },
+      {
+        "id": "login_credentials",
+        "template": "login_credentials",
+        "options": {
+          "logo": "logo.png",
+          "title": {
+            "en": "Enter username and password"
+          },
+          "usernameLabel": { "en": "Username" },
+          "usernamePlaceholder": { "en": "awtrix" },
+          "passwordLabel": { "en": "Password" },
+          "passwordPlaceholder": { "en": "password" }
+        }
+      },
+      {
+        "id": "done",
+        "template": "done"
       }
+
   ],
   "images": {
     "small": "{{driverAssetsPath}}/images/small.png",

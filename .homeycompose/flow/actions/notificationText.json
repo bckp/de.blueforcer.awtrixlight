@@ -21,6 +21,7 @@
     {
       "type": "dropdown",
       "name": "duration",
+      "value": "auto",
       "title": {
         "en": "seconds"
       },
