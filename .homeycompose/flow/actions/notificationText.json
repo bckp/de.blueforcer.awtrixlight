@@ -2,6 +2,9 @@
   "title": {
     "en": "Notification [[msg]], duration: [[duration]], color: [[color]]"
   },
+  "titleFormatted": {
+    "en": "Notification [[msg]], duration: [[duration]], color: [[color]]"
+  },
   "hint": {
     "en": "Send color notification to device for specified duration"
   },

@@ -36,7 +36,7 @@
         },
         "children": [
             {
-                "id": "abri",
+                "id": "ABRI",
                 "type": "checkbox",
                 "value": true,
                 "label": {
@@ -44,7 +44,7 @@
                 }
             },
             {
-                "id": "atrans",
+                "id": "ATRANS",
                 "type": "checkbox",
                 "value": true,
                 "label": {
@@ -52,7 +52,7 @@
                 }
             },
             {
-                "id": "blockn",
+                "id": "BLOCKN",
                 "type": "checkbox",
                 "value": true,
                 "label": {
@@ -60,7 +60,7 @@
                 }
             },
             {
-                "id": "uppercase",
+                "id": "UPPERCASE",
                 "type": "checkbox",
                 "value": true,
                 "label": {
@@ -68,7 +68,7 @@
                 }
             },
             {
-                "id": "teff",
+                "id": "TEFF",
                 "type": "dropdown",
                 "value": "0",
                 "label": {

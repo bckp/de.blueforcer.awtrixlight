@@ -4,7 +4,7 @@ const { Device } = require('homey');
 const AwtrixClient = require('../../lib/AwtrixClient');
 const AwtrixClientResponses = require('../../lib/AwtrixClientResponses');
 
-class TC001 extends Device {
+module.exports = class AwtrixLightDevice extends Device {
 
   static REBOOT_FIELDS = ['tim', 'dat', 'hum', 'temp', 'bat'];
   static POLL_INTERVAL = 60000;
@@ -13,37 +13,37 @@ class TC001 extends Device {
    * onInit is called when the device is initialized.
    */
   async onInit() {
-    this.log('TC001 has been initialized');
+    this.log('AwtrixLightDevice has been initialized');
+    await this.setUnavailable(this.homey.__('loading'));
+
+    // Setup flows
     this.initFlows();
 
     // Create API
-    this.api = new AwtrixClient({ ip: this.getStoreValue('ip') });
+    this.api = new AwtrixClient({ ip: this.getStoreValue('address') });
 
     // Setup user and pass if exists
     const settings = await this.getSettings();
     if (settings.user && settings.pass) {
+      this.log('Setting user and pass');
       this.api.setCredentials(settings.user, settings.pass);
     }
 
     // Clear interval and verify device
-    this.testDevice();
-    this.homey.clearInterval(this.poll);
-
-    // Refresh capabilities
-    if (this.getAvailable()) {
-      this.refreshCapabilities(this.api, true);
-      this.initPolling();
-      return true;
-    }
-
-    return false;
+    this.testDevice().then((result) => {
+      this.homey.clearInterval(this.poll);
+      if (result) {
+        this.refreshCapabilities(this.api, true);
+        this.initPolling();
+      }
+    }).catch((error) => this.error);
   }
 
   /**
    * onAdded is called when the user adds the device, called just after pairing.
    */
   async onAdded() {
-    this.log('TC001 has been added');
+    this.log('AwtrixLightDevice has been added');
   }
 
   /**
@@ -55,7 +55,7 @@ class TC001 extends Device {
    * @returns {Promise<string|void>} return a custom message that will be displayed
    */
   async onSettings({ oldSettings, newSettings, changedKeys }) {
-    this.log('TC001 settings where changed', oldSettings, newSettings, changedKeys);
+    this.log('AwtrixLightDevice settings where changed', oldSettings, newSettings, changedKeys);
 
     // Save settings
     await this.api.setSettings({
@@ -72,7 +72,7 @@ class TC001 extends Device {
     });
 
     // Reboot if needed
-    if (changedKeys.some((key) => TC001.REBOOT_FIELDS.includes(key))) {
+    if (changedKeys.some((key) => AwtrixLightDevice.REBOOT_FIELDS.includes(key))) {
       this.log('rebooting device');
       this.api.reboot();
     }
@@ -84,7 +84,7 @@ class TC001 extends Device {
    * onDeleted is called when the user deleted the device.
    */
   async onDeleted() {
-    this.log('TC001 has been deleted');
+    this.log('AwtrixLightDevice has been deleted');
 
     this.homey.clearInterval(this.poll);
   }
@@ -113,6 +113,8 @@ class TC001 extends Device {
 
   // Refresh device capabilities, this is expensive so we do not want to poll too often
   refreshCapabilities(api, full = false) {
+    const currentUptime = this.getStoreValue('uptime');
+
     api.getStats().then((stats) => {
       // Battery
       this.setCapabilityValue('measure_battery', stats.bat);
@@ -127,57 +129,49 @@ class TC001 extends Device {
       this.setCapabilityValue('alarm_generic.indicator1', !!stats.indicator1);
       this.setCapabilityValue('alarm_generic.indicator2', !!stats.indicator2);
       this.setCapabilityValue('alarm_generic.indicator3', !!stats.indicator3);
+
+      if (stats.uptime <= currentUptime) {
+        this.refreshApps().catch((error) => this.error);
+      }
+
+      this.setStoreValue('uptime', stats.uptime);
     }).catch((error) => {
       this.setUnavailable('Device error!').catch(this.error);
-      return false;
+      this.log(error);
     });
 
     api.getSettings().then((settings) => {
-      this.setCapabilityValue('ulanzi_matrix', !!settings.MATP);
+      this.setCapabilityValue('awtrix_matrix', !!settings.MATP);
 
       if (!full) {
-        return true;
+        return;
       }
 
       this.setSettings({
-        tim: !!settings.TIM,
-        dat: !!settings.DAT,
-        hum: !!settings.HUM,
-        temp: !!settings.TEMP,
-        bat: !!settings.BAT,
-        abri: !!settings.ABRI,
-        atrans: !!settings.ATRANS,
-        blockn: !!settings.BLOCKN,
-        uppercase: !!settings.UPPERCASE,
-        teff: settings?.TEFF?.toString(),
+        TIM: !!settings.TIM,
+        DAT: !!settings.DAT,
+        HUM: !!settings.HUM,
+        TEMP: !!settings.TEMP,
+        BAT: !!settings.BAT,
+        ABRI: !!settings.ABRI,
+        ATRANS: !!settings.ATRANS,
+        BLOCKN: !!settings.BLOCKN,
+        UPPERCASE: !!settings.UPPERCASE,
+        TEFF: settings?.TEFF?.toString(),
       });
     }).catch((error) => {
       this.setUnavailable('Device error!').catch(this.error);
-      return false;
     });
 
     return true;
   }
 
+  async refreshApps() {
+    const apps = this.api.apps();
+    return apps;
+  }
+
   initFlows() {
-    // Notification flows
-    this.driver._notificationTextAction.registerRunListener(async (args, state) => {
-      this.log('action:notificationText', args, state);
-      args.device.api.notify(args.msg, { color: args.color ?? null, duration: args.duration });
-    });
-    this.driver._notificationDismissAction.registerRunListener(async (args, state) => {
-      this.log('action:notificationDismiss', args, state);
-      args.device.api.dismiss();
-    });
-
-    // App flows
-    //TODO: implement app flows
-
-    // Display flows
-    this.driver._showDisplySetAction.registerRunListener(async (args, state) => {
-      this.log('action:displaySet', args, state);
-      args.device.api.power(args.power === '1');
-    });
   }
 
   initPolling() {
@@ -185,11 +179,12 @@ class TC001 extends Device {
     this.poll = this.homey.setInterval(async () => {
       this.log('polling...');
       this.refreshCapabilities(this.api);
-    }, TC001.POLL_INTERVAL);
+    }, AwtrixLightDevice.POLL_INTERVAL);
   }
 
   async testDevice() {
     return this.api.test().then((result) => {
+      this.log(result);
       switch (result.state) {
         case AwtrixClientResponses.LoginRequired:
           this.setWarning('Repair required!').catch(this.error);
@@ -211,6 +206,4 @@ class TC001 extends Device {
     });
   }
 
-}
-
-module.exports = TC001;
+};

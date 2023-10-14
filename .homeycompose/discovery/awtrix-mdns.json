@@ -1,17 +1,17 @@
 {
     "type": "mdns-sd",
     "mdns-sd": {
-      "name": "http",
+      "name": "awtrix",
       "protocol": "tcp"
     },
-    "id": "{{name}}",
+    "id": "{{txt.id}}",
     "conditions": [
       [
         {
-          "field": "name",
+          "field": "txt.type",
           "match": {
             "type": "string",
-            "value": "awtrix"
+            "value": "awtrix_light"
           }
         }
       ]

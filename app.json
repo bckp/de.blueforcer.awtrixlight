@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "compatibility": ">=5.0.0",
   "sdk": 3,
+  "brandColor": "#222222",
   "platforms": [
     "local"
   ],
@@ -30,6 +31,9 @@
     "actions": [
       {
         "title": {
+          "en": "Set display [[power]]"
+        },
+        "titleFormatted": {
           "en": "Set display [[power]]"
         },
         "hint": {
@@ -69,6 +73,9 @@
         "title": {
           "en": "Dismiss notification"
         },
+        "titleFormatted": {
+          "en": "Dismiss notification"
+        },
         "hint": {
           "en": "Dismiss permanent notification"
         },
@@ -83,6 +90,9 @@
       },
       {
         "title": {
+          "en": "Notification [[msg]], duration: [[duration]], color: [[color]]"
+        },
+        "titleFormatted": {
           "en": "Notification [[msg]], duration: [[duration]], color: [[color]]"
         },
         "hint": {
@@ -178,7 +188,7 @@
   "drivers": [
     {
       "name": {
-        "en": "TC001"
+        "en": "AwtrixLight"
       },
       "class": "other",
       "capabilities": [
@@ -187,7 +197,7 @@
         "measure_humidity",
         "measure_luminance",
         "measure_temperature",
-        "ulanzi_matrix",
+        "awtrix_matrix",
         "alarm_generic.indicator1",
         "alarm_generic.indicator2",
         "alarm_generic.indicator3"
@@ -225,48 +235,22 @@
           "template": "list_devices",
           "navigation": {
             "next": "add_my_devices"
+          },
+          "options": {
+            "singular": true
           }
         },
         {
           "id": "add_my_devices",
-          "template": "add_devices",
-          "navigation": {
-            "next": "login_credentials"
-          }
-        },
-        {
-          "id": "login_credentials",
-          "template": "login_credentials",
-          "options": {
-            "logo": "logo.png",
-            "title": {
-              "en": "Enter username and password"
-            },
-            "usernameLabel": {
-              "en": "Username"
-            },
-            "usernamePlaceholder": {
-              "en": "awtrix"
-            },
-            "passwordLabel": {
-              "en": "Password"
-            },
-            "passwordPlaceholder": {
-              "en": "password"
-            }
-          }
-        },
-        {
-          "id": "done",
-          "template": "done"
+          "template": "add_devices"
         }
       ],
       "images": {
-        "small": "/drivers/tc001/assets/images/small.png",
-        "large": "/drivers/tc001/assets/images/large.png",
-        "xlarge": "/drivers/tc001/assets/images/xlarge.png"
+        "small": "/drivers/atrixlight/assets/images/small.png",
+        "large": "/drivers/atrixlight/assets/images/large.png",
+        "xlarge": "/drivers/atrixlight/assets/images/xlarge.png"
       },
-      "id": "tc001",
+      "id": "atrixlight",
       "settings": [
         {
           "type": "group",
@@ -305,7 +289,7 @@
           },
           "children": [
             {
-              "id": "abri",
+              "id": "ABRI",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -313,7 +297,7 @@
               }
             },
             {
-              "id": "atrans",
+              "id": "ATRANS",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -321,7 +305,7 @@
               }
             },
             {
-              "id": "blockn",
+              "id": "BLOCKN",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -329,7 +313,7 @@
               }
             },
             {
-              "id": "uppercase",
+              "id": "UPPERCASE",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -337,7 +321,7 @@
               }
             },
             {
-              "id": "teff",
+              "id": "TEFF",
               "type": "dropdown",
               "value": "0",
               "label": {
@@ -466,7 +450,7 @@
     }
   ],
   "capabilities": {
-    "ulanzi_matrix": {
+    "awtrix_matrix": {
       "type": "boolean",
       "title": {
         "en": "Display"
@@ -481,17 +465,17 @@
     "awtrix-mdns": {
       "type": "mdns-sd",
       "mdns-sd": {
-        "name": "http",
+        "name": "awtrix",
         "protocol": "tcp"
       },
-      "id": "{{name}}",
+      "id": "{{txt.id}}",
       "conditions": [
         [
           {
-            "field": "name",
+            "field": "txt.type",
             "match": {
               "type": "string",
-              "value": "awtrix"
+              "value": "awtrix_light"
             }
           }
         ]
