@@ -33,8 +33,15 @@ module.exports = class AwtrixLightDevice extends Device {
     this.testDevice().then((result) => {
       this.homey.clearInterval(this.poll);
       if (result) {
-        this.refreshCapabilities(this.api, true);
+        this.log('Device availalible');
+
+        // Refresh all data
+        this.refreshAll();
+
+        // Initialize polling
         this.initPolling();
+      } else {
+        this.log('Pooling not set, there is issue with device');
       }
     }).catch((error) => this.error);
   }
@@ -55,6 +62,8 @@ module.exports = class AwtrixLightDevice extends Device {
    * @returns {Promise<string|void>} return a custom message that will be displayed
    */
   async onSettings({ oldSettings, newSettings, changedKeys }) {
+    //TODO: if polling not set, verify user and password and reset polling
+
     this.log('AwtrixLightDevice settings where changed', oldSettings, newSettings, changedKeys);
 
     // Save settings
@@ -111,11 +120,15 @@ module.exports = class AwtrixLightDevice extends Device {
     });
   }
 
-  // Refresh device capabilities, this is expensive so we do not want to poll too often
-  refreshCapabilities(api, full = false) {
-    const currentUptime = this.getStoreValue('uptime');
+  refreshAll() {
+    this.refreshCapabilities();
+    this.refreshSettings();
+    this.refreshApps();
+  }
 
-    api.getStats().then((stats) => {
+  // Refresh device capabilities, this is expensive so we do not want to poll too often
+  refreshCapabilities() {
+    this.api.getStats().then((stats) => {
       // Battery
       this.setCapabilityValue('measure_battery', stats.bat);
       this.setCapabilityValue('alarm_battery', stats.bat < 20);
@@ -130,24 +143,24 @@ module.exports = class AwtrixLightDevice extends Device {
       this.setCapabilityValue('alarm_generic.indicator2', !!stats.indicator2);
       this.setCapabilityValue('alarm_generic.indicator3', !!stats.indicator3);
 
-      if (stats.uptime <= currentUptime) {
+      //this.setCapabilityValue('awtrix_matrix', !!settings.MATP); // check data
+
+      if (stats.uptime <= this.getStoreValue('uptime')) {
         this.log('reboot detected');
         this.refreshApps().catch((error) => this.error);
       }
 
       this.setStoreValue('uptime', stats.uptime);
-      this.setAvailable();
+      this.setAvaibleIfNot();
     }).catch((error) => {
       this.setUnavailable(error?.cause?.code || 'unknown error').catch(this.error);
+      this.log(error.message ?? 'unknown error');
     });
+  }
 
-    api.getSettings().then((settings) => {
+  refreshSettings() {
+    this.api.getSettings().then((settings) => {
       this.setCapabilityValue('awtrix_matrix', !!settings.MATP);
-
-      if (!full) {
-        return;
-      }
-
       this.setSettings({
         TIM: !!settings.TIM,
         DAT: !!settings.DAT,
@@ -161,15 +174,13 @@ module.exports = class AwtrixLightDevice extends Device {
         TEFF: settings?.TEFF?.toString(),
       });
 
-      this.setAvailable();
+      this.setAvailableIfNot();
     }).catch((error) => {
       this.setUnavailable(error?.cause?.code || 'unknown error').catch(this.error);
     });
-
-    return true;
   }
 
-  async refreshApps() {
+  async refreshApps(api) {
     const apps = this.api.apps();
     return apps;
   }
@@ -207,6 +218,13 @@ module.exports = class AwtrixLightDevice extends Device {
       }
       return true;
     });
+  }
+
+  async setAvaibleIfNot() {
+    if (this.isAvailable()) {
+      return;
+    }
+    this.setAvailable().catch(this.error);
   }
 
 };
