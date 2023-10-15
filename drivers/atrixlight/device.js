@@ -152,7 +152,7 @@ module.exports = class AwtrixLightDevice extends Device {
       }
 
       this.setStoreValue('uptime', stats.uptime);
-      this.setAvaibleIfNot();
+      this.setAvailableIfNot();
     }).catch((error) => {
       this.setUnavailable(error?.cause?.code || 'unknown error').catch(this.error);
       this.log(error.message ?? 'unknown error');
@@ -177,11 +177,14 @@ module.exports = class AwtrixLightDevice extends Device {
       this.setAvailableIfNot();
     }).catch((error) => {
       this.setUnavailable(error?.cause?.code || 'unknown error').catch(this.error);
+      this.log(error.message ?? 'unknown error');
     });
   }
 
-  async refreshApps(api) {
-    const apps = this.api.apps();
+  async refreshApps() {
+    const apps = this.api.getApps().then((apps) => {
+      //TODO: verify all apps are ok, or we need to resync them
+    });
     return apps;
   }
 
@@ -192,7 +195,7 @@ module.exports = class AwtrixLightDevice extends Device {
     this.homey.clearInterval(this.poll);
     this.poll = this.homey.setInterval(async () => {
       this.log('polling...');
-      this.refreshCapabilities(this.api);
+      this.refreshCapabilities();
     }, AwtrixLightDevice.POLL_INTERVAL);
   }
 
@@ -220,8 +223,8 @@ module.exports = class AwtrixLightDevice extends Device {
     });
   }
 
-  async setAvaibleIfNot() {
-    if (this.isAvailable()) {
+  async setAvailableIfNot() {
+    if (this.getAvailable()) {
       return;
     }
     this.setAvailable().catch(this.error);

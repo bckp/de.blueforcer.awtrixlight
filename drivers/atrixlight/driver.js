@@ -44,12 +44,14 @@ class UlanziAwtrix extends Driver {
   async onPair(session) {
     this.log('onPair', session);
 
+    const discoveryStrategy = this.getDiscoveryStrategy();
+    const discoveryResults = discoveryStrategy.getDiscoveryResults();
+
+    let selectedDeviceId;
+
+    this.log(discoveryResults);
+
     session.setHandler('list_devices', async () => {
-      const discoveryStrategy = this.getDiscoveryStrategy();
-      const discoveryResults = discoveryStrategy.getDiscoveryResults();
-
-      this.log(discoveryResults);
-
       const devices = Object.values(discoveryResults).map((discoveryResult) => {
         return {
           name: discoveryResult.id,
@@ -85,6 +87,19 @@ class UlanziAwtrix extends Driver {
 
       this.log(devices);
       return devices;
+    });
+
+    session.setHandler('list_devices_selection', async (data) => {
+      selectedDeviceId = data[0].data.id;
+      return selectedDeviceId;
+    });
+
+    session.setHandler('get_device', async (data) => {
+      this.log('get_device', data);
+    });
+
+    session.setHandler('add_device', async (data) => {
+      this.log('add_device', data);
     });
   }
 
