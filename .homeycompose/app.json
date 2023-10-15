@@ -1,6 +1,6 @@
 {
   "id": "de.blueforcer.awtrixlight",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "compatibility": ">=5.0.0",
   "sdk": 3,
   "brandColor": "#222222",
@@ -11,7 +11,7 @@
     "en": "AWTRIX Light"
   },
   "description": {
-    "en": "Adds support for AWTRIX Light"
+    "en": "Awtrix Light is a custom firmware for the Ulanzi Smart Pixel clock."
   },
   "category": [
     "appliances"
