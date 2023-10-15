@@ -1,56 +1,101 @@
 {
-    "title": {
-      "en": "Notification [[msg]], icon: [[icon]], duration: [[duration]], color: [[color]]"
+  "title": {
+    "en": "Notification [[msg]], icon: [[icon]], duration: [[duration]], color: [[color]]"
+  },
+  "titleFormatted": {
+    "en": "Notification [[msg]], icon: [[icon]], duration: [[duration]], color: [[color]]"
+  },
+  "hint": {
+    "en": "Send color notification to device for specified duration, beaware icon must be uploaded to device first!"
+  },
+  "args": [
+    {
+      "name": "device",
+      "type": "device",
+      "filter": "driver_id=awtrixlight"
     },
-    "titleFormatted": {
-      "en": "Notification [[msg]], icon: [[icon]], duration: [[duration]], color: [[color]]"
-    },
-    "hint": {
-      "en": "Send color notification to device for specified duration, beaware icon must be uploaded to device first!"
-    },
-    "args": [
-      {
-        "name": "device",
-        "type": "device",
-        "filter": "driver_id=awtrixlight"
-      },
-      {
-        "type": "text",
-        "name": "msg",
-        "placeholder": {
-          "en": "message"
-        }
-      },
-      {
-        "type": "text",
-        "name": "icon",
-        "placeholder": {
-          "en": "icon id"
-        }
-      },
-      {
-        "type": "dropdown",
-        "name": "duration",
-        "value": "auto",
-        "title": {
-          "en": "seconds"
-        },
-        "values": [
-          { "id": "auto", "title": { "en": "Auto" } },
-          { "id": "5", "title": { "en": "5 seconds" } },
-          { "id": "10", "title": { "en": "10 seconds" } },
-          { "id": "15", "title": { "en": "15 seconds" } },
-          { "id": "30", "title": { "en": "30 seconds" } },
-          { "id": "60", "title": { "en": "1 minute" } },
-          { "id": "120", "title": { "en": "2 minutes" } },
-          { "id": "300", "title": { "en": "5 minutes" } },
-          { "id": "hold", "title": { "en": "Permanent" } }
-        ]
-      },
-      {
-        "type": "color",
-        "name": "color",
-        "required": false
+    {
+      "type": "text",
+      "name": "msg",
+      "placeholder": {
+        "en": "message"
       }
-    ]
-  }
+    },
+    {
+      "type": "text",
+      "name": "icon",
+      "placeholder": {
+        "en": "icon id"
+      }
+    },
+    {
+      "type": "dropdown",
+      "name": "duration",
+      "value": "auto",
+      "title": {
+        "en": "seconds"
+      },
+      "values": [
+        {
+          "id": "auto",
+          "title": {
+            "en": "Auto"
+          }
+        },
+        {
+          "id": "5",
+          "title": {
+            "en": "5 seconds"
+          }
+        },
+        {
+          "id": "10",
+          "title": {
+            "en": "10 seconds"
+          }
+        },
+        {
+          "id": "15",
+          "title": {
+            "en": "15 seconds"
+          }
+        },
+        {
+          "id": "30",
+          "title": {
+            "en": "30 seconds"
+          }
+        },
+        {
+          "id": "60",
+          "title": {
+            "en": "1 minute"
+          }
+        },
+        {
+          "id": "120",
+          "title": {
+            "en": "2 minutes"
+          }
+        },
+        {
+          "id": "300",
+          "title": {
+            "en": "5 minutes"
+          }
+        },
+        {
+          "id": "hold",
+          "title": {
+            "en": "Permanent"
+          }
+        }
+      ]
+    },
+    {
+      "type": "color",
+      "name": "color",
+      "required": false
+    }
+  ]
+}

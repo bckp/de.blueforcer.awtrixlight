@@ -13,6 +13,7 @@ class UlanziAwtrix extends Driver {
    */
   async onInit() {
     this.log('MyDriver has been initialized');
+    this.initFlows();
   }
 
   async initFlows() {
@@ -25,20 +26,16 @@ class UlanziAwtrix extends Driver {
 
     // Notification flows
     this._notificationTextAction.registerRunListener(async (args, state) => {
-      this.log('action:notificationText', args, state);
-      args.device.api.notify(args.msg, { color: args.color ?? null, duration: args.duration });
+      args.device.notify(args.msg, { color: args.color ?? null, duration: args.duration });
     });
     this._notificationTextIconAction.registerRunListener(async (args, state) => {
-      this.log('action:notificationTextIcon', args, state);
-      args.device.api.notify(args.msg, { color: args.color ?? null, duration: args.duration, icon: args.icon });
+      args.device.notify(args.msg, { color: args.color ?? null, duration: args.duration, icon: args.icon });
     });
     this._notificationDismissAction.registerRunListener(async (args, state) => {
-      this.log('action:notificationDismiss', args, state);
-      args.device.api.dismiss();
+      args.device.notifyDismiss();
     });
     this._playRtttlAction.registerRunListener(async (args, state) => {
-      this.log('action:playRTTTL', args, state);
-      args.device.api.rtttl(args.rtttl);
+      args.device.rtttl(args.rtttl);
     });
 
     // App flows

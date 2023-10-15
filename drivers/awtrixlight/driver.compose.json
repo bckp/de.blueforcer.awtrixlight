@@ -17,6 +17,11 @@
   "platforms": [
     "local"
   ],
+  "energy": {
+    "batteries": [
+      "INTERNAL"
+    ]
+  },
   "capabilitiesOptions": {
     "alarm_generic.indicator1": {
       "preventInsights": true,

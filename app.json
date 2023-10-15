@@ -290,7 +290,7 @@
           "en": "Play [[rtttl]] melody"
         },
         "titleFormatted": {
-          "en": "Play [[rtttl]] meoldy"
+          "en": "Play [[rtttl]] melody"
         },
         "hint": {
           "en": "Play RTTTL melody"
@@ -333,6 +333,11 @@
       "platforms": [
         "local"
       ],
+      "energy": {
+        "batteries": [
+          "INTERNAL"
+        ]
+      },
       "capabilitiesOptions": {
         "alarm_generic.indicator1": {
           "preventInsights": true,
@@ -387,7 +392,7 @@
           },
           "children": [
             {
-              "id": "username",
+              "id": "user",
               "type": "text",
               "label": {
                 "en": "Username"
@@ -398,7 +403,7 @@
               }
             },
             {
-              "id": "password",
+              "id": "pass",
               "type": "password",
               "label": {
                 "en": "Password"
@@ -533,7 +538,7 @@
           },
           "children": [
             {
-              "id": "tim",
+              "id": "TIM",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -541,7 +546,7 @@
               }
             },
             {
-              "id": "dat",
+              "id": "DAT",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -549,7 +554,7 @@
               }
             },
             {
-              "id": "hum",
+              "id": "HUM",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -557,7 +562,7 @@
               }
             },
             {
-              "id": "temp",
+              "id": "TEMP",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -565,7 +570,7 @@
               }
             },
             {
-              "id": "bat",
+              "id": "BAT",
               "type": "checkbox",
               "value": true,
               "label": {

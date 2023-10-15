@@ -3,10 +3,11 @@
 const { Device } = require('homey');
 const AwtrixClient = require('../../lib/AwtrixClient');
 const AwtrixClientResponses = require('../../lib/AwtrixClientResponses');
+const DataNormalizer = require('../../lib/DataNormalizer');
 
 module.exports = class AwtrixLightDevice extends Device {
 
-  static REBOOT_FIELDS = ['tim', 'dat', 'hum', 'temp', 'bat'];
+  static REBOOT_FIELDS = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
   static POLL_INTERVAL = 60000;
 
   /**
@@ -40,6 +41,9 @@ module.exports = class AwtrixLightDevice extends Device {
 
         // Initialize polling
         this.initPolling();
+
+        // Welcome message
+        this.homey();
       } else {
         this.log('Pooling not set, there is issue with device');
       }
@@ -51,6 +55,7 @@ module.exports = class AwtrixLightDevice extends Device {
    */
   async onAdded() {
     this.log('AwtrixLightDevice has been added');
+    this.connected();
   }
 
   /**
@@ -62,23 +67,27 @@ module.exports = class AwtrixLightDevice extends Device {
    * @returns {Promise<string|void>} return a custom message that will be displayed
    */
   async onSettings({ oldSettings, newSettings, changedKeys }) {
-    //TODO: if polling not set, verify user and password and reset polling
-
     this.log('AwtrixLightDevice settings where changed', oldSettings, newSettings, changedKeys);
 
+    // If user or pass changed, update credentials
+    if (changedKeys.some((key) => ['user', 'pass'].includes(key))) {
+      this.log('New user and password set, testing...');
+      this.api.setCredentials(newSettings.user, newSettings.pass);
+      const test = await this.api.test();
+      if (test.state !== AwtrixClientResponses.Ok) {
+        return Promise.reject(new Error('username or password not valid'));
+      }
+
+      if (!this.poll) {
+        this.initPolling();
+      }
+    }
+
+    const set = DataNormalizer.settings(newSettings);
+    this.log('settings', set);
+
     // Save settings
-    await this.api.setSettings({
-      TIM: !!newSettings.tim,
-      DAT: !!newSettings.dat,
-      HUM: !!newSettings.hum,
-      TEMP: !!newSettings.temp,
-      BAT: !!newSettings.bat,
-      ABRI: !!newSettings.abri,
-      ATRANS: !!newSettings.atrans,
-      BLOCKN: !!newSettings.blockn,
-      UPPERCASE: !!newSettings.uppercase,
-      TEFF: Number.parseInt(newSettings.teff, 10),
-    });
+    await this.api.setSettings(DataNormalizer.settings(newSettings));
 
     // Reboot if needed
     if (changedKeys.some((key) => AwtrixLightDevice.REBOOT_FIELDS.includes(key))) {
@@ -181,11 +190,17 @@ module.exports = class AwtrixLightDevice extends Device {
     });
   }
 
+  connected() {
+    this.api.notify('HOMEY', { color: '#FFFFFF', duration: '2' });
+  }
+
   async refreshApps() {
-    const apps = this.api.getApps().then((apps) => {
+    const homeyApps = this.getStoreKeys().filter((key) => DataNormalizer.isHomeyApp(key));
+    const awtrixApps = this.api.getApps().then((apps) => {
+
       //TODO: verify all apps are ok, or we need to resync them
     });
-    return apps;
+    return awtrixApps;
   }
 
   initFlows() {
@@ -228,6 +243,18 @@ module.exports = class AwtrixLightDevice extends Device {
       return;
     }
     this.setAvailable().catch(this.error);
+  }
+
+  async notify(msg, params) {
+    return this.api.notify(msg, params).catch((error) => this.error);
+  }
+
+  async notifyDismiss() {
+    return this.api.dismiss();
+  }
+
+  async rtttl(melody) {
+    return this.api.rtttl(melody);
   }
 
 };
