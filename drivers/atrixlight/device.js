@@ -143,7 +143,8 @@ module.exports = class AwtrixLightDevice extends Device {
       this.setCapabilityValue('alarm_generic.indicator2', !!stats.indicator2);
       this.setCapabilityValue('alarm_generic.indicator3', !!stats.indicator3);
 
-      //this.setCapabilityValue('awtrix_matrix', !!settings.MATP); // check data
+      // Display
+      this.setCapabilityValue('awtrix_matrix', !!stats.matp); // check data
 
       if (stats.uptime <= this.getStoreValue('uptime')) {
         this.log('reboot detected');
@@ -160,7 +161,6 @@ module.exports = class AwtrixLightDevice extends Device {
 
   refreshSettings() {
     this.api.getSettings().then((settings) => {
-      this.setCapabilityValue('awtrix_matrix', !!settings.MATP);
       this.setSettings({
         TIM: !!settings.TIM,
         DAT: !!settings.DAT,
