@@ -131,13 +131,14 @@ module.exports = class AwtrixLightDevice extends Device {
       this.setCapabilityValue('alarm_generic.indicator3', !!stats.indicator3);
 
       if (stats.uptime <= currentUptime) {
+        this.log('reboot detected');
         this.refreshApps().catch((error) => this.error);
       }
 
       this.setStoreValue('uptime', stats.uptime);
+      this.setAvailable();
     }).catch((error) => {
-      this.setUnavailable('Device error!').catch(this.error);
-      this.log(error);
+      this.setUnavailable(error?.cause?.code || 'unknown error').catch(this.error);
     });
 
     api.getSettings().then((settings) => {
@@ -159,8 +160,10 @@ module.exports = class AwtrixLightDevice extends Device {
         UPPERCASE: !!settings.UPPERCASE,
         TEFF: settings?.TEFF?.toString(),
       });
+
+      this.setAvailable();
     }).catch((error) => {
-      this.setUnavailable('Device error!').catch(this.error);
+      this.setUnavailable(error?.cause?.code || 'unknown error').catch(this.error);
     });
 
     return true;

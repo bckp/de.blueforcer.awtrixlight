@@ -455,10 +455,9 @@
       "title": {
         "en": "Display"
       },
-      "getable": true,
-      "setable": true,
-      "uiComponent": "sensor",
-      "uiQuickAction": false
+      "getable": false,
+      "setable": false,
+      "uiComponent": "sensor"
     }
   },
   "discovery": {
