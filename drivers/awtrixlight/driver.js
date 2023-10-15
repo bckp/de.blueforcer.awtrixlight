@@ -18,17 +18,27 @@ class UlanziAwtrix extends Driver {
   async initFlows() {
     // Register flows
     this._notificationTextAction = this.homey.flow.getActionCard('notificationText');
+    this._notificationTextIconAction = this.homey.flow.getActionCard('notificationTextIcon');
     this._notificationDismissAction = this.homey.flow.getActionCard('notificationDismiss');
     this._showDisplySetAction = this.homey.flow.getActionCard('displaySet');
+    this._playRtttlAction = this.homey.flow.getActionCard('playRTTTL');
 
     // Notification flows
     this._notificationTextAction.registerRunListener(async (args, state) => {
       this.log('action:notificationText', args, state);
       args.device.api.notify(args.msg, { color: args.color ?? null, duration: args.duration });
     });
+    this._notificationTextIconAction.registerRunListener(async (args, state) => {
+      this.log('action:notificationTextIcon', args, state);
+      args.device.api.notify(args.msg, { color: args.color ?? null, duration: args.duration, icon: args.icon });
+    });
     this._notificationDismissAction.registerRunListener(async (args, state) => {
       this.log('action:notificationDismiss', args, state);
       args.device.api.dismiss();
+    });
+    this._playRtttlAction.registerRunListener(async (args, state) => {
+      this.log('action:playRTTTL', args, state);
+      args.device.api.rtttl(args.rtttl);
     });
 
     // App flows

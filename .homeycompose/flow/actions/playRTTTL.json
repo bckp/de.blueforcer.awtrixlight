@@ -1,0 +1,25 @@
+{
+    "title": {
+      "en": "Play [[rtttl]] melody"
+    },
+    "titleFormatted": {
+      "en": "Play [[rtttl]] melody"
+    },
+    "hint": {
+      "en": "Play RTTTL melody"
+    },
+    "args": [
+      {
+        "name": "device",
+        "type": "device",
+        "filter": "driver_id=awtrixlight"
+      },
+      {
+        "type": "text",
+        "name": "rtttl",
+        "placeholder": {
+          "en": "melody"
+        }
+      }
+    ]
+  }
