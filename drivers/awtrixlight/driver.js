@@ -90,6 +90,7 @@ class UlanziAwtrix extends Driver {
     });
 
     session.setHandler('list_devices_selection', async (data) => {
+      this.log('list_devices_selection', data);
       selectedDeviceId = data[0].data.id;
       return selectedDeviceId;
     });

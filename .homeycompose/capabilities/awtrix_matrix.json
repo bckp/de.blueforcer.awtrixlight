@@ -5,5 +5,5 @@
     },
     "getable": false,
     "setable": false,
-    "uiComponent": "sensor"
+    "uiComponent": null
   }
