@@ -1,12 +1,12 @@
 {
   "title": {
-    "en": "Notification [[msg]], icon: [[icon]], duration: [[duration]], color: [[color]]"
+    "en": "Send notification [[msg]] with [[icon]] icon and [[color]] for [[duration]] seconds"
   },
   "titleFormatted": {
-    "en": "Notification [[msg]], icon: [[icon]], duration: [[duration]], color: [[color]]"
+    "en": "Send notification [[msg]] with [[icon]] icon and [[color]] for [[duration]] seconds"
   },
   "hint": {
-    "en": "Send color notification to device for specified duration, beaware icon must be uploaded to device first!"
+    "en": "Send color notification to device for specified duration with icon and color"
   },
   "args": [
     {
@@ -24,7 +24,7 @@
     {
       "type": "dropdown",
       "name": "icon",
-      "value": "none",
+      "value": "-",
       "title": {
         "en": "icon"
       },
@@ -32,7 +32,7 @@
         {
           "id": "-",
           "title": {
-            "en": "-"
+            "en": "no"
           }
         },
         {
@@ -92,73 +92,23 @@
       ]
     },
     {
-      "type": "dropdown",
+      "type": "range",
       "name": "duration",
-      "value": "auto",
+      "value": "5",
       "title": {
-        "en": "seconds"
+        "en": "Number of seconds"
       },
-      "values": [
-        {
-          "id": "auto",
-          "title": {
-            "en": "Auto"
-          }
-        },
-        {
-          "id": "5",
-          "title": {
-            "en": "5 seconds"
-          }
-        },
-        {
-          "id": "10",
-          "title": {
-            "en": "10 seconds"
-          }
-        },
-        {
-          "id": "15",
-          "title": {
-            "en": "15 seconds"
-          }
-        },
-        {
-          "id": "30",
-          "title": {
-            "en": "30 seconds"
-          }
-        },
-        {
-          "id": "60",
-          "title": {
-            "en": "1 minute"
-          }
-        },
-        {
-          "id": "120",
-          "title": {
-            "en": "2 minutes"
-          }
-        },
-        {
-          "id": "300",
-          "title": {
-            "en": "5 minutes"
-          }
-        },
-        {
-          "id": "hold",
-          "title": {
-            "en": "Permanent"
-          }
-        }
-      ]
+      "min": 1,
+      "max": 600,
+      "step": 5,
+      "label": "s",
+      "labelMultiplier": 1,
+      "labelDecimals": 0
     },
     {
       "type": "color",
       "name": "color",
-      "required": false
+      "value": "#eeeeee"
     }
   ]
 }

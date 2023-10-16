@@ -71,127 +71,13 @@
       },
       {
         "title": {
-          "en": "Dismiss notification"
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] for [[duration]] seconds"
         },
         "titleFormatted": {
-          "en": "Dismiss notification"
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] for [[duration]] seconds"
         },
         "hint": {
-          "en": "Dismiss permanent notification"
-        },
-        "args": [
-          {
-            "name": "device",
-            "type": "device",
-            "filter": "driver_id=awtrixlight"
-          }
-        ],
-        "id": "notificationDismiss"
-      },
-      {
-        "title": {
-          "en": "Notification [[msg]], duration: [[duration]], color: [[color]]"
-        },
-        "titleFormatted": {
-          "en": "Notification [[msg]], duration: [[duration]], color: [[color]]"
-        },
-        "hint": {
-          "en": "Send color notification to device for specified duration"
-        },
-        "args": [
-          {
-            "name": "device",
-            "type": "device",
-            "filter": "driver_id=awtrixlight"
-          },
-          {
-            "type": "text",
-            "name": "msg",
-            "placeholder": {
-              "en": "message"
-            }
-          },
-          {
-            "type": "dropdown",
-            "name": "duration",
-            "value": "auto",
-            "title": {
-              "en": "seconds"
-            },
-            "values": [
-              {
-                "id": "auto",
-                "title": {
-                  "en": "Auto"
-                }
-              },
-              {
-                "id": "5",
-                "title": {
-                  "en": "5 seconds"
-                }
-              },
-              {
-                "id": "10",
-                "title": {
-                  "en": "10 seconds"
-                }
-              },
-              {
-                "id": "15",
-                "title": {
-                  "en": "15 seconds"
-                }
-              },
-              {
-                "id": "30",
-                "title": {
-                  "en": "30 seconds"
-                }
-              },
-              {
-                "id": "60",
-                "title": {
-                  "en": "1 minute"
-                }
-              },
-              {
-                "id": "120",
-                "title": {
-                  "en": "2 minutes"
-                }
-              },
-              {
-                "id": "300",
-                "title": {
-                  "en": "5 minutes"
-                }
-              },
-              {
-                "id": "hold",
-                "title": {
-                  "en": "Permanent"
-                }
-              }
-            ]
-          },
-          {
-            "type": "color",
-            "name": "color",
-            "required": false
-          }
-        ],
-        "id": "notificationText"
-      },
-      {
-        "title": {
-          "en": "Notification [[msg]], icon: [[icon]], duration: [[duration]], color: [[color]]"
-        },
-        "titleFormatted": {
-          "en": "Notification [[msg]], icon: [[icon]], duration: [[duration]], color: [[color]]"
-        },
-        "hint": {
-          "en": "Send color notification to device for specified duration, beaware icon must be uploaded to device first!"
+          "en": "Send color notification to device for specified duration with icon and color"
         },
         "args": [
           {
@@ -209,7 +95,7 @@
           {
             "type": "dropdown",
             "name": "icon",
-            "value": "none",
+            "value": "-",
             "title": {
               "en": "icon"
             },
@@ -217,7 +103,7 @@
               {
                 "id": "-",
                 "title": {
-                  "en": "-"
+                  "en": "no"
                 }
               },
               {
@@ -277,65 +163,135 @@
             ]
           },
           {
-            "type": "dropdown",
+            "type": "range",
             "name": "duration",
-            "value": "auto",
+            "value": "5",
             "title": {
-              "en": "seconds"
+              "en": "Number of seconds"
+            },
+            "min": 1,
+            "max": 600,
+            "step": 5,
+            "label": "s",
+            "labelMultiplier": 1,
+            "labelDecimals": 0
+          },
+          {
+            "type": "color",
+            "name": "color",
+            "value": "#eeeeee"
+          }
+        ],
+        "id": "notification"
+      },
+      {
+        "title": {
+          "en": "Dismiss notification"
+        },
+        "titleFormatted": {
+          "en": "Dismiss notification"
+        },
+        "hint": {
+          "en": "Dismiss permanent notification"
+        },
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight"
+          }
+        ],
+        "id": "notificationDismiss"
+      },
+      {
+        "title": {
+          "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]]"
+        },
+        "titleFormatted": {
+          "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]]"
+        },
+        "hint": {
+          "en": "Send sticky notification to device with optional icon and color"
+        },
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight"
+          },
+          {
+            "type": "text",
+            "name": "msg",
+            "placeholder": {
+              "en": "message"
+            }
+          },
+          {
+            "type": "dropdown",
+            "name": "icon",
+            "value": "-",
+            "title": {
+              "en": "icon"
             },
             "values": [
               {
-                "id": "auto",
+                "id": "-",
                 "title": {
-                  "en": "Auto"
+                  "en": "no"
                 }
               },
               {
-                "id": "5",
+                "id": "homey",
                 "title": {
-                  "en": "5 seconds"
+                  "en": "Homey"
                 }
               },
               {
-                "id": "10",
+                "id": "heater",
                 "title": {
-                  "en": "10 seconds"
+                  "en": "Heater"
                 }
               },
               {
-                "id": "15",
+                "id": "warning",
                 "title": {
-                  "en": "15 seconds"
+                  "en": "Warning"
                 }
               },
               {
-                "id": "30",
+                "id": "lightOn",
                 "title": {
-                  "en": "30 seconds"
+                  "en": "Light ON"
                 }
               },
               {
-                "id": "60",
+                "id": "lightOff",
                 "title": {
-                  "en": "1 minute"
+                  "en": "Light Off"
                 }
               },
               {
-                "id": "120",
+                "id": "message",
                 "title": {
-                  "en": "2 minutes"
+                  "en": "Message"
                 }
               },
               {
-                "id": "300",
+                "id": "tempC",
                 "title": {
-                  "en": "5 minutes"
+                  "en": "Temp °C"
                 }
               },
               {
-                "id": "hold",
+                "id": "tempF",
                 "title": {
-                  "en": "Permanent"
+                  "en": "Temp °F"
+                }
+              },
+              {
+                "id": "smiley",
+                "title": {
+                  "en": "Smiley"
                 }
               }
             ]
@@ -343,10 +299,10 @@
           {
             "type": "color",
             "name": "color",
-            "required": false
+            "value": "#eeeeee"
           }
         ],
-        "id": "notificationTextIcon"
+        "id": "notificationSticky"
       },
       {
         "title": {
@@ -384,7 +340,6 @@
       "class": "other",
       "capabilities": [
         "measure_battery",
-        "alarm_battery",
         "measure_humidity",
         "measure_luminance",
         "measure_temperature",

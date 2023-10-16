@@ -149,7 +149,6 @@ module.exports = class AwtrixLightDevice extends Device {
     this.api.getStats().then((stats) => {
       // Battery
       this.setCapabilityValue('measure_battery', stats.bat);
-      this.setCapabilityValue('alarm_battery', stats.bat < 20);
 
       // Measurements
       this.setCapabilityValue('measure_humidity', stats.hum);

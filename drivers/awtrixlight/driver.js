@@ -18,18 +18,18 @@ class UlanziAwtrix extends Driver {
 
   async initFlows() {
     // Register flows
-    this._notificationTextAction = this.homey.flow.getActionCard('notificationText');
-    this._notificationTextIconAction = this.homey.flow.getActionCard('notificationTextIcon');
+    this._notificationAction = this.homey.flow.getActionCard('notification');
+    this._notificationStickyAction = this.homey.flow.getActionCard('notificationSticky');
     this._notificationDismissAction = this.homey.flow.getActionCard('notificationDismiss');
     this._showDisplySetAction = this.homey.flow.getActionCard('displaySet');
     this._playRtttlAction = this.homey.flow.getActionCard('playRTTTL');
 
     // Notification flows
-    this._notificationTextAction.registerRunListener(async (args, state) => {
-      args.device.notify(args.msg, { color: args.color ?? null, duration: args.duration });
+    this._notificationAction.registerRunListener(async (args, state) => {
+      args.device.notify(args.msg, { color: args.color, duration: args.duration });
     });
-    this._notificationTextIconAction.registerRunListener(async (args, state) => {
-      args.device.notify(args.msg, { color: args.color ?? null, duration: args.duration, icon: args.icon });
+    this._notificationStickyAction.registerRunListener(async (args, state) => {
+      args.device.notify(args.msg, { color: args.color, hold: true, icon: args.icon });
     });
     this._notificationDismissAction.registerRunListener(async (args, state) => {
       args.device.notifyDismiss();
