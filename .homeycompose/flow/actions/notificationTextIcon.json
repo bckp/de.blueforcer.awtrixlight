@@ -22,11 +22,74 @@
       }
     },
     {
-      "type": "text",
+      "type": "dropdown",
       "name": "icon",
-      "placeholder": {
-        "en": "icon id"
-      }
+      "value": "none",
+      "title": {
+        "en": "icon"
+      },
+      "values": [
+        {
+          "id": "-",
+          "title": {
+            "en": "-"
+          }
+        },
+        {
+          "id": "homey",
+          "title": {
+            "en": "Homey"
+          }
+        },
+        {
+          "id": "heater",
+          "title": {
+            "en": "Heater"
+          }
+        },
+        {
+          "id": "warning",
+          "title": {
+            "en": "Warning"
+          }
+        },
+        {
+          "id": "lightOn",
+          "title": {
+            "en": "Light ON"
+          }
+        },
+        {
+          "id": "lightOff",
+          "title": {
+            "en": "Light Off"
+          }
+        },
+        {
+          "id": "message",
+          "title": {
+            "en": "Message"
+          }
+        },
+        {
+          "id": "tempC",
+          "title": {
+            "en": "Temp °C"
+          }
+        },
+        {
+          "id": "tempF",
+          "title": {
+            "en": "Temp °F"
+          }
+        },
+        {
+          "id": "smiley",
+          "title": {
+            "en": "Smiley"
+          }
+        }
+      ]
     },
     {
       "type": "dropdown",

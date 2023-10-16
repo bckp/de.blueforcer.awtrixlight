@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('fs');
+const mime = require('mime-types');
 const { Device } = require('homey');
 const AwtrixClient = require('../../lib/AwtrixClient');
 const AwtrixClientResponses = require('../../lib/AwtrixClientResponses');
@@ -56,6 +58,13 @@ module.exports = class AwtrixLightDevice extends Device {
   async onAdded() {
     this.log('AwtrixLightDevice has been added');
     this.connected();
+
+    // Upload files
+    fs.readdir('../assets/icons', (err, files) => {
+      return files.forEach((file) => this.api._uploadImage(file, fs.readFileSync(`../assets/icons/${file}`), mime.lookup(file)));
+    }).error((error) => {
+      this.log(error);
+    });
   }
 
   /**
@@ -191,16 +200,19 @@ module.exports = class AwtrixLightDevice extends Device {
   }
 
   connected() {
-    this.api.notify('HOMEY', { color: '#FFFFFF', duration: '2' });
+    this.api.notify('HOMEY', { color: '#FFFFFF', duration: '2', icon: 'homey' });
   }
 
   async refreshApps() {
+    return [];
+    /*
     const homeyApps = this.getStoreKeys().filter((key) => DataNormalizer.isHomeyApp(key));
     const awtrixApps = this.api.getApps().then((apps) => {
 
       //TODO: verify all apps are ok, or we need to resync them
     });
     return awtrixApps;
+    */
   }
 
   initFlows() {
