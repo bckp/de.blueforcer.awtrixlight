@@ -32,7 +32,7 @@ class UlanziAwtrix extends Driver {
 
     // Displau
     this.homey.flow.getActionCard('displaySet').registerRunListener(async (args, state) => {
-      args.device.api.power(args.power === '1');
+      args.device.api.power(args.power === '1').catch(this.error);
     });
 
     // RTTTL sound

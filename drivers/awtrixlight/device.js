@@ -47,7 +47,7 @@ module.exports = class AwtrixLightDevice extends Device {
         this.initPolling();
 
         // Welcome message
-        this.homey();
+        this.connected();
       } else {
         this.log('Pooling not set, there is issue with device');
       }
@@ -62,8 +62,12 @@ module.exports = class AwtrixLightDevice extends Device {
     this.connected();
 
     // Upload files
-    fs.readdir('../assets/icons', (err, files) => {
-      return files.forEach((file) => this.api._uploadImage(file, fs.readFileSync(`../assets/icons/${file}`), mime.lookup(file)));
+    fs.readdir(`${__dirname}/assets/images/icons`, (err, files) => {
+      if (!files) {
+        return;
+      }
+
+      files.forEach((file) => this.api._uploadImage(file, fs.readFileSync(`${__dirname}/assets/images/icons/${file}`), mime.lookup(file)));
     }).error((error) => {
       this.log(error);
     });
@@ -232,20 +236,19 @@ module.exports = class AwtrixLightDevice extends Device {
       this.log(result);
       switch (result.state) {
         case AwtrixClientResponses.LoginRequired:
-          this.setWarning('Repair required!').catch(this.error);
+          this.setUnavailable('Repair required!').catch(this.error);
           return false;
 
         case AwtrixClientResponses.NotFound:
-          this.setWarning('Device not found!').catch(this.error);
+          this.setUnavailable('Device not found!').catch(this.error);
           return false;
 
         case AwtrixClientResponses.Error:
-          this.setWarning('Network error!').catch(this.error);
+          this.setUnavailable('Network error!').catch(this.error);
           return false;
 
         default:
           this.setAvailable().catch(this.error);
-          this.unsetWarning().catch(this.error);
       }
       return true;
     });

@@ -2,15 +2,13 @@
 
 const Homey = require('homey');
 
-class MyApp extends Homey.App {
+module.exports = class AwtrixApp extends Homey.App {
 
   /**
    * onInit is called when the app is initialized.
    */
   async onInit() {
-    this.log('MyApp has been initialized');
+    this.log('AwtrixApp has been initialized');
   }
 
 }
-
-module.exports = MyApp;
