@@ -19,6 +19,10 @@ module.exports = class AwtrixLightDevice extends Device {
     this.log('AwtrixLightDevice has been initialized');
     await this.setUnavailable(this.homey.__('loading'));
 
+    // Check MDNS for IP change
+    const result = this.driver.getDiscoveryStrategy().getDiscoveryResult(this.getData().id);
+    this.log(result);
+
     // Setup flows
     this.initFlows();
 
@@ -37,6 +41,7 @@ module.exports = class AwtrixLightDevice extends Device {
     // Clear interval and verify device
     this.testDevice().then((result) => {
       this.homey.clearInterval(this.poll);
+      result = result || this.tryRediscover();
       if (result) {
         this.log('Device availalible');
 
@@ -63,13 +68,16 @@ module.exports = class AwtrixLightDevice extends Device {
 
     // Upload files
     fs.readdir(`${__dirname}/assets/images/icons`, (err, files) => {
+      if (err) {
+        this.error(err);
+        return;
+      }
+
       if (!files) {
         return;
       }
 
       files.forEach((file) => this.api._uploadImage(file, fs.readFileSync(`${__dirname}/assets/images/icons/${file}`), mime.lookup(file)));
-    }).error((error) => {
-      this.log(error);
     });
   }
 
@@ -127,27 +135,29 @@ module.exports = class AwtrixLightDevice extends Device {
   }
 
   async onDiscoveryAvailable(discoveryResult) {
-    this.api.setIp(discoveryResult.address);
-    this.setAvailable();
+    if (this.getStoreValue('address') !== discoveryResult.address) {
+      this.onDiscoveryAddressChanged(discoveryResult);
+      await this.setAvailableIfNot();
+    }
   }
 
   onDiscoveryAddressChanged(discoveryResult) {
-    this.api.ip(discoveryResult.address);
-    this.api.getStats().then((stats) => {
-      this.log('address changes', stats);
-    });
-  }
-
-  onDiscoveryLastSeenChanged(discoveryResult) {
-    this.api.getStats().then((stats) => {
-      this.log('lastSeen', stats);
-    });
+    this.api.setIp(discoveryResult.address);
+    this.setStoreValue('address', discoveryResult.address).catch((error) => this.error(error));
+    this.testDevice().then((result) => this.log('address change with result', result));
   }
 
   refreshAll() {
     this.refreshCapabilities();
     this.refreshSettings();
     this.refreshApps();
+  }
+
+  tryRediscover() {
+    const result = this.driver.getDiscoveryStrategy().getDiscoveryResult(this.getData().id);
+    if (result) {
+      this.onDiscoveryAvailable(result);
+    }
   }
 
   // Refresh device capabilities, this is expensive so we do not want to poll too often
@@ -228,6 +238,10 @@ module.exports = class AwtrixLightDevice extends Device {
     this.poll = this.homey.setInterval(async () => {
       this.log('polling...');
       this.refreshCapabilities();
+
+      if (!this.getAvailable()) {
+        this.tryRediscover();
+      }
     }, AwtrixLightDevice.POLL_INTERVAL);
   }
 

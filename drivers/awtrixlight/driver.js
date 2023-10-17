@@ -55,8 +55,6 @@ class UlanziAwtrix extends Driver {
     const discoveryStrategy = this.getDiscoveryStrategy();
     const discoveryResults = discoveryStrategy.getDiscoveryResults();
 
-    let selectedDeviceId;
-
     this.log(discoveryResults);
 
     session.setHandler('list_devices', async () => {
