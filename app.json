@@ -71,10 +71,10 @@
       },
       {
         "title": {
-          "en": "Show [[indicator]] indicator with [[color]] and [[effect]] [[duration]] efect"
+          "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with duration [[duration]]"
         },
         "titleFormatted": {
-          "en": "Show [[indicator]] indicator with [[color]] and [[effect]] [[duration]] efect"
+          "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with duration [[duration]]"
         },
         "hint": {
           "en": "Enable or disable identificator"
@@ -214,10 +214,10 @@
       },
       {
         "title": {
-          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] for [[duration]] seconds"
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color for [[duration]] seconds"
         },
         "titleFormatted": {
-          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] for [[duration]] seconds"
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color for [[duration]] seconds"
         },
         "hint": {
           "en": "Send color notification to device for specified duration with icon and color"
@@ -348,10 +348,10 @@
       },
       {
         "title": {
-          "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]]"
+          "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color"
         },
         "titleFormatted": {
-          "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]]"
+          "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color"
         },
         "hint": {
           "en": "Send sticky notification to device with optional icon and color"

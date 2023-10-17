@@ -1,9 +1,9 @@
 {
   "title": {
-    "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]]"
+    "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color"
   },
   "titleFormatted": {
-    "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]]"
+    "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color"
   },
   "hint": {
     "en": "Send sticky notification to device with optional icon and color"
