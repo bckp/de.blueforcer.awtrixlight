@@ -17,34 +17,35 @@ class UlanziAwtrix extends Driver {
   }
 
   async initFlows() {
-    // Register flows
-    this._notificationAction = this.homey.flow.getActionCard('notification');
-    this._notificationStickyAction = this.homey.flow.getActionCard('notificationSticky');
-    this._notificationDismissAction = this.homey.flow.getActionCard('notificationDismiss');
-    this._showDisplySetAction = this.homey.flow.getActionCard('displaySet');
-    this._playRtttlAction = this.homey.flow.getActionCard('playRTTTL');
-
-    // Notification flows
-    this._notificationAction.registerRunListener(async (args, state) => {
-      args.device.notify(args.msg, { color: args.color, duration: args.duration });
+    // Notification
+    this.homey.flow.getActionCard('notification').registerRunListener(async (args, state) => {
+      args.device.notify(args.msg, { color: args.color, duration: args.duration, icon: args.icon });
     });
-    this._notificationStickyAction.registerRunListener(async (args, state) => {
+
+    // Sticky notification
+    this.homey.flow.getActionCard('notificationSticky').registerRunListener(async (args, state) => {
       args.device.notify(args.msg, { color: args.color, hold: true, icon: args.icon });
     });
-    this._notificationDismissAction.registerRunListener(async (args, state) => {
+    this.homey.flow.getActionCard('notificationDismiss').registerRunListener(async (args, state) => {
       args.device.notifyDismiss();
     });
-    this._playRtttlAction.registerRunListener(async (args, state) => {
+
+    // Displau
+    this.homey.flow.getActionCard('displaySet').registerRunListener(async (args, state) => {
+      args.device.api.power(args.power === '1');
+    });
+
+    // RTTTL sound
+    this.homey.flow.getActionCard('playRTTTL').registerRunListener(async (args, state) => {
       args.device.rtttl(args.rtttl);
     });
 
-    // App flows
-    //TODO: implement app flows
-
-    // Display flows
-    this._showDisplySetAction.registerRunListener(async (args, state) => {
-      this.log('action:displaySet', args, state);
-      args.device.api.power(args.power === '1');
+    // Indicators
+    this.homey.flow.getActionCard('indicator').registerRunListener(async (args) => {
+      args.device.indicator(args.indicator, { color: args.color, duration: args.duration, effect: args.effect });
+    });
+    this.homey.flow.getActionCard('indicatorDismiss').registerRunListener(async (args) => {
+      args.device.indicator(args.indicator, { color: '0' });
     });
   }
 

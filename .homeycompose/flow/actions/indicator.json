@@ -1,0 +1,65 @@
+{
+  "title": {
+    "en": "Show [[indicator]] indicator with [[color]] and [[effect]] [[duration]] efect"
+  },
+  "titleFormatted": {
+    "en": "Show [[indicator]] indicator with [[color]] and [[effect]] [[duration]] efect"
+  },
+  "hint": {
+    "en": "Enable or disable identificator"
+  },
+  "args": [
+    {
+      "name": "device",
+      "type": "device",
+      "filter": "driver_id=awtrixlight"
+    },
+    {
+      "type": "color",
+      "name": "color",
+      "title": {
+        "en": "Color"
+      }
+    },
+    {
+      "type": "dropdown",
+      "name": "indicator",
+      "value": "1",
+      "title": {
+        "en": "identificator number"
+      },
+      "values": [
+        { "id": "1", "title": { "en": "top right" } },
+        { "id": "2", "title": { "en": "right" } },
+        { "id": "3", "title": { "en": "bottom right" } }
+      ]
+    },
+    {
+      "type": "dropdown",
+      "name": "effect",
+      "value": "fade",
+      "title": {
+        "en": "effect"
+      },
+      "values": [
+        { "id": "-", "title": { "en": "no" } },
+        { "id": "blink", "title": { "en": "blink" } },
+        { "id": "fade", "title": { "en": "fade" } }
+      ]
+    },
+    {
+      "type": "range",
+      "name": "duration",
+      "value": 1000,
+      "title": {
+        "en": "effect duration"
+      },
+      "min": 500,
+      "max": 10000,
+      "step": 100,
+      "label": "ms",
+      "labelMultiplier": 1,
+      "labelDecimals": 0
+    }
+  ]
+}

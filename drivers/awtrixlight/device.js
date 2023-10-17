@@ -25,6 +25,8 @@ module.exports = class AwtrixLightDevice extends Device {
     // Create API
     this.api = new AwtrixClient({ ip: this.getStoreValue('address') });
 
+    // this.api.setDebug(true);
+
     // Setup user and pass if exists
     const settings = await this.getSettings();
     if (settings.user && settings.pass) {
@@ -266,6 +268,10 @@ module.exports = class AwtrixLightDevice extends Device {
 
   async rtttl(melody) {
     return this.api.rtttl(melody);
+  }
+
+  async indicator(id, options) {
+    return this.api.indicator(id, options);
   }
 
 };
