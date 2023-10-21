@@ -28,5 +28,8 @@
   },
   "1.0.9": {
     "en": "Fixed duration issue with notifications"
+  },
+  "1.0.10": {
+    "en": "Fixed duration"
   }
 }
