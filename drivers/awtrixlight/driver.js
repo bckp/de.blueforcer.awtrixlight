@@ -19,7 +19,7 @@ class UlanziAwtrix extends Driver {
   async initFlows() {
     // Notification
     this.homey.flow.getActionCard('notification').registerRunListener(async (args, state) => {
-      args.device.notify(args.msg, { color: args.color, duration: (args.duration * 1000), icon: args.icon });
+      args.device.notify(args.msg, { color: args.color, duration: Math.ceil(args.duration / 1000), icon: args.icon });
     });
 
     // Sticky notification
