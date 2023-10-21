@@ -71,10 +71,10 @@
       },
       {
         "title": {
-          "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with duration [[duration]]"
+          "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with efect duration [[duration]]"
         },
         "titleFormatted": {
-          "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with duration [[duration]]"
+          "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with efect duration [[duration]]"
         },
         "hint": {
           "en": "Enable or disable identificator"
@@ -214,14 +214,15 @@
       },
       {
         "title": {
-          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color for [[duration]] seconds"
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
         },
         "titleFormatted": {
-          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color for [[duration]] seconds"
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
         },
         "hint": {
           "en": "Send color notification to device for specified duration with icon and color"
         },
+        "duration": true,
         "args": [
           {
             "name": "device",
@@ -302,22 +303,26 @@
                 "title": {
                   "en": "Smiley"
                 }
+              },
+              {
+                "id": "weather",
+                "title": {
+                  "en": "Weather"
+                }
+              },
+              {
+                "id": "tempIn",
+                "title": {
+                  "en": "Temperature indoor"
+                }
+              },
+              {
+                "id": "tempOut",
+                "title": {
+                  "en": "Temperature outdoor"
+                }
               }
             ]
-          },
-          {
-            "type": "range",
-            "name": "duration",
-            "value": "5",
-            "title": {
-              "en": "Number of seconds"
-            },
-            "min": 1,
-            "max": 600,
-            "step": 5,
-            "label": "s",
-            "labelMultiplier": 1,
-            "labelDecimals": 0
           },
           {
             "type": "color",
@@ -435,6 +440,24 @@
                 "id": "smiley",
                 "title": {
                   "en": "Smiley"
+                }
+              },
+              {
+                "id": "weather",
+                "title": {
+                  "en": "Weather"
+                }
+              },
+              {
+                "id": "tempIn",
+                "title": {
+                  "en": "Temperature indoor"
+                }
+              },
+              {
+                "id": "tempOut",
+                "title": {
+                  "en": "Temperature outdoor"
                 }
               }
             ]

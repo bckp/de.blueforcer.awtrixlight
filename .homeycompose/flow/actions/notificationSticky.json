@@ -88,6 +88,24 @@
           "title": {
             "en": "Smiley"
           }
+        },
+        {
+          "id": "weather",
+          "title": {
+            "en": "Weather"
+          }
+        },
+        {
+          "id": "tempIn",
+          "title": {
+            "en": "Temperature indoor"
+          }
+        },
+        {
+          "id": "tempOut",
+          "title": {
+            "en": "Temperature outdoor"
+          }
         }
       ]
     },

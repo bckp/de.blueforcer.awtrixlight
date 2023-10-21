@@ -19,7 +19,7 @@ class UlanziAwtrix extends Driver {
   async initFlows() {
     // Notification
     this.homey.flow.getActionCard('notification').registerRunListener(async (args, state) => {
-      args.device.notify(args.msg, { color: args.color, duration: args.duration, icon: args.icon });
+      args.device.notify(args.msg, { color: args.color, duration: (args.duration * 1000), icon: args.icon });
     });
 
     // Sticky notification
@@ -97,7 +97,7 @@ class UlanziAwtrix extends Driver {
 
     session.setHandler('list_devices_selection', async (data) => {
       this.log('list_devices_selection', data);
-      selectedDeviceId = data[0].data.id;
+      let selectedDeviceId = data[0].data.id;
       return selectedDeviceId;
     });
 

@@ -1,9 +1,9 @@
 {
   "title": {
-    "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with duration [[duration]]"
+    "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with efect duration [[duration]]"
   },
   "titleFormatted": {
-    "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with duration [[duration]]"
+    "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with efect duration [[duration]]"
   },
   "hint": {
     "en": "Enable or disable identificator"
