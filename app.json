@@ -509,10 +509,12 @@
         "measure_humidity",
         "measure_luminance",
         "measure_temperature",
-        "awtrix_matrix",
+        "channel_up",
+        "channel_down",
         "alarm_generic.indicator1",
         "alarm_generic.indicator2",
-        "alarm_generic.indicator3"
+        "alarm_generic.indicator3",
+        "awtrix_matrix"
       ],
       "platforms": [
         "local"
@@ -772,9 +774,30 @@
       "title": {
         "en": "Display"
       },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "button",
+      "icon": "/assets/capability_awtrix_matrix.svg"
+    },
+    "button_next": {
+      "type": "boolean",
+      "title": {
+        "en": "Next app"
+      },
       "getable": false,
-      "setable": false,
-      "uiComponent": null
+      "setable": true,
+      "uiComponent": "button",
+      "icon": "/assets/capability_button_next.svg"
+    },
+    "button_prev": {
+      "type": "boolean",
+      "title": {
+        "en": "Previous app"
+      },
+      "getable": false,
+      "setable": true,
+      "uiComponent": "button",
+      "icon": "/assets/capability_button_prev.svg"
     }
   },
   "discovery": {

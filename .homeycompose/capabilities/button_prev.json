@@ -1,10 +1,10 @@
 {
     "type": "boolean",
     "title": {
-        "en": "Display"
+        "en": "Previous app"
     },
-    "getable": true,
+    "getable": false,
     "setable": true,
     "uiComponent": "button",
-    "icon": "/assets/capability_awtrix_matrix.svg"
+    "icon": "/assets/capability_button_prev.svg"
   }

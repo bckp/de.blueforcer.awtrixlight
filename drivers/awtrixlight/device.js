@@ -17,6 +17,8 @@ module.exports = class AwtrixLightDevice extends Device {
    */
   async onInit() {
     this.log('AwtrixLightDevice has been initialized');
+    await this.migrate();
+
     await this.setUnavailable(this.homey.__('loading'));
 
     // Check MDNS for IP change
@@ -177,7 +179,7 @@ module.exports = class AwtrixLightDevice extends Device {
       this.setCapabilityValue('alarm_generic.indicator3', !!stats.indicator3);
 
       // Display
-      this.setCapabilityValue('awtrix_matrix', !!stats.matp); // check data
+      this.setCapabilityValue('awtrix_matrix', !!stats.matrix); // check data
 
       if (stats.uptime <= this.getStoreValue('uptime')) {
         this.log('reboot detected');
@@ -231,6 +233,12 @@ module.exports = class AwtrixLightDevice extends Device {
   }
 
   initFlows() {
+    // Matrix
+    this.registerCapabilityListener('awtrix_matrix', async (value) => this.api.power(value));
+
+    // Buttons
+    this.registerCapabilityListener('button_next', async (value) => this.api.appNext());
+    this.registerCapabilityListener('button_prev', async (value) => this.api.appPrev());
   }
 
   initPolling() {
@@ -289,6 +297,16 @@ module.exports = class AwtrixLightDevice extends Device {
 
   async indicator(id, options) {
     return this.api.indicator(id, options);
+  }
+
+  async migrate() {
+    this.log(this.getCapabilities());
+    if (!this.hasCapability('button_next')) {
+      await this.addCapability('button_next');
+    }
+    if (!this.hasCapability('button_prev')) {
+      await this.addCapability('button_prev');
+    }
   }
 
 };

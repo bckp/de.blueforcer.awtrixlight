@@ -8,10 +8,12 @@
     "measure_humidity",
     "measure_luminance",
     "measure_temperature",
-    "awtrix_matrix",
+    "channel_up",
+    "channel_down",
     "alarm_generic.indicator1",
     "alarm_generic.indicator2",
-    "alarm_generic.indicator3"
+    "alarm_generic.indicator3",
+    "awtrix_matrix"
   ],
   "platforms": [
     "local"
