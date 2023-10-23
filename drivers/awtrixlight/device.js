@@ -21,10 +21,6 @@ module.exports = class AwtrixLightDevice extends Device {
 
     await this.setUnavailable(this.homey.__('loading'));
 
-    // Check MDNS for IP change
-    const result = this.driver.getDiscoveryStrategy().getDiscoveryResult(this.getData().id);
-    this.log(result);
-
     // Setup flows
     this.initFlows();
 
@@ -79,7 +75,7 @@ module.exports = class AwtrixLightDevice extends Device {
         return;
       }
 
-      files.forEach((file) => this.api._uploadImage(file, fs.readFileSync(`${__dirname}/assets/images/icons/${file}`), mime.lookup(file)));
+      files.forEach((file) => this.api._uploadImage(file, fs.readFileSync(`${__dirname}/assets/images/icons/${file}`)));
     });
   }
 
@@ -137,7 +133,7 @@ module.exports = class AwtrixLightDevice extends Device {
   }
 
   async onDiscoveryAvailable(discoveryResult) {
-    if (this.getStoreValue('address') !== discoveryResult.address) {
+    if ('address' in discoveryResult && this.getStoreValue('address') !== discoveryResult.address) {
       this.onDiscoveryAddressChanged(discoveryResult);
       await this.setAvailableIfNot();
     }
