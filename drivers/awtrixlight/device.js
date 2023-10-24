@@ -297,12 +297,19 @@ module.exports = class AwtrixLightDevice extends Device {
 
   async migrate() {
     this.log(this.getCapabilities());
-    if (!this.hasCapability('button_next')) {
-      await this.addCapability('button_next');
+    if (this.hasCapability('button_prev')) {
+      await this.removeCapability('button_prev');
     }
-    if (!this.hasCapability('button_prev')) {
-      await this.addCapability('button_prev');
+    if (this.hasCapability('button_next')) {
+      await this.removeCapability('button_next');
     }
+    if (this.hasCapability('awtrix_matrix')) {
+      await this.removeCapability('awtrix_matrix');
+    }
+
+    await this.addCapability('button_prev');
+    await this.addCapability('button_next');
+    await this.addCapability('awtrix_matrix');
   }
 
 };
