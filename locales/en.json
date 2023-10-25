@@ -1,1 +1,7 @@
-{}
+{
+    "loading": "initializing...",
+    "login": {
+        "invalidCredentials": "Username or password is not valid",
+        "unknownError": "Unknown error"
+    }
+}

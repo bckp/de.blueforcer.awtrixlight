@@ -5,7 +5,7 @@ const mime = require('mime-types');
 const { Device } = require('homey');
 const AwtrixClient = require('../../lib/AwtrixClient');
 const AwtrixClientResponses = require('../../lib/AwtrixClientResponses');
-const DataNormalizer = require('../../lib/DataNormalizer');
+const DataNormalizer = require('../../lib/Normalizer');
 
 module.exports = class AwtrixLightDevice extends Device {
 
@@ -95,8 +95,12 @@ module.exports = class AwtrixLightDevice extends Device {
       this.log('New user and password set, testing...');
       this.api.setCredentials(newSettings.user, newSettings.pass);
       const test = await this.api.test();
+      if (test.state === AwtrixClientResponses.LoginFailed) {
+        throw new Error(this.homey.__('login.invalidCredentials'));
+      }
+
       if (test.state !== AwtrixClientResponses.Ok) {
-        return Promise.reject(new Error('username or password not valid'));
+        throw new Error('Unknown error');
       }
 
       if (!this.poll) {
@@ -113,10 +117,8 @@ module.exports = class AwtrixLightDevice extends Device {
     // Reboot if needed
     if (changedKeys.some((key) => AwtrixLightDevice.REBOOT_FIELDS.includes(key))) {
       this.log('rebooting device');
-      this.api.reboot();
+      await this.api.reboot();
     }
-
-    return true;
   }
 
   /**
@@ -159,7 +161,8 @@ module.exports = class AwtrixLightDevice extends Device {
   }
 
   // Refresh device capabilities, this is expensive so we do not want to poll too often
-  refreshCapabilities() {
+  async refreshCapabilities() {
+    const stats = await this.api.getStats();
     this.api.getStats().then((stats) => {
       // Battery
       this.setCapabilityValue('measure_battery', stats.bat);
@@ -296,16 +299,11 @@ module.exports = class AwtrixLightDevice extends Device {
   }
 
   async migrate() {
-    this.log(this.getCapabilities());
-    if (this.hasCapability('button_prev')) {
-      await this.removeCapability('button_prev');
-    }
-    if (this.hasCapability('button_next')) {
-      await this.removeCapability('button_next');
-    }
-    if (this.hasCapability('awtrix_matrix')) {
-      await this.removeCapability('awtrix_matrix');
-    }
+    ['button_prev', 'button_next', 'awtrix_matrix'].forEach((name) => {
+      if (this.hasCapability(name)) {
+        this.removeCapability(name);
+      }
+    });
 
     await this.addCapability('button_prev');
     await this.addCapability('button_next');
