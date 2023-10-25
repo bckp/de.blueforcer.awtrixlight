@@ -1,8 +1,9 @@
 {
   "name": "de.blueforcer.awtrixlight",
   "version": "1.0.2",
-  "main": "app.js",
+  "main": "app.ts",
   "scripts": {
+    "build": "tsc",
     "lint": "eslint --ext .js,.ts --ignore-path .gitignore ."
   },
   "engines": {
@@ -14,7 +15,8 @@
     "@types/node": "^20.8.4",
     "eslint": "^7.32.0",
     "eslint-config-athom": "^3.1.1",
-    "homey": "^3.0.7"
+    "homey": "^3.0.7",
+    "typescript": "^5.2.2"
   },
   "dependencies": {
     "axios": "^1.5.1",
