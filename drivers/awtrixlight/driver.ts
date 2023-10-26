@@ -1,22 +1,16 @@
-'use strict';
+import { Driver } from 'homey';
+import PairSession from 'homey/lib/PairSession';
 
-const { Driver } = require('homey');
-const AwtrixClient = require('../../lib/AwtrixClient');
-const AwtrixResponses = require('../../lib/AwtrixClientResponses');
+module.exports = class UlanziAwtrix extends Driver {
 
-class UlanziAwtrix extends Driver {
+  static EnableManualAdd = false;
 
-  static ENABLE_MANUAL_ADD = false;
-
-  /**
-   * onInit is called when the driver is initialized.
-   */
-  async onInit() {
-    this.log('MyDriver has been initialized');
+  async onInit(): Promise<void> {
+    this.log('UlanziAwtrix has been initialized');
     this.initFlows();
   }
 
-  async initFlows() {
+  async initFlows(): Promise<void> {
     // Notification
     this.homey.flow.getActionCard('notification').registerRunListener(async (args, state) => {
       args.device.notify(args.msg, { color: args.color, duration: Math.ceil(args.duration / 1000), icon: args.icon });
@@ -49,7 +43,7 @@ class UlanziAwtrix extends Driver {
     });
   }
 
-  async onPair(session) {
+  async onPair(session: PairSession) {
     this.log('onPair', session);
 
     const discoveryStrategy = this.getDiscoveryStrategy();
@@ -75,14 +69,14 @@ class UlanziAwtrix extends Driver {
       });
 
       // If we do not find device, push custom one so user can set IP directly
-      if (UlanziAwtrix.ENABLE_MANUAL_ADD) {
+      if (UlanziAwtrix.EnableManualAdd) {
         devices.push({
           name: 'Manual',
           data: {
             id: `custom_${Date.now().toString()}`,
           },
           store: {
-            address: null,
+            address: '',
           },
           settings: {
             user: null,
@@ -95,21 +89,19 @@ class UlanziAwtrix extends Driver {
       return devices;
     });
 
-    session.setHandler('list_devices_selection', async (data) => {
+    session.setHandler('list_devices_selection', async (data: any) => {
       this.log('list_devices_selection', data);
-      let selectedDeviceId = data[0].data.id;
-      return selectedDeviceId;
+      // let selectedDeviceId = data[0].data.id;
+      // return selectedDeviceId;
     });
 
-    session.setHandler('get_device', async (data) => {
+    session.setHandler('get_device', async (data: any) => {
       this.log('get_device', data);
     });
 
-    session.setHandler('add_device', async (data) => {
+    session.setHandler('add_device', async (data: any) => {
       this.log('add_device', data);
     });
   }
 
-}
-
-module.exports = UlanziAwtrix;
+};

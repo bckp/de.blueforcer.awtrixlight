@@ -1,7 +1,7 @@
 {
   "id": "de.blueforcer.awtrixlight",
   "version": "1.0.13",
-  "compatibility": ">=5.0.0",
+  "compatibility": ">=7.0.0",
   "sdk": 3,
   "brandColor": "#222222",
   "platforms": [

@@ -1,34 +1,39 @@
-'use strict';
+import fs from 'fs';
+// import mime from 'mime-types';
+import { Device } from 'homey';
+import { indicatorNumber, indicatorOptions, powerOptions, settingOptions } from '../../lib/Normalizer';
+import ApiClient from '../../lib/Api/Client';
+import { Status } from '../../lib/Api/Response';
+import Api from '../../lib/Api/Api';
 
-const fs = require('fs');
-const mime = require('mime-types');
-const { Device } = require('homey');
-const AwtrixClient = require('../../lib/AwtrixClient');
-const AwtrixClientResponses = require('../../lib/AwtrixClientResponses');
-const DataNormalizer = require('../../lib/Normalizer');
-
-/** @deprecated */
 module.exports = class AwtrixLightDevice extends Device {
 
+  static RebootFields = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
+  static PollInterval = 30000;
+
+  // @deprecated
   static REBOOT_FIELDS = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
+  // @deprecated
   static POLL_INTERVAL = 60000;
+
+  api!: Api;
 
   /**
    * onInit is called when the device is initialized.
    */
   async onInit() {
     this.log('AwtrixLightDevice has been initialized');
-    await this.migrate();
-
     await this.setUnavailable(this.homey.__('loading'));
+    await this.migrate();
 
     // Setup flows
     this.initFlows();
 
     // Create API
-    this.api = new AwtrixClient({ ip: this.getStoreValue('address') });
-
-    // this.api.setDebug(true);
+    this.api = new Api(
+      new ApiClient({ ip: this.getStoreValue('address') }),
+      this,
+    );
 
     // Setup user and pass if exists
     const settings = await this.getSettings();
@@ -283,32 +288,93 @@ module.exports = class AwtrixLightDevice extends Device {
     this.setAvailable().catch(this.error);
   }
 
-  async notify(msg, params) {
-    return this.api.notify(msg, params).catch((error) => this.error);
-  }
-
-  async notifyDismiss() {
-    return this.api.dismiss();
-  }
-
-  async rtttl(melody) {
-    return this.api.rtttl(melody);
-  }
-
-  async indicator(id, options) {
-    return this.api.indicator(id, options);
-  }
-
   async migrate() {
-    ['button_prev', 'button_next', 'awtrix_matrix'].forEach((name) => {
+    ['button_prev', 'button_next', 'awtrix_matrix'].forEach(async (name) => {
       if (this.hasCapability(name)) {
-        this.removeCapability(name);
+        await this.removeCapability(name);
       }
     });
 
     await this.addCapability('button_prev');
     await this.addCapability('button_next');
     await this.addCapability('awtrix_matrix');
+  }
+
+
+  async notify(msg, params) {
+    return this.api.notify(msg, params).catch((error) => this.error);
+  }
+
+
+  /** bckp ******* Commands ******* */
+  async cmdDismiss() {
+    return this.clientPost('notify/dismiss');
+  }
+
+  async cmdRtttl(melody: string): Promise<boolean> {
+    return this.clientPost('rtttl', melody);
+  }
+
+  async cmdPower(power: boolean): Promise<boolean> {
+    return this.clientPost('power', powerOptions({ power }));
+  }
+
+  async cmdIndicator(id: number | string, options: any): Promise<boolean> {
+    return this.clientPost(`indicator${indicatorNumber(id)}`, indicatorOptions(options));
+  }
+
+  async cmdAppNext(): Promise<boolean> {
+    return this.clientPost('nextapp');
+  }
+
+  async cmdAppPrev(): Promise<boolean> {
+    return this.clientPost('previousapp');
+  }
+
+  async cmdReboot(): Promise<boolean> {
+    return this.clientPost('reboot');
+  }
+
+  async cmdSetSettings(options: any): Promise<boolean> {
+    return this.clientPost('settings', settingOptions(options));
+  }
+
+  async cmdGetSettings(): Promise<object> {
+    return this.clientGet('settings');
+  }
+
+  /** bckp ******* NETWORK LAYER  ******* */
+  async clientGet(endpoint: string): Promise<object> {
+    const response = await this.client.get(endpoint);
+    this.processResponseCode(response.status, response.message);
+
+    return response.data || {};
+  }
+
+  async clientPost(endpoint: string, options?: any): Promise<boolean> {
+    const response = await this.client.post(endpoint, options);
+    this.processResponseCode(response.status, response.message);
+
+    return response?.status === Status.Ok;
+  }
+
+  processResponseCode(status: Status, message?: string): void {
+    switch (status) {
+      case Status.Ok:
+        this.setAvailableIfNot();
+        return;
+
+      case Status.AuthRequired:
+        this.setUnavailable('Authentication required!').catch((error) => this.log(error));
+        return;
+
+      case Status.AuthFailed:
+        this.setUnavailable('Authentication failed!').catch((error) => this.log(error));
+        return;
+
+      default:
+        this.setUnavailable(message ?? 'Unknown error.').catch((error) => this.log(error));
+    }
   }
 
 };

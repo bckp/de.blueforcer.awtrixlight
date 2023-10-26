@@ -7,15 +7,14 @@
     "lint": "eslint --ext .js,.ts --ignore-path .gitignore ."
   },
   "engines": {
-    "node": ">=8.10.0"
+    "node": ">=16.1.1"
   },
   "devDependencies": {
     "@tsconfig/node16": "^16.1.1",
     "@types/homey": "npm:homey-apps-sdk-v3-types@^0.3.5",
-    "@types/node": "^20.8.4",
+    "@types/node": "^20.8.9",
     "eslint": "^7.32.0",
     "eslint-config-athom": "^3.1.1",
-    "homey": "^3.0.7",
     "typescript": "^5.2.2"
   },
   "dependencies": {
