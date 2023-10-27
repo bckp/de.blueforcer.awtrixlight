@@ -5,6 +5,7 @@ import { indicatorNumber, indicatorOptions, powerOptions, settingOptions } from 
 import ApiClient from '../../lib/Api/Client';
 import { Status } from '../../lib/Api/Response';
 import Api from '../../lib/Api/Api';
+import { SettingOptions } from '../../lib/Types';
 
 module.exports = class AwtrixLightDevice extends Device {
 
@@ -242,8 +243,11 @@ module.exports = class AwtrixLightDevice extends Device {
     this.registerCapabilityListener('awtrix_matrix', async (value) => this.api.power(value));
 
     // Buttons
-    this.registerCapabilityListener('button_next', async (value) => this.api.appNext());
-    this.registerCapabilityListener('button_prev', async (value) => this.api.appPrev());
+    this.registerCapabilityListener('button_next', async () => {
+      this.api.appNext();
+    });
+    this.registerCapabilityListener('button_next', async () => this.cmdAppNext());
+    this.registerCapabilityListener('button_prev', async () => this.api.appPrev());
   }
 
   initPolling() {
@@ -300,81 +304,45 @@ module.exports = class AwtrixLightDevice extends Device {
     await this.addCapability('awtrix_matrix');
   }
 
-
-  async notify(msg, params) {
-    return this.api.notify(msg, params).catch((error) => this.error);
-  }
-
-
   /** bckp ******* Commands ******* */
-  async cmdDismiss() {
-    return this.clientPost('notify/dismiss');
+  async cmdNotify(msg: string, params: any): Promise<void> {
+    this.api.notify(msg, params).catch(this.error);
   }
 
-  async cmdRtttl(melody: string): Promise<boolean> {
-    return this.clientPost('rtttl', melody);
+  async cmdDismiss(): Promise<void> {
+    this.api.dismiss().catch(this.error);
   }
 
-  async cmdPower(power: boolean): Promise<boolean> {
-    return this.clientPost('power', powerOptions({ power }));
+  async cmdRtttl(melody: string): Promise<void> {
+    this.api.rtttl(melody).catch(this.error);
   }
 
-  async cmdIndicator(id: number | string, options: any): Promise<boolean> {
-    return this.clientPost(`indicator${indicatorNumber(id)}`, indicatorOptions(options));
+  async cmdPower(power: boolean): Promise<void> {
+    this.api.power(power).catch(this.error);
   }
 
-  async cmdAppNext(): Promise<boolean> {
-    return this.clientPost('nextapp');
+  async cmdIndicator(id: number | string, options: any): Promise<void> {
+    this.api.indicator(id, options).catch(this.error);
   }
 
-  async cmdAppPrev(): Promise<boolean> {
-    return this.clientPost('previousapp');
+  async cmdAppNext(): Promise<void> {
+    this.api.appNext().catch(this.error);
   }
 
-  async cmdReboot(): Promise<boolean> {
-    return this.clientPost('reboot');
+  async cmdAppPrev(): Promise<void> {
+    this.api.appPrev().catch(this.error);
   }
 
-  async cmdSetSettings(options: any): Promise<boolean> {
-    return this.clientPost('settings', settingOptions(options));
+  async cmdReboot(): Promise<void> {
+    this.api.reboot().catch(this.error);
   }
 
-  async cmdGetSettings(): Promise<object> {
-    return this.clientGet('settings');
+  async cmdSetSettings(options: any): Promise<void> {
+    this.api.setSettings(options).catch(this.error);
   }
 
-  /** bckp ******* NETWORK LAYER  ******* */
-  async clientGet(endpoint: string): Promise<object> {
-    const response = await this.client.get(endpoint);
-    this.processResponseCode(response.status, response.message);
-
-    return response.data || {};
-  }
-
-  async clientPost(endpoint: string, options?: any): Promise<boolean> {
-    const response = await this.client.post(endpoint, options);
-    this.processResponseCode(response.status, response.message);
-
-    return response?.status === Status.Ok;
-  }
-
-  processResponseCode(status: Status, message?: string): void {
-    switch (status) {
-      case Status.Ok:
-        this.setAvailableIfNot();
-        return;
-
-      case Status.AuthRequired:
-        this.setUnavailable('Authentication required!').catch((error) => this.log(error));
-        return;
-
-      case Status.AuthFailed:
-        this.setUnavailable('Authentication failed!').catch((error) => this.log(error));
-        return;
-
-      default:
-        this.setUnavailable(message ?? 'Unknown error.').catch((error) => this.log(error));
-    }
+  async cmdGetSettings(): Promise<SettingOptions|void> {
+    return this.api.getSettings().catch(this.error);
   }
 
 };

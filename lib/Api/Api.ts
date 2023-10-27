@@ -3,10 +3,12 @@ import Client from './Client';
 import {
   indicatorNumber,
   indicatorOptions,
+  notifyOptions,
   powerOptions,
   settingOptions,
 } from '../Normalizer';
 import { Status } from './Response';
+import { SettingOptions } from '../Types';
 
 export default class Api {
 
@@ -59,11 +61,15 @@ export default class Api {
     return this.clientPost('reboot');
   }
 
+  async notify(msg: string, options: object): Promise<boolean> {
+    return this.clientPost('notify', notifyOptions({ text: msg, ...options }));
+  }
+
   async setSettings(options: any): Promise<boolean> {
     return this.clientPost('settings', settingOptions(options));
   }
 
-  async getSettings(): Promise<object> {
+  async getSettings(): Promise<SettingOptions> {
     return this.clientGet('settings');
   }
 

@@ -1,5 +1,12 @@
-import { Driver } from 'homey';
+import { Device, Driver } from 'homey';
 import PairSession from 'homey/lib/PairSession';
+import AwtrixLightDevice from './device';
+
+type ListenerArgs = {
+  device: AwtrixLightDevice
+} & {
+  [key: string]: string | number | boolean;
+};
 
 module.exports = class UlanziAwtrix extends Driver {
 
@@ -12,26 +19,27 @@ module.exports = class UlanziAwtrix extends Driver {
 
   async initFlows(): Promise<void> {
     // Notification
-    this.homey.flow.getActionCard('notification').registerRunListener(async (args, state) => {
+    this.homey.flow.getActionCard('notification').registerRunListener(async (args) => {
       args.device.notify(args.msg, { color: args.color, duration: Math.ceil(args.duration / 1000), icon: args.icon });
     });
 
     // Sticky notification
-    this.homey.flow.getActionCard('notificationSticky').registerRunListener(async (args, state) => {
+    this.homey.flow.getActionCard('notificationSticky').registerRunListener(async (args: ListenerArgs) => {
       args.device.notify(args.msg, { color: args.color, hold: true, icon: args.icon });
     });
-    this.homey.flow.getActionCard('notificationDismiss').registerRunListener(async (args, state) => {
+    this.homey.flow.getActionCard('notificationDismiss').registerRunListener(async (args) => {
       args.device.notifyDismiss();
     });
 
     // Displau
-    this.homey.flow.getActionCard('displaySet').registerRunListener(async (args, state) => {
-      args.device.api.power(args.power === '1').catch(this.error);
+    this.homey.flow.getActionCard('displaySet').registerRunListener(async (args) => {
+      args.device.cmdPower(args.power === '1');
     });
 
     // RTTTL sound
-    this.homey.flow.getActionCard('playRTTTL').registerRunListener(async (args, state) => {
-      args.device.rtttl(args.rtttl);
+    this.homey.flow.getActionCard('playRTTTL').registerRunListener(async (args) => {
+      args.device.cmdRtttl(args.rtttl);
+      args.device.api.rtttl(args.rtttl);
     });
 
     // Indicators
