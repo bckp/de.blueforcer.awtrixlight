@@ -10,14 +10,14 @@ import {
 } from '../Normalizer';
 import { Status } from './Response';
 import { AwtrixImage, AwtrixStats, SettingOptions } from '../Types';
-import { AwtrixLightDevice } from '../../drivers/awtrixlight';
+import { DeviceFailer } from '../../drivers/awtrixlight/failer';
 
 export default class Api {
 
   client: Client;
-  device: AwtrixLightDevice;
+  device: Device & DeviceFailer;
 
-  constructor(client: Client, device: AwtrixLightDevice) {
+  constructor(client: Client, device: Device & DeviceFailer) {
     this.client = client;
     this.device = device;
   }

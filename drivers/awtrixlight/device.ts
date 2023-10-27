@@ -5,14 +5,15 @@ import ApiClient from '../../lib/Api/Client';
 import { Status } from '../../lib/Api/Response';
 import Api from '../../lib/Api/Api';
 import { AwtrixImage, AwtrixStats, SettingOptions } from '../../lib/Types';
+import { DeviceFailer } from './failer';
 
 const RebootFields: ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'] = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
 const PollInterval: number = 30000;
 
-export default class AwtrixLightDevice extends Device {
+export default class AwtrixLightDevice extends Device implements DeviceFailer {
 
   api!: Api;
-  pool!: NodeJS.Timeout;
+  poll!: NodeJS.Timeout;
   failCritical: boolean = false;
   failCount: number = 0;
   failThreshold: number = 3;
@@ -210,9 +211,9 @@ export default class AwtrixLightDevice extends Device {
         UPPERCASE: !!settings.UPPERCASE,
         TEFF: settings?.TEFF?.toString(),
       });
-    } catch (error: any ) {
+    } catch (error: any) {
       this.log(error.message || error);
-    };
+    }
   }
 
   connected() {
@@ -344,4 +345,4 @@ export default class AwtrixLightDevice extends Device {
     this.failCritical = value;
   }
 
-};
+}
