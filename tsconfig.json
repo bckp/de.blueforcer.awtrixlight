@@ -3,11 +3,11 @@
   "compilerOptions": {
     "allowJs": true,
     "outDir": ".homeybuild/",
-    "target": "es6",
-    "lib": ["es6", "dom"],
-    "sourceMap": true,
-    "baseUrl": ".",
-    "module": "esnext",
-    "moduleResolution": "node",
-  }
+    "target": "ES6",
+    "lib": ["es6", "dom"]
+  },
+  "paths": {
+    "drivers/*": ["./drivers/*"],
+    "lib/*": ["./lib/*"],
+},
 }
