@@ -90,13 +90,13 @@ export const appName = (id: string): string => {
   return `${appPrefix}${id.replace(/[^a-z0-9]+/g, '').toLowerCase()}`;
 };
 
-export const powerOptions = (options: any): PowerOptions => {
+export const powerOptions = (options: Record<'power', any>): PowerOptions => {
   return {
     power: !!options.power,
   };
 };
 
-const basicOptions = (options: any): BaseOptions => {
+const basicOptions = (options: Record<keyof BaseOptions, any>): BaseOptions => {
   const opt: BaseOptions = {};
 
   if (options.text && isString(options.text)) {
@@ -172,7 +172,7 @@ const basicOptions = (options: any): BaseOptions => {
   return opt;
 };
 
-export const notifyOptions = (options: any): NotifyOptions => {
+export const notifyOptions = (options: Record<keyof NotifyOptions, any>): NotifyOptions => {
   const opt: NotifyOptions = basicOptions(options);
 
   if (options.hold) {
@@ -212,47 +212,32 @@ export const appOptions = (options: any): AppOptions => {
   return opt;
 };
 
-export const settingOptions = (options: any): SettingOptions => {
+const defaultSettingsOptions: SettingOptions = {
+  ABRI: false,
+  ATRANS: false,
+  BAT: false,
+  BLOCKN: false,
+  DAT: false,
+  HUM: false,
+  TEFF: undefined,
+  TEMP: false,
+  TIM: false,
+  UPPERCASE: false,
+}
+
+type OptionalSettingOptions = keyof Omit<SettingOptions, 'TEFF'>
+
+export const settingOptions = (options: Record<string, any>): SettingOptions => {
   const opt: SettingOptions = {};
-
-  if (options.TIM) {
-    opt.TIM = !!options.TIM;
+  const { TEFF, ...optionalOptions } = {...defaultSettingsOptions, ...options}
+  if (TEFF) {
+    opt.TEFF = toTransitionEffect(TEFF);
   }
 
-  if (options.DAT) {
-    opt.DAT = !!options.DAT;
-  }
-
-  if (options.HUM) {
-    opt.HUM = !!options.HUM;
-  }
-
-  if (options.TEMP) {
-    opt.TEMP = !!options.TEMP;
-  }
-
-  if (options.BAT) {
-    opt.BAT = !!options.BAT;
-  }
-
-  if (options.ABRI) {
-    opt.ABRI = !!options.ABRI;
-  }
-
-  if (options.ATRANS) {
-    opt.ATRANS = !!options.ATRANS;
-  }
-
-  if (options.BLOCKN) {
-    opt.BLOCKN = !!options.BLOCKN;
-  }
-
-  if (options.UPPERCASE) {
-    opt.UPPERCASE = !!options.UPPERCASE;
-  }
-
-  if (options.TEFF) {
-    opt.TEFF = toTransitionEffect(options.TEFF);
+  for (const key in optionalOptions) {
+    if (key in options) {
+      opt[key as OptionalSettingOptions] = !!options[key];
+    }
   }
 
   return opt;
