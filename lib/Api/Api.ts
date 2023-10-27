@@ -30,6 +30,10 @@ export default class Api {
     this.client.setIp(ip);
   }
 
+  setDebug(debug: boolean) {
+    this.client.setDebug(debug);
+  }
+
   async isAvaible(): Promise<boolean> {
     return await this.clientVerify() === Status.Ok;
   }
@@ -63,8 +67,8 @@ export default class Api {
     return this.clientPost('reboot');
   }
 
-  async notify(msg: string, options: object): Promise<boolean> {
-    return this.clientPost('notify', notifyOptions({ text: msg, ...options}));
+  async notify(msg: string, options: any): Promise<boolean> {
+    return this.clientPost('notify', notifyOptions({ ...options, text: msg }));
   }
 
   async setSettings(options: any): Promise<boolean> {

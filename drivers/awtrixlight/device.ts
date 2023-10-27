@@ -23,9 +23,12 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
    */
   async onInit() {
     this.log('AwtrixLightDevice has been initialized');
-    await this.setUnavailable(this.homey.__('loading'));
-    await this.migrate();
-
+    try {
+      await this.setUnavailable(this.homey.__('loading'));
+      await this.migrate();
+    } catch (error: any) {
+      this.error(error.message || error);
+    }
     // Setup flows
     this.initFlows();
 
@@ -34,6 +37,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
       new ApiClient({ ip: this.getStoreValue('address') }),
       this,
     );
+    this.api.setDebug(true);
 
     // Setup user and pass if exists
     const settings = await this.getSettings();
@@ -44,7 +48,10 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
 
     // Test device if possible
     if (!await this.testDevice()) {
+      this.log('Device not available, trying to rediscover');
       this.tryRediscover();
+    } else {
+      await this.setAvailable();
     }
     this.homey.clearInterval(this.poll);
 
@@ -53,6 +60,8 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
       this.failsReset();
       this.failsCritical(true);
       if (this.getAvailable()) {
+        this.log('Capabilities:', this.getCapabilities());
+
         this.log('Device availalible');
         this.refreshAll();
         this.initPolling();
@@ -263,19 +272,37 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
   }
 
   async migrate() {
-    ['button_prev', 'button_next', 'awtrix_matrix'].forEach(async (name) => {
-      if (this.hasCapability(name)) {
-        await this.removeCapability(name);
+    this.log('Migrating device...');
+    this.log('onInit', this.getCapabilities());
+
+    try {
+      if (this.hasCapability('button_prev')) {
+        await this.removeCapability('button_prev');
+        this.log('removed capability button_prev');
       }
-    });
+      if (this.hasCapability('button_next')) {
+        await this.removeCapability('button_next');
+        this.log('removed capability button_next');
+      }
+      if (this.hasCapability('awtrix_matrix')) {
+        await this.removeCapability('awtrix_matrix');
+        this.log('removed capability awtrix_matrix');
+      }
 
-    await this.addCapability('button_prev');
-    await this.addCapability('button_next');
-    await this.addCapability('awtrix_matrix');
+      await this.addCapability('button_prev');
+      this.log('added capability button_prev');
+      await this.addCapability('button_next');
+      this.log('added capability button_next');
+      await this.addCapability('awtrix_matrix');
+      this.log('added capability awtrix_matrix');
 
-    // Add rssi capability if not exists
-    if (!this.hasCapability('rssi')) {
-      await this.addCapability('rssi');
+      // Add rssi capability if not exists
+      if (!this.hasCapability('rssi')) {
+        await this.addCapability('rssi');
+        this.log('added capability rssi');
+      }
+    } catch (error: any) {
+      this.error(error);
     }
   }
 
@@ -346,3 +373,5 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
   }
 
 }
+
+module.exports = AwtrixLightDevice;

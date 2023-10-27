@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import FormData from 'form-data';
 import { Response, Status } from './Response';
 
@@ -59,68 +59,37 @@ export default class Client {
   }
 
   async #getRequest(url: string): Promise<Response> {
-    // eslint-disable-next-line
-    this.debug && this.log(`GET ${url}`);
-
     try {
       const result = await axios.get(url, {
         headers: this.#getHeaders(),
       });
+      this.#debugInfo('GET: ', url, result);
       return {
         status: this.#translateStatusCode(result.status),
         data: result.data,
       };
-    } catch (error) {
-      let message = 'unknown error';
-      let status = Status.Error;
-
-      if (axios.isAxiosError(error)) {
-        message = error.message;
-        status = this.#translateStatusCode(error.response?.status || 500);
-      }
-
-      return {
-        status,
-        message,
-      };
+    } catch (error: any) {
+      return this.#requestError(error, url);
     }
   }
 
   async post(cmd: string, data: any): Promise<Response> {
     const url: string = this.#getApiUrl(cmd);
-
-    // eslint-disable-next-line
-    this.debug && this.log(`GET ${url}`);
-
     try {
       const result = await axios.post(url, data, {
         headers: this.#getHeaders(),
       });
+      this.#debugInfo('POST: ', url, result);
       return {
         status: this.#translateStatusCode(result.status),
       };
-    } catch (error) {
-      let status = Status.Error;
-      let message = 'unknown error';
-
-      if (axios.isAxiosError(error)) {
-        status = this.#translateStatusCode(error.response?.status || 500);
-        message = error.message;
-      }
-
-      return {
-        status,
-        message,
-      };
+    } catch (error: any) {
+      return this.#requestError(error, url);
     }
   }
 
   async upload(path: string, form: FormData): Promise<Response> {
     const url: string = this.#getUrl(path);
-
-    // eslint-disable-next-line
-    this.debug && this.log(`POST(upload) ${url}`);
-
     try {
       const result = await axios.post(url, form, {
         headers: {
@@ -128,14 +97,12 @@ export default class Client {
           ...form.getHeaders(),
         },
       });
+      this.#debugInfo('POST(upload): ', url, result);
       return {
         status: this.#translateStatusCode(result.status),
       };
     } catch (error: any) {
-      return {
-        status: this.#translateStatusCode(error.response?.status || 500),
-        message: error.message || 'unknown error',
-      };
+      return this.#requestError(error, url);
     }
   }
 
@@ -168,6 +135,45 @@ export default class Client {
     return {
       Authorization: `Basic ${token}`,
     };
+  }
+
+  #requestError(error: any, url: string): Response {
+    this.#debugError('RESULT: ', url, error.message || error);
+
+    let message = 'unknown error';
+    let status = Status.Error;
+
+    if (axios.isAxiosError(error)) {
+      message = error.message;
+      status = this.#translateStatusCode(error.response?.status || 500);
+    }
+
+    return {
+      status,
+      message,
+    };
+  }
+
+  #debugInfo(message: string, url: string, args?: AxiosResponse): void {
+    if (!this.debug) {
+      return;
+    }
+
+    const dump: {status?: number, statusText?: string, data?: any, headers?: any} = {};
+    if (args) {
+      dump.status = args.status;
+      dump.statusText = args.statusText;
+      dump.data = args.data;
+      dump.headers = args.headers;
+    }
+    this.log(message, url, dump);
+  }
+
+  #debugError(message: string, url: string, arg: any): void {
+    if (!this.debug) {
+      return;
+    }
+    this.log(message, url, arg);
   }
 
 }

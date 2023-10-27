@@ -138,4 +138,6 @@ export default class UlanziAwtrix extends Driver {
     });
   }
 
-};
+}
+
+module.exports = UlanziAwtrix;
