@@ -1,23 +1,20 @@
 import fs from 'fs';
 // import mime from 'mime-types';
-import { Device } from 'homey';
+import { Device, DiscoveryResultMDNSSD } from 'homey';
 import { indicatorNumber, indicatorOptions, powerOptions, settingOptions } from '../../lib/Normalizer';
 import ApiClient from '../../lib/Api/Client';
 import { Status } from '../../lib/Api/Response';
 import Api from '../../lib/Api/Api';
 import { SettingOptions } from '../../lib/Types';
+import { DiscoveryResult } from 'homey/lib/Device';
+
+const RebootFields: ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
+const PollInterval: 30000;
 
 module.exports = class AwtrixLightDevice extends Device {
 
-  static RebootFields = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
-  static PollInterval = 30000;
-
-  // @deprecated
-  static REBOOT_FIELDS = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
-  // @deprecated
-  static POLL_INTERVAL = 60000;
-
   api!: Api;
+  pool!: NodeJS.Timeout;
 
   /**
    * onInit is called when the device is initialized.
@@ -43,25 +40,22 @@ module.exports = class AwtrixLightDevice extends Device {
       this.api.setCredentials(settings.user, settings.pass);
     }
 
-    // Clear interval and verify device
-    this.testDevice().then((result) => {
-      this.homey.clearInterval(this.poll);
-      result = result || this.tryRediscover();
-      if (result) {
-        this.log('Device availalible');
+    // Test device if possible
+    const device = await this.testDevice();
+    if (!await this.testDevice()) {
+      this.tryRediscover();
+    }
+    this.homey.clearInterval(this.poll);
 
-        // Refresh all data
-        this.refreshAll();
-
-        // Initialize polling
-        this.initPolling();
-
-        // Welcome message
-        this.connected();
-      } else {
-        this.log('Pooling not set, there is issue with device');
-      }
-    }).catch((error) => this.error);
+    // Setup polling
+    if (this.getAvailable()) {
+      this.log('Device availalible');
+      this.refreshAll();
+      this.initPolling();
+      this.connected();
+    } else {
+      this.log('Pooling not set, there is issue with device');
+    }
   }
 
   /**
@@ -73,16 +67,14 @@ module.exports = class AwtrixLightDevice extends Device {
 
     // Upload files
     fs.readdir(`${__dirname}/assets/images/icons`, (err, files) => {
+      if (files) {
+        files.forEach((file) => this.api.uploadImage(fs.readFileSync(`${__dirname}/assets/images/icons/${file}`), file));
+      }
+
       if (err) {
         this.error(err);
         return;
       }
-
-      if (!files) {
-        return;
-      }
-
-      files.forEach((file) => this.api._uploadImage(file, fs.readFileSync(`${__dirname}/assets/images/icons/${file}`)));
     });
   }
 
@@ -133,25 +125,24 @@ module.exports = class AwtrixLightDevice extends Device {
    */
   async onDeleted() {
     this.log('AwtrixLightDevice has been deleted');
-
     this.homey.clearInterval(this.poll);
   }
 
-  onDiscoveryResult(discoveryResult) {
+  onDiscoveryResult(discoveryResult: DiscoveryResultMDNSSD) {
     return discoveryResult.id === this.getData().id;
   }
 
-  async onDiscoveryAvailable(discoveryResult) {
+  async onDiscoveryAvailable(discoveryResult: DiscoveryResultMDNSSD) {
     if ('address' in discoveryResult && this.getStoreValue('address') !== discoveryResult.address) {
       this.onDiscoveryAddressChanged(discoveryResult);
-      await this.setAvailableIfNot();
+      await this.setAvailable();
     }
   }
 
-  onDiscoveryAddressChanged(discoveryResult) {
+  onDiscoveryAddressChanged(discoveryResult: DiscoveryResultMDNSSD) {
     this.api.setIp(discoveryResult.address);
     this.setStoreValue('address', discoveryResult.address).catch((error) => this.error(error));
-    this.testDevice().then((result) => this.log('address change with result', result));
+    this.testDevice().then((result) => this.log('Device address changed with result: ', result));
   }
 
   refreshAll() {
@@ -162,7 +153,7 @@ module.exports = class AwtrixLightDevice extends Device {
 
   tryRediscover() {
     const result = this.driver.getDiscoveryStrategy().getDiscoveryResult(this.getData().id);
-    if (result) {
+    if (result && result instanceof DiscoveryResultMDNSSD) {
       this.onDiscoveryAvailable(result);
     }
   }
@@ -259,37 +250,16 @@ module.exports = class AwtrixLightDevice extends Device {
       if (!this.getAvailable()) {
         this.tryRediscover();
       }
-    }, AwtrixLightDevice.POLL_INTERVAL);
+    }, this.);
   }
 
-  async testDevice() {
-    return this.api.test().then((result) => {
-      this.log(result);
-      switch (result.state) {
-        case AwtrixClientResponses.LoginRequired:
-          this.setUnavailable('Repair required!').catch(this.error);
-          return false;
-
-        case AwtrixClientResponses.NotFound:
-          this.setUnavailable('Device not found!').catch(this.error);
-          return false;
-
-        case AwtrixClientResponses.Error:
-          this.setUnavailable('Network error!').catch(this.error);
-          return false;
-
-        default:
-          this.setAvailable().catch(this.error);
-      }
+  async testDevice(user?: string, pass?: string) {
+    const status = await this.api.clientVerify(true, user, pass).catch(this.error);
+    if (status === Status.Ok) {
       return true;
-    });
-  }
-
-  async setAvailableIfNot() {
-    if (this.getAvailable()) {
-      return;
     }
-    this.setAvailable().catch(this.error);
+
+    return false;
   }
 
   async migrate() {

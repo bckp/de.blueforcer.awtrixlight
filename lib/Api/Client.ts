@@ -1,4 +1,5 @@
 import axios from 'axios';
+import FormData from 'form-data';
 import { Response, Status } from './Response';
 
 type ClientOptions = {
@@ -50,8 +51,14 @@ export default class Client {
   }
 
   async get(cmd: string): Promise<Response> {
-    const url: string = this.#getApiUrl(cmd);
+    return this.#getRequest(this.#getApiUrl(cmd));
+  }
 
+  async getDirect(path: string): Promise<Response> {
+    return this.#getRequest(this.#getUrl(path));
+  }
+
+  async #getRequest(url: string): Promise<Response> {
     // eslint-disable-next-line
     this.debug && this.log(`GET ${url}`);
 
@@ -106,6 +113,38 @@ export default class Client {
         message,
       };
     }
+  }
+
+  async upload(path: string, form: FormData): Promise<Response> {
+    const url: string = this.#getUrl(path);
+
+    // eslint-disable-next-line
+    this.debug && this.log(`POST(upload) ${url}`);
+
+    try {
+      const result = await axios.post(url, form, {
+        headers: {
+          ...this.#getHeaders(),
+          ...form.getHeaders(),
+        },
+      });
+      return {
+        status: this.#translateStatusCode(result.status),
+      };
+    } catch (error) {
+      let status = Status.Error;
+      let message = 'unknown error';
+
+      if (axios.isAxiosError(error)) {
+        status = this.#translateStatusCode(error.response?.status || 500);
+        message = error.message;
+      }
+    }
+
+    return {
+      status,
+      message,
+    };
   }
 
   #translateStatusCode(code: number): Status {

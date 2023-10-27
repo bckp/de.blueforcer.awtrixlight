@@ -1,4 +1,5 @@
 import { Device } from 'homey';
+import FormData from 'form-data';
 import Client from './Client';
 import {
   indicatorNumber,
@@ -73,6 +74,17 @@ export default class Api {
     return this.clientGet('settings');
   }
 
+  async uploadImage(data: any, name: string): Promise<boolean> {
+    const form = new FormData();
+    form.append('image', data, { filepath: `/ICONS/${name}` });
+
+    return this.clientUpload('edit', form);
+  }
+
+  async getImages(): Promise<object> {
+    return this.clientGetDirect('images');
+  }
+
   /** bckp ******* NETWORK LAYER  ******* */
   async clientGet(endpoint: string): Promise<object> {
     const response = await this.client.get(endpoint);
@@ -88,8 +100,24 @@ export default class Api {
     return response?.status === Status.Ok;
   }
 
-  async clientVerify(): Promise<Status> {
-    return (await this.client.get('stats')).status;
+  async clientUpload(endpoint: string, data?: FormData): Promise<boolean> {
+    const response = await this.client.upload(endpoint, data);
+    this.processResponseCode(response.status, response.message);
+
+    return response?.status === Status.Ok;
+  }
+
+  async clientVerify(verify: boolean = false, user?: string, pass?: string): Promise<Status> {
+    if (user && pass) {
+      this.client.setCredentials(user, pass);
+    }
+    const response = await this.client.get('stats');
+
+    if (verify) {
+      this.processResponseCode(response.status, response.message);
+    }
+
+    return response.status;
   }
 
   processResponseCode(status: Status, message?: string): void {
