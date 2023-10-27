@@ -9,14 +9,15 @@ import {
   settingOptions,
 } from '../Normalizer';
 import { Status } from './Response';
-import { SettingOptions } from '../Types';
+import { AwtrixImage, AwtrixStats, SettingOptions } from '../Types';
+import { AwtrixLightDevice } from '../../drivers/awtrixlight';
 
 export default class Api {
 
   client: Client;
-  device: Device;
+  device: AwtrixLightDevice;
 
-  constructor(client: Client, device: Device) {
+  constructor(client: Client, device: AwtrixLightDevice) {
     this.client = client;
     this.device = device;
   }
@@ -63,7 +64,7 @@ export default class Api {
   }
 
   async notify(msg: string, options: object): Promise<boolean> {
-    return this.clientPost('notify', notifyOptions({ text: msg, ...options }));
+    return this.clientPost('notify', notifyOptions({ text: msg, ...options}));
   }
 
   async setSettings(options: any): Promise<boolean> {
@@ -74,6 +75,10 @@ export default class Api {
     return this.clientGet('settings');
   }
 
+  async getStats(): Promise<AwtrixStats> {
+    return this.clientGet('stats');
+  }
+
   async uploadImage(data: any, name: string): Promise<boolean> {
     const form = new FormData();
     form.append('image', data, { filepath: `/ICONS/${name}` });
@@ -81,16 +86,23 @@ export default class Api {
     return this.clientUpload('edit', form);
   }
 
-  async getImages(): Promise<object> {
-    return this.clientGetDirect('images');
+  async getImages(): Promise<AwtrixImage[]> {
+    return this.clientGetDirect('list?dir=/ICONS/');
   }
 
   /** bckp ******* NETWORK LAYER  ******* */
-  async clientGet(endpoint: string): Promise<object> {
+  async clientGet<T>(endpoint: string): Promise<T> {
     const response = await this.client.get(endpoint);
     this.processResponseCode(response.status, response.message);
 
     return response.data || {};
+  }
+
+  async clientGetDirect(endpoint: string): Promise<any> {
+    const response = await this.client.getDirect(endpoint);
+    this.processResponseCode(response.status, response.message);
+
+    return response.data || null;
   }
 
   async clientPost(endpoint: string, options?: any): Promise<boolean> {
@@ -100,7 +112,7 @@ export default class Api {
     return response?.status === Status.Ok;
   }
 
-  async clientUpload(endpoint: string, data?: FormData): Promise<boolean> {
+  async clientUpload(endpoint: string, data: FormData): Promise<boolean> {
     const response = await this.client.upload(endpoint, data);
     this.processResponseCode(response.status, response.message);
 
@@ -126,19 +138,28 @@ export default class Api {
         if (this.device.getAvailable()) {
           return;
         }
-        this.device.setAvailable().catch((error) => this.device.log(error.message ?? error));
+        this.device.setAvailable().catch((error: any) => this.device.log(error.message ?? error));
+        this.device.failsReset();
         return;
 
       case Status.AuthRequired:
-        this.device.setUnavailable('Authentication required!').catch((error) => this.device.log(error));
+        this.processUnavailability('Authentication required!');
         return;
 
       case Status.AuthFailed:
-        this.device.setUnavailable('Authentication failed!').catch((error) => this.device.log(error));
+        this.processUnavailability('Authentication failed!');
         return;
 
       default:
-        this.device.setUnavailable(message ?? 'Unknown error.').catch((error) => this.device.log(error));
+        this.processUnavailability(message ?? 'Unknown error.');
+    }
+  }
+
+  processUnavailability(message: string): void {
+    if (this.device.failsExceeded()) {
+      this.device.setUnavailable(message).catch((error: any) => this.device.log(error));
+    } else {
+      this.device.failsAdd();
     }
   }
 

@@ -3,12 +3,37 @@ import PairSession from 'homey/lib/PairSession';
 import AwtrixLightDevice from './device';
 
 type ListenerArgs = {
-  device: AwtrixLightDevice
-} & {
-  [key: string]: string | number | boolean;
+  device: AwtrixLightDevice,
 };
 
-module.exports = class UlanziAwtrix extends Driver {
+type ListenerArgsDisplay = ListenerArgs & {
+  power: string,
+}
+
+type ListenerArgsRtttl = ListenerArgs & {
+  rtttl: string,
+}
+
+type ListenerArgsIndicator = ListenerArgs & {
+  indicator: string,
+  color?: string,
+  duration?: number,
+  effect?: string,
+}
+
+type ListenerArgsNotification = ListenerArgs & {
+  msg: string,
+  color: string,
+  duration?: number,
+  icon?: string
+}
+
+/*  duration?: number,
+  msg?: string,
+} & {
+  [key: string]: string | number | boolean;
+} */
+export default class UlanziAwtrix extends Driver {
 
   static EnableManualAdd = false;
 
@@ -19,35 +44,36 @@ module.exports = class UlanziAwtrix extends Driver {
 
   async initFlows(): Promise<void> {
     // Notification
-    this.homey.flow.getActionCard('notification').registerRunListener(async (args) => {
-      args.device.notify(args.msg, { color: args.color, duration: Math.ceil(args.duration / 1000), icon: args.icon });
+    this.homey.flow.getActionCard('notification').registerRunListener(async (args: ListenerArgsNotification) => {
+      const duration = typeof args.duration === 'number' ? Math.ceil(args.duration/1000) : undefined;
+      args.device.cmdNotify(args.msg, { color: args.color, duration, icon: args.icon });
     });
 
     // Sticky notification
-    this.homey.flow.getActionCard('notificationSticky').registerRunListener(async (args: ListenerArgs) => {
-      args.device.notify(args.msg, { color: args.color, hold: true, icon: args.icon });
+    this.homey.flow.getActionCard('notificationSticky').registerRunListener(async (args: ListenerArgsNotification) => {
+      const msg = args.msg || '';
+      args.device.cmdNotify(msg, { color: args.color, hold: true, icon: args.icon });
     });
-    this.homey.flow.getActionCard('notificationDismiss').registerRunListener(async (args) => {
-      args.device.notifyDismiss();
+    this.homey.flow.getActionCard('notificationDismiss').registerRunListener(async (args: ListenerArgs) => {
+      args.device.cmdDismiss();
     });
 
     // Displau
-    this.homey.flow.getActionCard('displaySet').registerRunListener(async (args) => {
+    this.homey.flow.getActionCard('displaySet').registerRunListener(async (args: ListenerArgsDisplay) => {
       args.device.cmdPower(args.power === '1');
     });
 
     // RTTTL sound
-    this.homey.flow.getActionCard('playRTTTL').registerRunListener(async (args) => {
+    this.homey.flow.getActionCard('playRTTTL').registerRunListener(async (args: ListenerArgsRtttl) => {
       args.device.cmdRtttl(args.rtttl);
-      args.device.api.rtttl(args.rtttl);
     });
 
     // Indicators
-    this.homey.flow.getActionCard('indicator').registerRunListener(async (args) => {
-      args.device.indicator(args.indicator, { color: args.color, duration: args.duration, effect: args.effect });
+    this.homey.flow.getActionCard('indicator').registerRunListener(async (args: ListenerArgsIndicator) => {
+      args.device.cmdIndicator(args.indicator, { color: args.color, duration: args.duration, effect: args.effect });
     });
-    this.homey.flow.getActionCard('indicatorDismiss').registerRunListener(async (args) => {
-      args.device.indicator(args.indicator, { color: '0' });
+    this.homey.flow.getActionCard('indicatorDismiss').registerRunListener(async (args: ListenerArgsIndicator) => {
+      args.device.cmdIndicator(args.indicator, {});
     });
   }
 

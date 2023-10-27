@@ -229,7 +229,7 @@ type OptionalSettingOptions = keyof Omit<SettingOptions, 'TEFF'>
 
 export const settingOptions = (options: Record<string, any>): SettingOptions => {
   const opt: SettingOptions = {};
-  const { TEFF, ...optionalOptions } = {...defaultSettingsOptions, ...options}
+  const { TEFF, ...optionalOptions } = { ...defaultSettingsOptions, ...options }
   if (TEFF) {
     opt.TEFF = toTransitionEffect(TEFF);
   }

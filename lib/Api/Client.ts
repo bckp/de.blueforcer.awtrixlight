@@ -131,20 +131,12 @@ export default class Client {
       return {
         status: this.#translateStatusCode(result.status),
       };
-    } catch (error) {
-      let status = Status.Error;
-      let message = 'unknown error';
-
-      if (axios.isAxiosError(error)) {
-        status = this.#translateStatusCode(error.response?.status || 500);
-        message = error.message;
-      }
+    } catch (error: any) {
+      return {
+        status: this.#translateStatusCode(error.response?.status || 500),
+        message: error.message || 'unknown error',
+      };
     }
-
-    return {
-      status,
-      message,
-    };
   }
 
   #translateStatusCode(code: number): Status {

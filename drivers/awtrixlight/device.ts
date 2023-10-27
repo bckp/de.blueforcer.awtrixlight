@@ -1,20 +1,21 @@
 import fs from 'fs';
 // import mime from 'mime-types';
 import { Device, DiscoveryResultMDNSSD } from 'homey';
-import { indicatorNumber, indicatorOptions, powerOptions, settingOptions } from '../../lib/Normalizer';
 import ApiClient from '../../lib/Api/Client';
 import { Status } from '../../lib/Api/Response';
 import Api from '../../lib/Api/Api';
-import { SettingOptions } from '../../lib/Types';
-import { DiscoveryResult } from 'homey/lib/Device';
+import { AwtrixImage, AwtrixStats, SettingOptions } from '../../lib/Types';
 
-const RebootFields: ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
-const PollInterval: 30000;
+const RebootFields: ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'] = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
+const PollInterval: number = 30000;
 
-module.exports = class AwtrixLightDevice extends Device {
+export default class AwtrixLightDevice extends Device {
 
   api!: Api;
   pool!: NodeJS.Timeout;
+  failCritical: boolean = false;
+  failCount: number = 0;
+  failThreshold: number = 3;
 
   /**
    * onInit is called when the device is initialized.
@@ -41,20 +42,25 @@ module.exports = class AwtrixLightDevice extends Device {
     }
 
     // Test device if possible
-    const device = await this.testDevice();
     if (!await this.testDevice()) {
       this.tryRediscover();
     }
     this.homey.clearInterval(this.poll);
 
     // Setup polling
-    if (this.getAvailable()) {
-      this.log('Device availalible');
-      this.refreshAll();
-      this.initPolling();
-      this.connected();
-    } else {
-      this.log('Pooling not set, there is issue with device');
+    try {
+      this.failsReset();
+      this.failsCritical(true);
+      if (this.getAvailable()) {
+        this.log('Device availalible');
+        this.refreshAll();
+        this.initPolling();
+        this.connected();
+      } else {
+        this.log('Pooling not set, there is issue with device');
+      }
+    } finally {
+      this.failsCritical(false);
     }
   }
 
@@ -72,51 +78,38 @@ module.exports = class AwtrixLightDevice extends Device {
       }
 
       if (err) {
-        this.error(err);
-        return;
+        this.log(err);
       }
     });
   }
 
-  /**
-   * onSettings is called when the user updates the device's settings.
-   * @param {object} event the onSettings event data
-   * @param {object} event.oldSettings The old settings object
-   * @param {object} event.newSettings The new settings object
-   * @param {string[]} event.changedKeys An array of keys changed since the previous version
-   * @returns {Promise<string|void>} return a custom message that will be displayed
-   */
-  async onSettings({ oldSettings, newSettings, changedKeys }) {
+  async onSettings({ oldSettings, newSettings, changedKeys }: {
+    oldSettings: { [key: string]: boolean | string | number | undefined | null };
+    newSettings: { [key: string]: boolean | string | number | undefined | null };
+    changedKeys: string[];
+  }): Promise<string | void> {
     this.log('AwtrixLightDevice settings where changed', oldSettings, newSettings, changedKeys);
 
     // If user or pass changed, update credentials
-    if (changedKeys.some((key) => ['user', 'pass'].includes(key))) {
-      this.log('New user and password set, testing...');
-      this.api.setCredentials(newSettings.user, newSettings.pass);
-      const test = await this.api.test();
-      if (test.state === AwtrixClientResponses.LoginFailed) {
+    if (typeof newSettings.user === 'string' && typeof newSettings.pass === 'string') {
+      if (!await this.testDevice(newSettings.user, newSettings.pass)) {
+        this.api.setCredentials(
+          typeof oldSettings.user === 'string' ? oldSettings.user : '',
+          typeof oldSettings.pass === 'string' ? oldSettings.pass : '',
+        );
         throw new Error(this.homey.__('login.invalidCredentials'));
       }
 
-      if (test.state !== AwtrixClientResponses.Ok) {
-        throw new Error('Unknown error');
-      }
-
+      // Enable pooling if not
       if (!this.poll) {
         this.initPolling();
       }
     }
 
-    const set = DataNormalizer.settings(newSettings);
-    this.log('settings', set);
-
-    // Save settings
-    await this.api.setSettings(DataNormalizer.settings(newSettings));
-
-    // Reboot if needed
-    if (changedKeys.some((key) => AwtrixLightDevice.REBOOT_FIELDS.includes(key))) {
+    this.api.setSettings(newSettings).catch(this.error);
+    if (RebootFields.some((key: string) => changedKeys.includes(key))) {
       this.log('rebooting device');
-      await this.api.reboot();
+      await this.api.reboot().catch(this.error);
     }
   }
 
@@ -159,9 +152,14 @@ module.exports = class AwtrixLightDevice extends Device {
   }
 
   // Refresh device capabilities, this is expensive so we do not want to poll too often
-  async refreshCapabilities() {
-    const stats = await this.api.getStats();
-    this.api.getStats().then((stats) => {
+  async refreshCapabilities(): Promise<void> {
+    try {
+      const stats = await this.cmdGetStats();
+      if (!stats) {
+        this.log('status endpoint failed');
+        return;
+      }
+
       // Battery
       this.setCapabilityValue('measure_battery', stats.bat);
 
@@ -176,7 +174,10 @@ module.exports = class AwtrixLightDevice extends Device {
       this.setCapabilityValue('alarm_generic.indicator3', !!stats.indicator3);
 
       // Display
-      this.setCapabilityValue('awtrix_matrix', !!stats.matrix); // check data
+      this.setCapabilityValue('awtrix_matrix', !!stats.matrix);
+
+      // RSSI
+      this.setCapabilityValue('rssi', stats.wifi_signal);
 
       if (stats.uptime <= this.getStoreValue('uptime')) {
         this.log('reboot detected');
@@ -184,15 +185,19 @@ module.exports = class AwtrixLightDevice extends Device {
       }
 
       this.setStoreValue('uptime', stats.uptime);
-      this.setAvailableIfNot();
-    }).catch((error) => {
-      this.setUnavailable(error?.cause?.code || 'unknown error').catch(this.error);
-      this.log(error.message ?? 'unknown error');
-    });
+    } catch (error: any) {
+      this.log(error.message || error);
+    }
   }
 
-  refreshSettings() {
-    this.api.getSettings().then((settings) => {
+  async refreshSettings(): Promise<void> {
+    try {
+      const settings = await this.cmdGetSettings();
+      if (!settings) {
+        this.log('settings endpoint failed');
+        return;
+      }
+
       this.setSettings({
         TIM: !!settings.TIM,
         DAT: !!settings.DAT,
@@ -205,12 +210,9 @@ module.exports = class AwtrixLightDevice extends Device {
         UPPERCASE: !!settings.UPPERCASE,
         TEFF: settings?.TEFF?.toString(),
       });
-
-      this.setAvailableIfNot();
-    }).catch((error) => {
-      this.setUnavailable(error?.cause?.code || 'unknown error').catch(this.error);
-      this.log(error.message ?? 'unknown error');
-    });
+    } catch (error: any ) {
+      this.log(error.message || error);
+    };
   }
 
   connected() {
@@ -231,14 +233,11 @@ module.exports = class AwtrixLightDevice extends Device {
 
   initFlows() {
     // Matrix
-    this.registerCapabilityListener('awtrix_matrix', async (value) => this.api.power(value));
+    this.registerCapabilityListener('awtrix_matrix', async (value) => this.cmdPower(value));
 
     // Buttons
-    this.registerCapabilityListener('button_next', async () => {
-      this.api.appNext();
-    });
     this.registerCapabilityListener('button_next', async () => this.cmdAppNext());
-    this.registerCapabilityListener('button_prev', async () => this.api.appPrev());
+    this.registerCapabilityListener('button_prev', async () => this.cmdAppPrev());
   }
 
   initPolling() {
@@ -250,7 +249,7 @@ module.exports = class AwtrixLightDevice extends Device {
       if (!this.getAvailable()) {
         this.tryRediscover();
       }
-    }, this.);
+    }, PollInterval);
   }
 
   async testDevice(user?: string, pass?: string) {
@@ -272,6 +271,11 @@ module.exports = class AwtrixLightDevice extends Device {
     await this.addCapability('button_prev');
     await this.addCapability('button_next');
     await this.addCapability('awtrix_matrix');
+
+    // Add rssi capability if not exists
+    if (!this.hasCapability('rssi')) {
+      await this.addCapability('rssi');
+    }
   }
 
   /** bckp ******* Commands ******* */
@@ -313,6 +317,31 @@ module.exports = class AwtrixLightDevice extends Device {
 
   async cmdGetSettings(): Promise<SettingOptions|void> {
     return this.api.getSettings().catch(this.error);
+  }
+
+  async cmdGetStats(): Promise<AwtrixStats|void> {
+    return this.api.getStats().catch(this.error);
+  }
+
+  async cmdGetImages(): Promise<AwtrixImage[]|void> {
+    return this.api.getImages().catch(this.error);
+  }
+
+  /** bckp ******* API related ****** */
+  failsReset(): void {
+    this.failCount = 0;
+  }
+
+  failsAdd(): void {
+    this.failCount++;
+  }
+
+  failsExceeded(): boolean {
+    return this.failCritical || this.failCount >= this.failThreshold;
+  }
+
+  failsCritical(value: boolean): void {
+    this.failCritical = value;
   }
 
 };

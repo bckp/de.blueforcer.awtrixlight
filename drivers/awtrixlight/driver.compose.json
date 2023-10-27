@@ -13,7 +13,8 @@
     "alarm_generic.indicator1",
     "alarm_generic.indicator2",
     "alarm_generic.indicator3",
-    "awtrix_matrix"
+    "awtrix_matrix",
+    "rssi"
   ],
   "platforms": [
     "local"

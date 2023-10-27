@@ -15,6 +15,32 @@ export type PowerOptions = {
   power: boolean;
 }
 
+export type AwtrixImage = {
+  type: string,
+  size: number,
+  name: string,
+}
+
+export type AwtrixStats = {
+  bat: number,
+  lux: number,
+  ram: number,
+  bri: number,
+  temp: number,
+  hum: number,
+  uptime: number,
+  // eslint-disable-next-line camelcase
+  wifi_signal: number,
+  messages: number,
+  version: string,
+  indicator1: boolean,
+  indicator2: boolean,
+  indicator3: boolean,
+  app: string,
+  uid: string,
+  matrix: boolean,
+}
+
 type Base = {
   text?: string; // The text to display.
   textCase?: TextCase; // Changes the Uppercase setting. 0=global setting, 1=forces uppercase; 2=shows as it sent.
@@ -67,5 +93,5 @@ export type SettingOptions = {
   ATRANS?: boolean;
   BLOCKN?: boolean;
   UPPERCASE?: boolean;
-  TEFF?: TransitionEffect;
+  TEFF?: number;
 };
