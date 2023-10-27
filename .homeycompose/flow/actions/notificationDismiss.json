@@ -2,6 +2,9 @@
   "title": {
     "en": "Dismiss notification"
   },
+  "titleFormatted": {
+    "en": "Dismiss notification"
+  },
   "hint": {
     "en": "Dismiss permanent notification"
   },
@@ -9,7 +12,7 @@
     {
       "name": "device",
       "type": "device",
-      "filter": "driver_id=tc001"
+      "filter": "driver_id=awtrixlight"
     }
   ]
 }

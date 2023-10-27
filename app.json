@@ -1,9 +1,10 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
-  "id": "com.ulanzi.awtrix",
-  "version": "1.0.0",
-  "compatibility": ">=5.0.0",
+  "id": "de.blueforcer.awtrixlight",
+  "version": "1.0.13",
+  "compatibility": ">=7.4.0",
   "sdk": 3,
+  "brandColor": "#222222",
   "platforms": [
     "local"
   ],
@@ -11,7 +12,7 @@
     "en": "AWTRIX Light"
   },
   "description": {
-    "en": "Adds support for AWTRIX Light"
+    "en": "Connected Smart Clock for your Smart Home"
   },
   "category": [
     "appliances"
@@ -32,6 +33,9 @@
         "title": {
           "en": "Set display [[power]]"
         },
+        "titleFormatted": {
+          "en": "Set display [[power]]"
+        },
         "hint": {
           "en": "Enable or disable display"
         },
@@ -39,7 +43,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter": "driver_id=tc001"
+            "filter": "driver_id=awtrixlight"
           },
           {
             "type": "dropdown",
@@ -67,32 +71,163 @@
       },
       {
         "title": {
-          "en": "Dismiss notification"
+          "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with efect duration [[duration]]"
+        },
+        "titleFormatted": {
+          "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with efect duration [[duration]]"
         },
         "hint": {
-          "en": "Dismiss permanent notification"
+          "en": "Enable or disable identificator"
         },
         "args": [
           {
             "name": "device",
             "type": "device",
-            "filter": "driver_id=tc001"
+            "filter": "driver_id=awtrixlight"
+          },
+          {
+            "type": "color",
+            "name": "color",
+            "title": {
+              "en": "Color"
+            }
+          },
+          {
+            "type": "dropdown",
+            "name": "indicator",
+            "value": "1",
+            "title": {
+              "en": "identificator number"
+            },
+            "values": [
+              {
+                "id": "1",
+                "title": {
+                  "en": "top right"
+                }
+              },
+              {
+                "id": "2",
+                "title": {
+                  "en": "right"
+                }
+              },
+              {
+                "id": "3",
+                "title": {
+                  "en": "bottom right"
+                }
+              }
+            ]
+          },
+          {
+            "type": "dropdown",
+            "name": "effect",
+            "value": "fade",
+            "title": {
+              "en": "effect"
+            },
+            "values": [
+              {
+                "id": "-",
+                "title": {
+                  "en": "no"
+                }
+              },
+              {
+                "id": "blink",
+                "title": {
+                  "en": "blink"
+                }
+              },
+              {
+                "id": "fade",
+                "title": {
+                  "en": "fade"
+                }
+              }
+            ]
+          },
+          {
+            "type": "range",
+            "name": "duration",
+            "value": 1000,
+            "title": {
+              "en": "effect duration"
+            },
+            "min": 500,
+            "max": 10000,
+            "step": 100,
+            "label": "ms",
+            "labelMultiplier": 1,
+            "labelDecimals": 0
           }
         ],
-        "id": "notificationDismiss"
+        "id": "indicator"
       },
       {
         "title": {
-          "en": "Notification [[msg]], duration: [[duration]], color: [[color]]"
+          "en": "Hide [[indicator]] indicator"
+        },
+        "titleFormatted": {
+          "en": "Hide [[indicator]] indicator"
         },
         "hint": {
-          "en": "Send color notification to device for specified duration"
+          "en": "Disable identificator"
         },
         "args": [
           {
             "name": "device",
             "type": "device",
-            "filter": "driver_id=tc001"
+            "filter": "driver_id=awtrixlight"
+          },
+          {
+            "type": "dropdown",
+            "name": "indicator",
+            "value": "1",
+            "title": {
+              "en": "identificator number"
+            },
+            "values": [
+              {
+                "id": "1",
+                "title": {
+                  "en": "top right"
+                }
+              },
+              {
+                "id": "2",
+                "title": {
+                  "en": "right"
+                }
+              },
+              {
+                "id": "3",
+                "title": {
+                  "en": "bottom right"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "indicatorDismiss"
+      },
+      {
+        "title": {
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
+        },
+        "titleFormatted": {
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
+        },
+        "hint": {
+          "en": "Send color notification to device for specified duration with icon and color"
+        },
+        "duration": true,
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight"
           },
           {
             "type": "text",
@@ -103,63 +238,88 @@
           },
           {
             "type": "dropdown",
-            "name": "duration",
+            "name": "icon",
+            "value": "-",
             "title": {
-              "en": "seconds"
+              "en": "icon"
             },
             "values": [
               {
-                "id": "auto",
+                "id": "-",
                 "title": {
-                  "en": "Auto"
+                  "en": "no"
                 }
               },
               {
-                "id": "5",
+                "id": "homey",
                 "title": {
-                  "en": "5 seconds"
+                  "en": "Homey"
                 }
               },
               {
-                "id": "10",
+                "id": "heater",
                 "title": {
-                  "en": "10 seconds"
+                  "en": "Heater"
                 }
               },
               {
-                "id": "15",
+                "id": "warning",
                 "title": {
-                  "en": "15 seconds"
+                  "en": "Warning"
                 }
               },
               {
-                "id": "30",
+                "id": "lightOn",
                 "title": {
-                  "en": "30 seconds"
+                  "en": "Light ON"
                 }
               },
               {
-                "id": "60",
+                "id": "lightOff",
                 "title": {
-                  "en": "1 minute"
+                  "en": "Light Off"
                 }
               },
               {
-                "id": "120",
+                "id": "message",
                 "title": {
-                  "en": "2 minutes"
+                  "en": "Message"
                 }
               },
               {
-                "id": "300",
+                "id": "tempC",
                 "title": {
-                  "en": "5 minutes"
+                  "en": "Temp °C"
                 }
               },
               {
-                "id": "hold",
+                "id": "tempF",
                 "title": {
-                  "en": "Permanent"
+                  "en": "Temp °F"
+                }
+              },
+              {
+                "id": "smiley",
+                "title": {
+                  "en": "Smiley"
+                }
+              },
+              {
+                "id": "weather",
+                "title": {
+                  "en": "Weather"
+                }
+              },
+              {
+                "id": "tempIn",
+                "title": {
+                  "en": "Temperature indoor"
+                }
+              },
+              {
+                "id": "tempOut",
+                "title": {
+                  "en": "Temperature outdoor"
                 }
               }
             ]
@@ -167,33 +327,246 @@
           {
             "type": "color",
             "name": "color",
-            "required": false
+            "value": "#eeeeee"
           }
         ],
-        "id": "notificationText"
+        "id": "notification"
+      },
+      {
+        "title": {
+          "en": "Dismiss notification"
+        },
+        "titleFormatted": {
+          "en": "Dismiss notification"
+        },
+        "hint": {
+          "en": "Dismiss permanent notification"
+        },
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight"
+          }
+        ],
+        "id": "notificationDismiss"
+      },
+      {
+        "title": {
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color (experimental)"
+        },
+        "titleFormatted": {
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color (experimental)"
+        },
+        "hint": {
+          "en": "Send color notification to device for specified duration with icon (from device) and color"
+        },
+        "duration": true,
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight"
+          },
+          {
+            "type": "text",
+            "name": "msg",
+            "placeholder": {
+              "en": "message"
+            }
+          },
+          {
+            "type": "autocomplete",
+            "name": "icon",
+            "title": {
+              "en": "icon"
+            },
+            "placeholder": {
+              "en": "icon"
+            }
+          },
+          {
+            "type": "color",
+            "name": "color",
+            "value": "#eeeeee"
+          }
+        ],
+        "id": "notificationIcon"
+      },
+      {
+        "title": {
+          "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color"
+        },
+        "titleFormatted": {
+          "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color"
+        },
+        "hint": {
+          "en": "Send sticky notification to device with optional icon and color"
+        },
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight"
+          },
+          {
+            "type": "text",
+            "name": "msg",
+            "placeholder": {
+              "en": "message"
+            }
+          },
+          {
+            "type": "dropdown",
+            "name": "icon",
+            "value": "-",
+            "title": {
+              "en": "icon"
+            },
+            "values": [
+              {
+                "id": "-",
+                "title": {
+                  "en": "no"
+                }
+              },
+              {
+                "id": "homey",
+                "title": {
+                  "en": "Homey"
+                }
+              },
+              {
+                "id": "heater",
+                "title": {
+                  "en": "Heater"
+                }
+              },
+              {
+                "id": "warning",
+                "title": {
+                  "en": "Warning"
+                }
+              },
+              {
+                "id": "lightOn",
+                "title": {
+                  "en": "Light ON"
+                }
+              },
+              {
+                "id": "lightOff",
+                "title": {
+                  "en": "Light Off"
+                }
+              },
+              {
+                "id": "message",
+                "title": {
+                  "en": "Message"
+                }
+              },
+              {
+                "id": "tempC",
+                "title": {
+                  "en": "Temp °C"
+                }
+              },
+              {
+                "id": "tempF",
+                "title": {
+                  "en": "Temp °F"
+                }
+              },
+              {
+                "id": "smiley",
+                "title": {
+                  "en": "Smiley"
+                }
+              },
+              {
+                "id": "weather",
+                "title": {
+                  "en": "Weather"
+                }
+              },
+              {
+                "id": "tempIn",
+                "title": {
+                  "en": "Temperature indoor"
+                }
+              },
+              {
+                "id": "tempOut",
+                "title": {
+                  "en": "Temperature outdoor"
+                }
+              }
+            ]
+          },
+          {
+            "type": "color",
+            "name": "color",
+            "value": "#eeeeee"
+          }
+        ],
+        "id": "notificationSticky"
+      },
+      {
+        "title": {
+          "en": "Play [[rtttl]] melody"
+        },
+        "titleFormatted": {
+          "en": "Play [[rtttl]] melody"
+        },
+        "hint": {
+          "en": "Play RTTTL melody"
+        },
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight"
+          },
+          {
+            "type": "text",
+            "name": "rtttl",
+            "placeholder": {
+              "en": "melody"
+            }
+          }
+        ],
+        "id": "playRTTTL"
       }
     ]
   },
   "drivers": [
     {
       "name": {
-        "en": "TC001"
+        "en": "AwtrixLight"
       },
       "class": "other",
       "capabilities": [
         "measure_battery",
-        "alarm_battery",
         "measure_humidity",
         "measure_luminance",
         "measure_temperature",
-        "ulanzi_matrix",
+        "button_prev",
+        "button_next",
         "alarm_generic.indicator1",
         "alarm_generic.indicator2",
-        "alarm_generic.indicator3"
+        "alarm_generic.indicator3",
+        "awtrix_matrix",
+        "rssi"
       ],
       "platforms": [
         "local"
       ],
+      "energy": {
+        "batteries": [
+          "INTERNAL"
+        ]
+      },
       "capabilitiesOptions": {
         "alarm_generic.indicator1": {
           "preventInsights": true,
@@ -224,6 +597,9 @@
           "template": "list_devices",
           "navigation": {
             "next": "add_my_devices"
+          },
+          "options": {
+            "singular": true
           }
         },
         {
@@ -232,11 +608,11 @@
         }
       ],
       "images": {
-        "small": "/drivers/tc001/assets/images/small.png",
-        "large": "/drivers/tc001/assets/images/large.png",
-        "xlarge": "/drivers/tc001/assets/images/xlarge.png"
+        "small": "/drivers/awtrixlight/assets/images/small.png",
+        "large": "/drivers/awtrixlight/assets/images/large.png",
+        "xlarge": "/drivers/awtrixlight/assets/images/xlarge.png"
       },
-      "id": "tc001",
+      "id": "awtrixlight",
       "settings": [
         {
           "type": "group",
@@ -245,7 +621,7 @@
           },
           "children": [
             {
-              "id": "username",
+              "id": "user",
               "type": "text",
               "label": {
                 "en": "Username"
@@ -256,7 +632,7 @@
               }
             },
             {
-              "id": "password",
+              "id": "pass",
               "type": "password",
               "label": {
                 "en": "Password"
@@ -275,7 +651,7 @@
           },
           "children": [
             {
-              "id": "abri",
+              "id": "ABRI",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -283,7 +659,7 @@
               }
             },
             {
-              "id": "atrans",
+              "id": "ATRANS",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -291,7 +667,7 @@
               }
             },
             {
-              "id": "blockn",
+              "id": "BLOCKN",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -299,7 +675,7 @@
               }
             },
             {
-              "id": "uppercase",
+              "id": "UPPERCASE",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -307,7 +683,7 @@
               }
             },
             {
-              "id": "teff",
+              "id": "TEFF",
               "type": "dropdown",
               "value": "0",
               "label": {
@@ -391,7 +767,7 @@
           },
           "children": [
             {
-              "id": "tim",
+              "id": "TIM",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -399,7 +775,7 @@
               }
             },
             {
-              "id": "dat",
+              "id": "DAT",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -407,7 +783,7 @@
               }
             },
             {
-              "id": "hum",
+              "id": "HUM",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -415,7 +791,7 @@
               }
             },
             {
-              "id": "temp",
+              "id": "TEMP",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -423,7 +799,7 @@
               }
             },
             {
-              "id": "bat",
+              "id": "BAT",
               "type": "checkbox",
               "value": true,
               "label": {
@@ -436,32 +812,66 @@
     }
   ],
   "capabilities": {
-    "ulanzi_matrix": {
+    "awtrix_matrix": {
       "type": "boolean",
       "title": {
         "en": "Display"
       },
       "getable": true,
       "setable": true,
+      "uiComponent": "button",
+      "icon": "/assets/capability_awtrix_matrix.svg"
+    },
+    "button_next": {
+      "type": "boolean",
+      "title": {
+        "en": "Next app"
+      },
+      "getable": false,
+      "setable": true,
+      "uiComponent": "button",
+      "icon": "/assets/capability_button_next.svg"
+    },
+    "button_prev": {
+      "type": "boolean",
+      "title": {
+        "en": "Previous app"
+      },
+      "getable": false,
+      "setable": true,
+      "uiComponent": "button",
+      "icon": "/assets/capability_button_prev.svg"
+    },
+    "rssi": {
+      "type": "number",
+      "title": {
+        "en": "Signal"
+      },
+      "getable": true,
+      "setable": false,
       "uiComponent": "sensor",
-      "uiQuickAction": false
+      "insights": false,
+      "icon": "/assets/rssi.svg",
+      "units": {
+        "en": "RSSI"
+      }
     }
   },
   "discovery": {
     "awtrix-mdns": {
       "type": "mdns-sd",
       "mdns-sd": {
-        "name": "http",
+        "name": "awtrix",
         "protocol": "tcp"
       },
-      "id": "{{name}}",
+      "id": "{{txt.id}}",
       "conditions": [
         [
           {
-            "field": "name",
+            "field": "txt.type",
             "match": {
               "type": "string",
-              "value": "awtrix"
+              "value": "awtrix_light"
             }
           }
         ]

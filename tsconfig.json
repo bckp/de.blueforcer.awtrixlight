@@ -2,6 +2,12 @@
   "extends": "@tsconfig/node16/tsconfig.json",
   "compilerOptions": {
     "allowJs": true,
-    "outDir": ".homeybuild/"
+    "outDir": ".homeybuild/",
+    "target": "es6",
+    "lib": ["es6", "dom"],
+    "sourceMap": true,
+    "baseUrl": ".",
+    "module": "esnext",
+    "moduleResolution": "node",
   }
 }

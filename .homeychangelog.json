@@ -1,0 +1,44 @@
+{
+  "1.0.0": {
+    "en": "Initial version"
+  },
+  "1.0.1": {
+    "en": "Description"
+  },
+  "1.0.2": {
+    "en": "typo"
+  },
+  "1.0.3": {
+    "en": "Typo"
+  },
+  "1.0.4": {
+    "en": "Added build-in icons"
+  },
+  "1.0.5": {
+    "en": "typo"
+  },
+  "1.0.6": {
+    "en": "Added indicator support"
+  },
+  "1.0.7": {
+    "en": "typo"
+  },
+  "1.0.8": {
+    "en": "Fixed issue with icons"
+  },
+  "1.0.9": {
+    "en": "Fixed duration issue with notifications"
+  },
+  "1.0.10": {
+    "en": "Fixed duration"
+  },
+  "1.0.11": {
+    "en": "Added buttons, fixed some stuff"
+  },
+  "1.0.12": {
+    "en": "Fixes"
+  },
+  "1.0.13": {
+    "en": "Fixes"
+  }
+}

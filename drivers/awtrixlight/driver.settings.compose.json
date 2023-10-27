@@ -6,7 +6,7 @@
         },
         "children": [
             {
-                "id": "username",
+                "id": "user",
                 "type": "text",
                 "label": {
                     "en": "Username"
@@ -17,7 +17,7 @@
                 }
             },
             {
-                "id": "password",
+                "id": "pass",
                 "type": "password",
                 "label": {
                     "en": "Password"
@@ -36,7 +36,7 @@
         },
         "children": [
             {
-                "id": "abri",
+                "id": "ABRI",
                 "type": "checkbox",
                 "value": true,
                 "label": {
@@ -44,7 +44,7 @@
                 }
             },
             {
-                "id": "atrans",
+                "id": "ATRANS",
                 "type": "checkbox",
                 "value": true,
                 "label": {
@@ -52,7 +52,7 @@
                 }
             },
             {
-                "id": "blockn",
+                "id": "BLOCKN",
                 "type": "checkbox",
                 "value": true,
                 "label": {
@@ -60,7 +60,7 @@
                 }
             },
             {
-                "id": "uppercase",
+                "id": "UPPERCASE",
                 "type": "checkbox",
                 "value": true,
                 "label": {
@@ -68,7 +68,7 @@
                 }
             },
             {
-                "id": "teff",
+                "id": "TEFF",
                 "type": "dropdown",
                 "value": "0",
                 "label": {
@@ -152,7 +152,7 @@
         },
         "children": [
             {
-                "id": "tim",
+                "id": "TIM",
                 "type": "checkbox",
                 "value": true,
                 "label": {
@@ -160,7 +160,7 @@
                 }
             },
             {
-                "id": "dat",
+                "id": "DAT",
                 "type": "checkbox",
                 "value": true,
                 "label": {
@@ -168,7 +168,7 @@
                 }
             },
             {
-                "id": "hum",
+                "id": "HUM",
                 "type": "checkbox",
                 "value": true,
                 "label": {
@@ -176,7 +176,7 @@
                 }
             },
             {
-                "id": "temp",
+                "id": "TEMP",
                 "type": "checkbox",
                 "value": true,
                 "label": {
@@ -184,7 +184,7 @@
                 }
             },
             {
-                "id": "bat",
+                "id": "BAT",
                 "type": "checkbox",
                 "value": true,
                 "label": {

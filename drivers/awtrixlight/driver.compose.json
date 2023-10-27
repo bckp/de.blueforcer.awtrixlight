@@ -1,22 +1,29 @@
 {
   "name": {
-    "en": "TC001"
+    "en": "AwtrixLight"
   },
   "class": "other",
   "capabilities": [
     "measure_battery",
-    "alarm_battery",
     "measure_humidity",
     "measure_luminance",
     "measure_temperature",
-    "ulanzi_matrix",
+    "button_prev",
+    "button_next",
     "alarm_generic.indicator1",
     "alarm_generic.indicator2",
-    "alarm_generic.indicator3"
+    "alarm_generic.indicator3",
+    "awtrix_matrix",
+    "rssi"
   ],
   "platforms": [
     "local"
   ],
+  "energy": {
+    "batteries": [
+      "INTERNAL"
+    ]
+  },
   "capabilitiesOptions": {
     "alarm_generic.indicator1": {
       "preventInsights": true,
@@ -37,7 +44,6 @@
       }
     }
   },
-
   "discovery": "awtrix-mdns",
   "connectivity": [
     "lan"
@@ -46,7 +52,8 @@
       {
         "id": "list_my_devices",
         "template": "list_devices",
-        "navigation": { "next": "add_my_devices" }
+        "navigation": { "next": "add_my_devices" },
+        "options": { "singular": true }
       },
       {
         "id": "add_my_devices",

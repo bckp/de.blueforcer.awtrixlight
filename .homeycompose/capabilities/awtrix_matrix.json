@@ -5,6 +5,6 @@
     },
     "getable": true,
     "setable": true,
-    "uiComponent": "sensor",
-    "uiQuickAction": false
+    "uiComponent": "button",
+    "icon": "/assets/capability_awtrix_matrix.svg"
   }

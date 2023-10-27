@@ -1,0 +1,14 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Signal"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": false,
+  "icon": "/assets/rssi.svg",
+  "units": {
+    "en": "RSSI"
+  }
+}
