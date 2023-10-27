@@ -1,5 +1,9 @@
 {
-  "extends": "athom",
+  "extends": [
+    "athom",
+    "plugin:import/recommended",
+    "plugin:import/typescript"
+  ],
   "rules": {
     "node/no-unsupported-features/es-syntax": [
       "error",
@@ -17,5 +21,16 @@
         "strict": "off"
       }
     }
-  ]
+  ],
+  "settings": {
+    "import/resolver": {
+        "typescript": {
+          "directory": "./tsconfig.json"
+        },
+        "node": true
+    },
+    "import/parsers": {
+      "@typescript-eslint/parser": [".ts", ".tsx"]
+    }
+  }
 }
