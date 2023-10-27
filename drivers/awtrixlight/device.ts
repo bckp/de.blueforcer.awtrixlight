@@ -201,7 +201,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
 
       if (stats.uptime <= this.getStoreValue('uptime')) {
         this.log('reboot detected');
-        this.refreshApps().catch((error) => this.error);
+        this.refreshApps().catch(this.error);
       }
 
       this.setStoreValue('uptime', stats.uptime);
