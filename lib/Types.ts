@@ -41,6 +41,12 @@ export type AwtrixStats = {
   matrix: boolean,
 }
 
+export type HomeyAwtrixIcon = {
+  name: string,
+  id: string,
+  description?: string,
+}
+
 type Base = {
   text?: string; // The text to display.
   textCase?: TextCase; // Changes the Uppercase setting. 0=global setting, 1=forces uppercase; 2=shows as it sent.

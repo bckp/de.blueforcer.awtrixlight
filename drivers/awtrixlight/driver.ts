@@ -1,6 +1,7 @@
-import { Device, Driver } from 'homey';
+import { Driver } from 'homey';
 import PairSession from 'homey/lib/PairSession';
 import AwtrixLightDevice from './device';
+import { HomeyAwtrixIcon } from '../../lib/Types';
 
 type ListenerArgs = {
   device: AwtrixLightDevice,
@@ -28,17 +29,20 @@ type ListenerArgsNotification = ListenerArgs & {
   icon?: string
 }
 
-/*  duration?: number,
-  msg?: string,
-} & {
-  [key: string]: string | number | boolean;
-} */
+type ListenerArgsNotificationIcon = ListenerArgsNotification & {
+  icon: HomeyAwtrixIcon
+}
+
 export default class UlanziAwtrix extends Driver {
 
   static EnableManualAdd = false;
 
+  homeyIp!: string;
+
   async onInit(): Promise<void> {
     this.log('UlanziAwtrix has been initialized');
+
+    this.homeyIp = await this.homey.cloud.getLocalAddress();
     this.initFlows();
   }
 
@@ -47,6 +51,16 @@ export default class UlanziAwtrix extends Driver {
     this.homey.flow.getActionCard('notification').registerRunListener(async (args: ListenerArgsNotification) => {
       const duration = typeof args.duration === 'number' ? Math.ceil(args.duration/1000) : undefined;
       args.device.cmdNotify(args.msg, { color: args.color, duration, icon: args.icon });
+    });
+
+    // Notification with icon
+    this.homey.flow.getActionCard('notificationIcon').registerRunListener(async (args: ListenerArgsNotificationIcon) => {
+      const duration = typeof args.duration === 'number' ? Math.ceil(args.duration / 1000) : undefined;
+      args.device.cmdNotify(args.msg, { color: args.color, duration, icon: args.icon.id });
+    }).getArgument('icon').registerAutocompleteListener(async (query: string, args: ListenerArgs) => {
+      return (await args.device.getIconList()).filter((result) => {
+        return result.name.toLowerCase().includes(query.toLowerCase());
+      });
     });
 
     // Sticky notification

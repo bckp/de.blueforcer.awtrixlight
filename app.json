@@ -353,6 +353,48 @@
       },
       {
         "title": {
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color (experimental)"
+        },
+        "titleFormatted": {
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color (experimental)"
+        },
+        "hint": {
+          "en": "Send color notification to device for specified duration with icon (from device) and color"
+        },
+        "duration": true,
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight"
+          },
+          {
+            "type": "text",
+            "name": "msg",
+            "placeholder": {
+              "en": "message"
+            }
+          },
+          {
+            "type": "autocomplete",
+            "name": "icon",
+            "title": {
+              "en": "icon"
+            },
+            "placeholder": {
+              "en": "icon"
+            }
+          },
+          {
+            "type": "color",
+            "name": "color",
+            "value": "#eeeeee"
+          }
+        ],
+        "id": "notificationIcon"
+      },
+      {
+        "title": {
           "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color"
         },
         "titleFormatted": {
