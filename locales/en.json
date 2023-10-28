@@ -3,5 +3,20 @@
     "login": {
         "invalidCredentials": "Username or password is not valid",
         "unknownError": "Unknown error"
+    },
+    "list": {
+      "icons": {
+        "empty": {
+          "name": "Empty",
+          "description": "Without icon"
+        }
+      }
+    },
+    "api": {
+      "error": {
+        "loginRequired": "Authentication required!",
+        "loginFailed": "Authentication failed!",
+        "unknownError": "Unknown error."
+      }
     }
 }

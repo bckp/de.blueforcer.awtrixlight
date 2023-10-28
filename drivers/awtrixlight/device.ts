@@ -1,15 +1,14 @@
 import fs from 'fs';
 import { Device, DiscoveryResultMDNSSD } from 'homey';
-import path from 'path';
 import ApiClient from '../../lib/Api/Client';
 import { Status } from '../../lib/Api/Response';
 import Api from '../../lib/Api/Api';
-import { AwtrixImage, AwtrixStats, HomeyAwtrixIcon, SettingOptions } from '../../lib/Types';
+import { AwtrixImage, AwtrixStats, SettingOptions } from '../../lib/Types';
 import { DeviceFailer } from './failer';
+import Icons from '../../lib/List/Icons';
 
 const RebootFields: ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'] = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
 const PollInterval: number = 30000;
-const IconsTimeout: number = 60000;
 
 export default class AwtrixLightDevice extends Device implements DeviceFailer {
 
@@ -19,14 +18,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
   failCount: number = 0;
   failThreshold: number = 3;
 
-  // Temporary list storage
-  iconsList: {
-    list: HomeyAwtrixIcon[],
-    timer?: NodeJS.Timer,
-  } = {
-    list: [],
-    timer: undefined,
-  };
+  icons!: Icons;
 
   /**
    * onInit is called when the device is initialized.
@@ -47,8 +39,20 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
       new ApiClient({ ip: this.getStoreValue('address') }),
       this,
     );
+
+    // Create icons service
+    this.icons = new Icons(
+      this.api,
+      this,
+    );
+
     // this.api.setDebug(true);
 
+    // Initialize API etc
+    this.initializeDevice();
+  }
+
+  async initializeDevice(): Promise<void> {
     // Setup user and pass if exists
     const settings = await this.getSettings();
     if (settings.user && settings.pass) {
@@ -316,26 +320,6 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
     }
   }
 
-  async getIconList(): Promise<HomeyAwtrixIcon[]> {
-    if (this.iconsList.list.length === 0) {
-      this.iconsList.list = [
-        {
-          name: 'No icon',
-          id: '-',
-          description: 'Without icon',
-        },
-        ...(await this.cmdGetIcons().catch(this.error)) || [],
-      ];
-    }
-
-    this.homey.clearTimeout(this.iconsList.timer);
-    this.iconsList.timer = this.homey.setTimeout(() => {
-      this.iconsList.list = [];
-    }, IconsTimeout);
-
-    return this.iconsList.list;
-  }
-
   /** bckp ******* Commands ******* */
   async cmdNotify(msg: string, params: any): Promise<void> {
     this.api.notify(msg, params).catch(this.error);
@@ -383,18 +367,6 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
 
   async cmdGetImages(): Promise<AwtrixImage[]|void> {
     return this.api.getImages().catch(this.error);
-  }
-
-  async cmdGetIcons(): Promise<HomeyAwtrixIcon[]|void> {
-    const icons = await this.api.getImages().catch(this.error) || [];
-    return icons.map((icon: AwtrixImage): HomeyAwtrixIcon => {
-      const value: string = path.parse(icon.name).name;
-
-      return {
-        name: value,
-        id: value,
-      };
-    });
   }
 
   /** bckp ******* API related ****** */

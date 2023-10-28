@@ -58,9 +58,7 @@ export default class UlanziAwtrix extends Driver {
       const duration = typeof args.duration === 'number' ? Math.ceil(args.duration / 1000) : undefined;
       args.device.cmdNotify(args.msg, { color: args.color, duration, icon: args.icon.id });
     }).getArgument('icon').registerAutocompleteListener(async (query: string, args: ListenerArgs) => {
-      return (await args.device.getIconList()).filter((result) => {
-        return result.name.toLowerCase().includes(query.toLowerCase());
-      });
+      return args.device.icons.find(query);
     });
 
     // Sticky notification

@@ -31,6 +31,57 @@
     "actions": [
       {
         "title": {
+          "en": "Create/update application [[name]], set [[msg]] with [[icon]] and [[options]] in json format (experimental)"
+        },
+        "titleFormatted": {
+          "en": "Create/update application [[name]], set [[msg]] with [[icon]] and [[options]] in json format (experimental)"
+        },
+        "hint": {
+          "en": "Create/update application, give you ability to set custom options in form of JSON format"
+        },
+        "deprecated": true,
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight"
+          },
+          {
+            "type": "text",
+            "name": "msg",
+            "placeholder": {
+              "en": "message"
+            }
+          },
+          {
+            "type": "autocomplete",
+            "name": "name",
+            "placeholder": {
+              "en": "app name"
+            }
+          },
+          {
+            "type": "autocomplete",
+            "name": "icon",
+            "title": {
+              "en": "icon"
+            },
+            "placeholder": {
+              "en": "icon"
+            }
+          },
+          {
+            "type": "text",
+            "name": "options",
+            "placeholder": {
+              "en": "options JSON"
+            }
+          }
+        ],
+        "id": "applicationIcon"
+      },
+      {
+        "title": {
           "en": "Set display [[power]]"
         },
         "titleFormatted": {

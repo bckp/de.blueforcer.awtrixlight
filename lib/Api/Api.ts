@@ -147,15 +147,15 @@ export default class Api {
         return;
 
       case Status.AuthRequired:
-        this.processUnavailability('Authentication required!');
+        this.processUnavailability(this.device.homey.__('api.error.loginRequired'));
         return;
 
       case Status.AuthFailed:
-        this.processUnavailability('Authentication failed!');
+        this.processUnavailability(this.device.homey.__('api.error.loginFailed'));
         return;
 
       default:
-        this.processUnavailability(message ?? 'Unknown error.');
+        this.processUnavailability(message ?? this.device.homey.__('api.error.unknownError'));
     }
   }
 
