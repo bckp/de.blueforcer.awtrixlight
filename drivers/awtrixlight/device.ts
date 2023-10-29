@@ -9,8 +9,8 @@ import Icons from '../../lib/List/Icons';
 import Poll from '../../lib/Poll';
 
 const RebootFields: ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'] = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
-const PollInterval: number = 30000;
-const PollIntervalLong: number = 1800000; // 30 minutes
+const PollInterval: number = 60000; // 1 minute
+const PollIntervalLong: number = 300000; // 5 minutes
 
 export default class AwtrixLightDevice extends Device implements DeviceFailer, DevicePoll {
 
