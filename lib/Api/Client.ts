@@ -2,11 +2,22 @@ import axios, { AxiosResponse } from 'axios';
 import FormData from 'form-data';
 import { Response, Status } from './Response';
 
+const Timeout = 5000; // 5 seconds
+const TimeoutUpload = Timeout * 2; // 4 seconds
+const TimeoutRequest = Timeout / 2; // 2.5 seconds
+
 type ClientOptions = {
   ip: string;
   user?: string;
   pass?: string;
   log?: (message?: any, ...optionalParams: any[]) => void;
+}
+
+function abortSignal(timeout: number): AbortSignal {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), timeout);
+
+  return controller.signal;
 }
 
 export default class Client {
@@ -60,8 +71,11 @@ export default class Client {
 
   async #getRequest(url: string): Promise<Response> {
     try {
+      this.#debugInfo('GET: ', url);
       const result = await axios.get(url, {
         headers: this.#getHeaders(),
+        timeout: Timeout,
+        signal: abortSignal(TimeoutRequest),
       });
       this.#debugInfo('GET: ', url, result);
       return {
@@ -76,8 +90,11 @@ export default class Client {
   async post(cmd: string, data: any): Promise<Response> {
     const url: string = this.#getApiUrl(cmd);
     try {
+      this.#debugInfo('POST: ', url);
       const result = await axios.post(url, data, {
         headers: this.#getHeaders(),
+        timeout: Timeout,
+        signal: abortSignal(TimeoutRequest),
       });
       this.#debugInfo('POST: ', url, result);
       return {
@@ -91,11 +108,14 @@ export default class Client {
   async upload(path: string, form: FormData): Promise<Response> {
     const url: string = this.#getUrl(path);
     try {
+      this.#debugInfo('POST(upload): ', url);
       const result = await axios.post(url, form, {
         headers: {
           ...this.#getHeaders(),
           ...form.getHeaders(),
         },
+        timeout: TimeoutUpload,
+        signal: abortSignal(TimeoutRequest),
       });
       this.#debugInfo('POST(upload): ', url, result);
       return {
@@ -138,7 +158,14 @@ export default class Client {
   }
 
   #requestError(error: any, url: string): Response {
-    this.#debugError('RESULT: ', url, error.message || error);
+    this.#debugError('Result(error): ', url, error.message || error);
+
+    // Device did not respond in time
+    if (error.code === 'ECONNABORTED' || error.code === 'ERR_CANCELED') {
+      return {
+        status: Status.NotFound,
+      };
+    }
 
     let message = 'unknown error';
     let status = Status.Error;

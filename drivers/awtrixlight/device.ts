@@ -4,13 +4,13 @@ import ApiClient from '../../lib/Api/Client';
 import { Status } from '../../lib/Api/Response';
 import Api from '../../lib/Api/Api';
 import { AwtrixImage, AwtrixStats, SettingOptions } from '../../lib/Types';
-import { DeviceFailer } from './failer';
+import { DeviceFailer, DevicePoll } from './interfaces';
 import Icons from '../../lib/List/Icons';
 
 const RebootFields: ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'] = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
-const PollInterval: number = 30000;
+const PollInterval: number = 10000; // 30000 by default
 
-export default class AwtrixLightDevice extends Device implements DeviceFailer {
+export default class AwtrixLightDevice extends Device implements DeviceFailer, DevicePoll {
 
   api!: Api;
   poll!: NodeJS.Timeout;
@@ -46,7 +46,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
       this,
     );
 
-    // this.api.setDebug(true);
+    this.api.setDebug(true);
 
     // Initialize API etc
     this.initializeDevice();
@@ -63,22 +63,21 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
     // Test device if possible
     if (!await this.testDevice()) {
       this.log('Device not available, trying to rediscover');
+      this.setUnavailable(this.homey.__('states.unavailable')).catch(this.error);
       this.tryRediscover();
     } else {
       await this.setAvailable();
     }
-    this.homey.clearInterval(this.poll);
+    this.pollClear();
 
     // Setup polling
     try {
       this.failsReset();
       this.failsCritical(true);
       if (this.getAvailable()) {
-        this.log('Capabilities:', this.getCapabilities());
-
         this.log('Device availalible');
         this.refreshAll();
-        this.initPolling();
+        this.pollInit();
         this.connected();
       } else {
         this.log('Pooling not set, there is issue with device');
@@ -125,8 +124,8 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
       }
 
       // Enable pooling if not
-      if (!this.poll) {
-        this.initPolling();
+      if (!this.pollIsActive()) {
+        this.pollInit();
       }
     }
 
@@ -150,6 +149,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
   }
 
   async onDiscoveryAvailable(discoveryResult: DiscoveryResultMDNSSD) {
+    this.log('onDiscoveryAvailable', discoveryResult);
     if ('address' in discoveryResult && this.getStoreValue('address') !== discoveryResult.address) {
       this.onDiscoveryAddressChanged(discoveryResult);
       await this.setAvailable();
@@ -157,6 +157,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
   }
 
   onDiscoveryAddressChanged(discoveryResult: DiscoveryResultMDNSSD) {
+    this.log('onDiscoveryAddressChanged', discoveryResult);
     this.api.setIp(discoveryResult.address);
     this.setStoreValue('address', discoveryResult.address).catch((error) => this.error(error));
     this.testDevice().then((result) => this.log('Device address changed with result: ', result));
@@ -169,9 +170,13 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
   }
 
   tryRediscover() {
-    const result = this.driver.getDiscoveryStrategy().getDiscoveryResult(this.getData().id);
-    if (result && result instanceof DiscoveryResultMDNSSD) {
-      this.onDiscoveryAvailable(result);
+    try {
+      const result = this.driver.getDiscoveryStrategy().getDiscoveryResult(this.getData().id);
+      if (result && result instanceof DiscoveryResultMDNSSD && result.address) {
+        this.onDiscoveryAvailable(result);
+      }
+    } catch (error: any) {
+      this.log('Discovery error: ', error);
     }
   }
 
@@ -179,6 +184,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
   async refreshCapabilities(): Promise<void> {
     try {
       const stats = await this.cmdGetStats();
+      this.log('refreshCapabilities', stats);
       if (!stats) {
         this.log('status endpoint failed');
         return;
@@ -262,18 +268,6 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
     // Buttons
     this.registerCapabilityListener('button_next', async () => this.cmdAppNext());
     this.registerCapabilityListener('button_prev', async () => this.cmdAppPrev());
-  }
-
-  initPolling() {
-    this.homey.clearInterval(this.poll);
-    this.poll = this.homey.setInterval(async () => {
-      this.log('polling...');
-      this.refreshCapabilities();
-
-      if (!this.getAvailable()) {
-        this.tryRediscover();
-      }
-    }, PollInterval);
   }
 
   async testDevice(user?: string, pass?: string) {
@@ -384,6 +378,29 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer {
 
   failsCritical(value: boolean): void {
     this.failCritical = value;
+  }
+
+  /** bckp ******* Polling ******* */
+  pollClear(): void {
+    this.homey.clearInterval(this.poll);
+  }
+
+  pollExec(): void {
+    this.log('polling...');
+    this.refreshCapabilities();
+
+    if (!this.getAvailable()) {
+      this.tryRediscover();
+    }
+  }
+
+  pollInit(): void {
+    this.pollClear();
+    this.poll = this.homey.setInterval(async () => this.pollExec(), PollInterval);
+  }
+
+  pollIsActive(): boolean {
+    return !!this.poll;
   }
 
 }

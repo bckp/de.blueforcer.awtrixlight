@@ -10,14 +10,14 @@ import {
 } from '../Normalizer';
 import { Status } from './Response';
 import { AwtrixImage, AwtrixStats, SettingOptions } from '../Types';
-import { DeviceFailer } from '../../drivers/awtrixlight/failer';
+import { DeviceFailer, DevicePoll } from '../../drivers/awtrixlight/interfaces';
 
 export default class Api {
 
   client: Client;
-  device: Device & DeviceFailer;
+  device: Device & DeviceFailer & DevicePoll;
 
-  constructor(client: Client, device: Device & DeviceFailer) {
+  constructor(client: Client, device: Device & DeviceFailer & DevicePoll) {
     this.client = client;
     this.device = device;
   }
@@ -142,8 +142,14 @@ export default class Api {
         if (this.device.getAvailable()) {
           return;
         }
+
         this.device.setAvailable().catch((error: any) => this.device.log(error.message ?? error));
         this.device.failsReset();
+
+        // Reinit poll if not active
+        if (!this.device.pollIsActive()) {
+          this.device.pollInit();
+        }
         return;
 
       case Status.AuthRequired:

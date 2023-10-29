@@ -5,6 +5,7 @@
     },
     "getable": true,
     "setable": true,
+    "insights": false,
     "uiComponent": "button",
     "icon": "/assets/capability_awtrix_matrix.svg"
   }

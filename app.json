@@ -870,6 +870,7 @@
       },
       "getable": true,
       "setable": true,
+      "insights": false,
       "uiComponent": "button",
       "icon": "/assets/capability_awtrix_matrix.svg"
     },
@@ -896,7 +897,7 @@
     "rssi": {
       "type": "number",
       "title": {
-        "en": "Signal"
+        "en": "Signal strength"
       },
       "getable": true,
       "setable": false,
@@ -904,7 +905,7 @@
       "insights": false,
       "icon": "/assets/rssi.svg",
       "units": {
-        "en": "RSSI"
+        "en": "dBm"
       }
     }
   },

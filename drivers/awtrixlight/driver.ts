@@ -33,9 +33,9 @@ type ListenerArgsNotificationIcon = ListenerArgsNotification & {
   icon: HomeyAwtrixIcon
 }
 
-export default class UlanziAwtrix extends Driver {
+const ManualAdd = false;
 
-  static EnableManualAdd = false;
+export default class UlanziAwtrix extends Driver {
 
   homeyIp!: string;
 
@@ -115,7 +115,7 @@ export default class UlanziAwtrix extends Driver {
       });
 
       // If we do not find device, push custom one so user can set IP directly
-      if (UlanziAwtrix.EnableManualAdd) {
+      if (ManualAdd) {
         devices.push({
           name: 'Manual',
           data: {

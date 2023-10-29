@@ -1,22 +1,23 @@
 {
+  "states": {
     "loading": "initializing...",
-    "login": {
-        "invalidCredentials": "Username or password is not valid",
-        "unknownError": "Unknown error"
-    },
-    "list": {
-      "icons": {
-        "empty": {
-          "name": "Empty",
-          "description": "Without icon"
-        }
-      }
-    },
-    "api": {
-      "error": {
-        "loginRequired": "Authentication required!",
-        "loginFailed": "Authentication failed!",
-        "unknownError": "Unknown error."
+    "unavailable": "no response from device",
+    "invalidCredentials": "Username or password is not valid",
+    "unknownError": "Unknown error"
+  },
+  "list": {
+    "icons": {
+      "empty": {
+        "name": "Empty",
+        "description": "Without icon"
       }
     }
+  },
+  "api": {
+    "error": {
+      "loginRequired": "Authentication required!",
+      "loginFailed": "Authentication failed!",
+      "unknownError": "Device did not respond!"
+    }
+  }
 }
