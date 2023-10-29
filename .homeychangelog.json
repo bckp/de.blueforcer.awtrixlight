@@ -49,5 +49,8 @@
   },
   "1.1.2": {
     "en": "Fixes"
+  },
+  "1.1.3": {
+    "en": "Added extended poll interval, to recover from unavailable device"
   }
 }
