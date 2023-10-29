@@ -367,16 +367,31 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     this.api.setSettings(options).catch(this.error);
   }
 
-  async cmdGetSettings(): Promise<SettingOptions|null|void> {
-    return this.api.getSettings().catch(this.error);
+  async cmdGetSettings(): Promise<SettingOptions|null> {
+    try {
+      return await this.api.getSettings();
+    } catch (error: any) {
+      this.error(error);
+      return null;
+    }
   }
 
-  async cmdGetStats(): Promise<AwtrixStats|null|void> {
-    return this.api.getStats().catch(this.error);
+  async cmdGetStats(): Promise<AwtrixStats|null> {
+    try {
+      return await this.api.getStats();
+    } catch (error: any) {
+      this.error(error);
+      return null;
+    }
   }
 
-  async cmdGetImages(): Promise<AwtrixImage[]|void> {
-    return this.api.getImages().catch(this.error);
+  async cmdGetImages(): Promise<AwtrixImage[]|null> {
+    try {
+      return await this.api.getImages();
+    } catch (error: any) {
+      this.error(error);
+      return null;
+    }
   }
 
   /** bckp ******* API related ****** */
