@@ -8,7 +8,7 @@ import { DeviceFailer, DevicePoll } from './interfaces';
 import Icons from '../../lib/List/Icons';
 
 const RebootFields: ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'] = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
-const PollInterval: number = 10000; // 30000 by default
+const PollInterval: number = 30000;
 
 export default class AwtrixLightDevice extends Device implements DeviceFailer, DevicePoll {
 
@@ -351,11 +351,11 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     this.api.setSettings(options).catch(this.error);
   }
 
-  async cmdGetSettings(): Promise<SettingOptions|void> {
+  async cmdGetSettings(): Promise<SettingOptions|null|void> {
     return this.api.getSettings().catch(this.error);
   }
 
-  async cmdGetStats(): Promise<AwtrixStats|void> {
+  async cmdGetStats(): Promise<AwtrixStats|null|void> {
     return this.api.getStats().catch(this.error);
   }
 

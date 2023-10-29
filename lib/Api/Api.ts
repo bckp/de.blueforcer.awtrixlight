@@ -75,11 +75,11 @@ export default class Api {
     return this.clientPost('settings', settingOptions(options));
   }
 
-  async getSettings(): Promise<SettingOptions> {
+  async getSettings(): Promise<SettingOptions|null> {
     return this.clientGet('settings');
   }
 
-  async getStats(): Promise<AwtrixStats> {
+  async getStats(): Promise<AwtrixStats|null> {
     return this.clientGet('stats');
   }
 
@@ -95,18 +95,28 @@ export default class Api {
   }
 
   /** bckp ******* NETWORK LAYER  ******* */
-  async clientGet<T>(endpoint: string): Promise<T> {
-    const response = await this.client.get(endpoint);
-    this.processResponseCode(response.status, response.message);
+  async clientGet<T>(endpoint: string): Promise<T|null> {
+    try {
+      const response = await this.client.get(endpoint);
+      this.processResponseCode(response.status, response.message);
 
-    return response.data || {};
+      return response.data || null;
+    } catch (error: any) {
+      this.device.log(error);
+      return null;
+    }
   }
 
   async clientGetDirect(endpoint: string): Promise<any> {
-    const response = await this.client.getDirect(endpoint);
-    this.processResponseCode(response.status, response.message);
+    try {
+      const response = await this.client.getDirect(endpoint);
+      this.processResponseCode(response.status, response.message);
 
-    return response.data || null;
+      return response.data || null;
+    } catch (error: any) {
+      this.device.log(error);
+      return null;
+    }
   }
 
   async clientPost(endpoint: string, options?: any): Promise<boolean> {
@@ -168,6 +178,7 @@ export default class Api {
   processUnavailability(message: string): void {
     if (this.device.failsExceeded()) {
       this.device.setUnavailable(message).catch((error: any) => this.device.log(error));
+      this.device.pollClear();
     } else {
       this.device.failsAdd();
     }
