@@ -1,3 +1,5 @@
+import Poll from "../../lib/Poll";
+
 export interface DeviceFailer {
   failsReset(): void;
   failsAdd(): void;
@@ -6,8 +8,5 @@ export interface DeviceFailer {
 }
 
 export interface DevicePoll {
-  pollInit(): void;
-  pollExec(): void;
-  pollIsActive(): boolean;
-  pollClear(): void;
+  poll: Poll;
 }

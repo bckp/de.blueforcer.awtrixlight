@@ -155,11 +155,7 @@ export default class Api {
 
         this.device.setAvailable().catch((error: any) => this.device.log(error.message ?? error));
         this.device.failsReset();
-
-        // Reinit poll if not active
-        if (!this.device.pollIsActive()) {
-          this.device.pollInit();
-        }
+        this.device.poll.start();
         return;
 
       case Status.AuthRequired:
@@ -178,7 +174,7 @@ export default class Api {
   processUnavailability(message: string): void {
     if (this.device.failsExceeded()) {
       this.device.setUnavailable(message).catch((error: any) => this.device.log(error));
-      this.device.pollClear();
+      this.device.poll.extend();
     } else {
       this.device.failsAdd();
     }

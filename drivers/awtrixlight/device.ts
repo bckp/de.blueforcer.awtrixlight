@@ -6,19 +6,21 @@ import Api from '../../lib/Api/Api';
 import { AwtrixImage, AwtrixStats, SettingOptions } from '../../lib/Types';
 import { DeviceFailer, DevicePoll } from './interfaces';
 import Icons from '../../lib/List/Icons';
+import Poll from '../../lib/Poll';
 
 const RebootFields: ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'] = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
 const PollInterval: number = 30000;
+const PollIntervalLong: number = 1800000; // 30 minutes
 
 export default class AwtrixLightDevice extends Device implements DeviceFailer, DevicePoll {
 
   api!: Api;
-  poll!: NodeJS.Timeout;
   failCritical: boolean = false;
   failCount: number = 0;
   failThreshold: number = 3;
 
   icons!: Icons;
+  poll!: Poll;
 
   /**
    * onInit is called when the device is initialized.
@@ -39,6 +41,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       new ApiClient({ ip: this.getStoreValue('address') }),
       this,
     );
+    // this.api.setDebug(true);
 
     // Create icons service
     this.icons = new Icons(
@@ -46,7 +49,20 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       this,
     );
 
-    this.api.setDebug(true);
+    // Setup polling
+    this.poll = new Poll(
+      async () => {
+        this.log('polling...');
+        this.refreshCapabilities();
+
+        if (!this.getAvailable()) {
+          this.tryRediscover();
+        }
+      },
+      this.homey,
+      PollInterval,
+      PollIntervalLong,
+    );
 
     // Initialize API etc
     this.initializeDevice();
@@ -68,7 +84,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     } else {
       await this.setAvailable();
     }
-    this.pollClear();
+    this.poll.stop();
 
     // Setup polling
     try {
@@ -77,12 +93,12 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       if (this.getAvailable()) {
         this.log('Device availalible');
         this.refreshAll();
-        this.pollInit();
         this.connected();
       } else {
-        this.log('Pooling not set, there is issue with device');
+        this.log('Polling set to extended mode, device is not available');
       }
     } finally {
+      this.poll.start();
       this.failsCritical(false);
     }
   }
@@ -124,8 +140,8 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       }
 
       // Enable pooling if not
-      if (!this.pollIsActive()) {
-        this.pollInit();
+      if (!this.poll.isActive()) {
+        this.poll.start();
       }
     }
 
@@ -378,29 +394,6 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
 
   failsCritical(value: boolean): void {
     this.failCritical = value;
-  }
-
-  /** bckp ******* Polling ******* */
-  pollClear(): void {
-    this.homey.clearInterval(this.poll);
-  }
-
-  pollExec(): void {
-    this.log('polling...');
-    this.refreshCapabilities();
-
-    if (!this.getAvailable()) {
-      this.tryRediscover();
-    }
-  }
-
-  pollInit(): void {
-    this.pollClear();
-    this.poll = this.homey.setInterval(async () => this.pollExec(), PollInterval);
-  }
-
-  pollIsActive(): boolean {
-    return !!this.poll;
   }
 
 }
