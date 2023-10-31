@@ -101,6 +101,26 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       this.poll.start();
       this.failsCritical(false);
     }
+
+    this.registerCapabilityListener('button.rediscover', async (): Promise<void> => {
+      this.log('Rediscover button pressed');
+      try {
+        // Device is OK, no need to rediscover
+        if (await this.api.clientVerify() === Status.Ok) {
+          return;
+        }
+
+        // Try to rediscover
+        if (await this.tryRediscover()) {
+          this.setCapabilityValue('ip', this.getStoreValue('address'));
+          return;
+        }
+      } catch (error: any) {
+        this.error(error);
+      }
+
+      throw new Error('Rediscovery failed');
+    });
   }
 
   /**
@@ -109,6 +129,8 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   async onAdded() {
     this.log('AwtrixLightDevice has been added');
     this.connected();
+
+    this.setCapabilityValue('ip', this.getStoreValue('address'));
 
     // Upload files
     fs.readdir(`${__dirname}/assets/images/icons`, (err, files) => {
@@ -164,19 +186,29 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     return discoveryResult.id === this.getData().id;
   }
 
-  async onDiscoveryAvailable(discoveryResult: DiscoveryResultMDNSSD) {
-    this.log('onDiscoveryAvailable', discoveryResult);
+  async onDiscoveryAvailable(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {
     if ('address' in discoveryResult && this.getStoreValue('address') !== discoveryResult.address) {
-      this.onDiscoveryAddressChanged(discoveryResult);
-      await this.setAvailable();
+      if (await this.onDiscoveryAddressChanged(discoveryResult)) {
+        await this.setAvailable();
+        return true;
+      }
     }
+    return false;
   }
 
-  onDiscoveryAddressChanged(discoveryResult: DiscoveryResultMDNSSD) {
-    this.log('onDiscoveryAddressChanged', discoveryResult);
+  async onDiscoveryAddressChanged(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {
+    // Set IP
     this.api.setIp(discoveryResult.address);
     this.setStoreValue('address', discoveryResult.address).catch((error) => this.error(error));
-    this.testDevice().then((result) => this.log('Device address changed with result: ', result));
+    this.setCapabilityValue('ip', discoveryResult.address);
+
+    // Verify
+    try {
+      return await this.testDevice();
+    } catch (error) {
+      this.error(error);
+    }
+    return false;
   }
 
   refreshAll() {
@@ -185,15 +217,16 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     this.refreshApps();
   }
 
-  tryRediscover() {
+  async tryRediscover(): Promise<boolean> {
     try {
       const result = this.driver.getDiscoveryStrategy().getDiscoveryResult(this.getData().id);
       if (result && result instanceof DiscoveryResultMDNSSD && result.address) {
-        this.onDiscoveryAvailable(result);
+        return this.onDiscoveryAvailable(result);
       }
     } catch (error: any) {
       this.log('Discovery error: ', error);
     }
+    return false;
   }
 
   // Refresh device capabilities, this is expensive so we do not want to poll too often
@@ -298,32 +331,51 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   async migrate() {
     this.log('Migrating device...');
     this.log('onInit', this.getCapabilities());
+    const capabilities = this.getCapabilities();
 
     try {
-      if (this.hasCapability('button_prev')) {
-        await this.removeCapability('button_prev');
-        this.log('removed capability button_prev');
-      }
-      if (this.hasCapability('button_next')) {
-        await this.removeCapability('button_next');
-        this.log('removed capability button_next');
-      }
-      if (this.hasCapability('awtrix_matrix')) {
-        await this.removeCapability('awtrix_matrix');
-        this.log('removed capability awtrix_matrix');
-      }
+      // Only reset capabilities if they are in bad order
+      if (!(
+        capabilities.indexOf('awtrix_matrix') > capabilities.indexOf('button_next')
+        && capabilities.indexOf('button_next') > capabilities.indexOf('button_prev')
+      )) {
+        this.log('Capabilities are in bad order, resetting...');
+        if (capabilities.includes('button_prev')) {
+          await this.removeCapability('button_prev');
+          this.log('removed capability button_prev');
+        }
+        if (capabilities.includes('button_next')) {
+          await this.removeCapability('button_next');
+          this.log('removed capability button_next');
+        }
+        if (capabilities.includes('awtrix_matrix')) {
+          await this.removeCapability('awtrix_matrix');
+          this.log('removed capability awtrix_matrix');
+        }
 
-      await this.addCapability('button_prev');
-      this.log('added capability button_prev');
-      await this.addCapability('button_next');
-      this.log('added capability button_next');
-      await this.addCapability('awtrix_matrix');
-      this.log('added capability awtrix_matrix');
+        // Re/add in correct order
+        this.log('re-add capabilities');
+        await this.addCapability('button_prev');
+        await this.addCapability('button_next');
+        await this.addCapability('awtrix_matrix');
+      }
 
       // Add rssi capability if not exists
-      if (!this.hasCapability('rssi')) {
+      if (!capabilities.includes('rssi')) {
         await this.addCapability('rssi');
         this.log('added capability rssi');
+      }
+
+      // Add rssi capability if not exists
+      if (!capabilities.includes('ip')) {
+        await this.addCapability('ip');
+        await this.setCapabilityValue('ip', this.getStoreValue('address'));
+        this.log('added capability ip');
+      }
+
+      // Add rediscover
+      if (!capabilities.includes('button.rediscover')) {
+        await this.addCapability('button.rediscover');
       }
     } catch (error: any) {
       this.error(error);

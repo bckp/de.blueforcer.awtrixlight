@@ -608,7 +608,9 @@
         "alarm_generic.indicator2",
         "alarm_generic.indicator3",
         "awtrix_matrix",
-        "rssi"
+        "rssi",
+        "ip",
+        "button.rediscover"
       ],
       "platforms": [
         "local"
@@ -635,6 +637,15 @@
           "preventInsights": true,
           "title": {
             "en": "Indicator bottom"
+          }
+        },
+        "button.rediscover": {
+          "maintenanceAction": true,
+          "title": {
+            "en": "Try to discover"
+          },
+          "desc": {
+            "en": "Start discovery process for new IP of device."
           }
         }
       },
@@ -893,6 +904,17 @@
       "setable": true,
       "uiComponent": "button",
       "icon": "/assets/capability_button_prev.svg"
+    },
+    "ip": {
+      "type": "string",
+      "title": {
+        "en": "IP Address"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "/assets/ipaddress.svg"
     },
     "rssi": {
       "type": "number",

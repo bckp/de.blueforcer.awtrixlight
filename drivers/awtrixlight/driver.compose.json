@@ -14,7 +14,9 @@
     "alarm_generic.indicator2",
     "alarm_generic.indicator3",
     "awtrix_matrix",
-    "rssi"
+    "rssi",
+    "ip",
+    "button.rediscover"
   ],
   "platforms": [
     "local"
@@ -42,6 +44,11 @@
       "title": {
         "en": "Indicator bottom"
       }
+    },
+    "button.rediscover": {
+      "maintenanceAction": true,
+      "title": { "en": "Try to discover" },
+      "desc": { "en": "Start discovery process for new IP of device." }
     }
   },
   "discovery": "awtrix-mdns",
