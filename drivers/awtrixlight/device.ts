@@ -179,7 +179,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
    */
   async onDeleted() {
     this.log('AwtrixLightDevice has been deleted');
-    this.homey.clearInterval(this.poll);
+    this.poll.stop();
   }
 
   onDiscoveryResult(discoveryResult: DiscoveryResultMDNSSD) {
@@ -239,31 +239,33 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
         return;
       }
 
-      // Battery
-      this.setCapabilityValue('measure_battery', stats.bat);
+      await this.setCapabilityValues({
+        // Battery
+        measure_battery: stats.bat,
 
-      // Measurements
-      this.setCapabilityValue('measure_humidity', stats.hum);
-      this.setCapabilityValue('measure_luminance', stats.lux);
-      this.setCapabilityValue('measure_temperature', stats.temp);
+        // Measurements
+        measure_humidity: stats.hum,
+        measure_luminance: stats.lux,
+        measure_temperature: stats.temp,
 
-      // Indicators
-      this.setCapabilityValue('alarm_generic.indicator1', !!stats.indicator1);
-      this.setCapabilityValue('alarm_generic.indicator2', !!stats.indicator2);
-      this.setCapabilityValue('alarm_generic.indicator3', !!stats.indicator3);
+        // Indicators
+        'alarm_generic.indicator1': !!stats.indicator1,
+        'alarm_generic.indicator2': !!stats.indicator2,
+        'alarm_generic.indicator3': !!stats.indicator3,
 
-      // Display
-      this.setCapabilityValue('awtrix_matrix', !!stats.matrix);
+        // Display
+        awtrix_matrix: !!stats.matrix,
 
-      // RSSI
-      this.setCapabilityValue('rssi', stats.wifi_signal);
+        // RSSI
+        rssi: stats.wifi_signal,
+      });
 
       if (stats.uptime <= this.getStoreValue('uptime')) {
         this.log('reboot detected');
-        this.refreshApps().catch(this.error);
+        // this.refreshApps().catch(this.error);
       }
 
-      this.setStoreValue('uptime', stats.uptime);
+      await this.setStoreValue('uptime', stats.uptime);
     } catch (error: any) {
       this.log(error.message || error);
     }
@@ -444,6 +446,10 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       this.error(error);
       return null;
     }
+  }
+
+  async setCapabilityValues(values: { [key: string]: any }): Promise<void> {
+    Object.keys(values).map((key) => this.setCapabilityValue(key, values[key]).catch(this.error));
   }
 
   /** bckp ******* API related ****** */
