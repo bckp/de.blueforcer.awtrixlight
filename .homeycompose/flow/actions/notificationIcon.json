@@ -1,9 +1,9 @@
 {
   "title": {
-    "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color (experimental)"
+    "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
   },
   "titleFormatted": {
-    "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color (experimental)"
+    "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
   },
   "hint": {
     "en": "Send color notification to device for specified duration with icon (from device) and color"

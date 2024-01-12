@@ -9,7 +9,7 @@ export const isColor = (color: any): color is string => {
 
 export const isNumeric = (input: any): input is number | string => {
   if (typeof input === 'string' || typeof input === 'number') {
-    return Number.isNaN(Number.parseInt(input.toString(), 10));
+    return !Number.isNaN(Number.parseInt(input.toString(), 10));
   }
   return false;
 };

@@ -25,5 +25,12 @@
   "author": {
     "name": "Radovan Kepák",
     "email": "radovan@kepakovi.cz"
+  },
+  "contributors": {
+    "developers": [
+      {
+        "name": "Dennie de Groot"
+      }
+    ]
   }
 }

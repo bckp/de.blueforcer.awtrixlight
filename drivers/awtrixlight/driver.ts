@@ -33,6 +33,19 @@ type ListenerArgsNotificationIcon = ListenerArgsNotification & {
   icon: HomeyAwtrixIcon
 }
 
+type ListenerArgsCustomApp = ListenerArgs & {
+  name: string,
+  msg: string,
+  color?: string,
+  duration?: number,
+  icon: HomeyAwtrixIcon,
+  options: string
+}
+
+type ListenerArgsRemoveCustomApp = ListenerArgs & {
+  name: string
+}
+
 const ManualAdd = false;
 
 export default class UlanziAwtrix extends Driver {
@@ -48,12 +61,6 @@ export default class UlanziAwtrix extends Driver {
 
   async initFlows(): Promise<void> {
     // Notification
-    this.homey.flow.getActionCard('notification').registerRunListener(async (args: ListenerArgsNotification) => {
-      const duration = typeof args.duration === 'number' ? Math.ceil(args.duration/1000) : undefined;
-      args.device.cmdNotify(args.msg, { color: args.color, duration, icon: args.icon });
-    });
-
-    // Notification with icon
     this.homey.flow.getActionCard('notificationIcon').registerRunListener(async (args: ListenerArgsNotificationIcon) => {
       const duration = typeof args.duration === 'number' ? Math.ceil(args.duration / 1000) : undefined;
       args.device.cmdNotify(args.msg, { color: args.color, duration, icon: args.icon.id });
@@ -62,10 +69,13 @@ export default class UlanziAwtrix extends Driver {
     });
 
     // Sticky notification
-    this.homey.flow.getActionCard('notificationSticky').registerRunListener(async (args: ListenerArgsNotification) => {
+    this.homey.flow.getActionCard('notificationSticky').registerRunListener(async (args: ListenerArgsNotificationIcon) => {
       const msg = args.msg || '';
-      args.device.cmdNotify(msg, { color: args.color, hold: true, icon: args.icon });
+      args.device.cmdNotify(msg, { color: args.color, hold: true, icon: args.icon.id });
+    }).getArgument('icon').registerAutocompleteListener(async (query: string, args: ListenerArgs) => {
+      return args.device.icons.find(query);
     });
+
     this.homey.flow.getActionCard('notificationDismiss').registerRunListener(async (args: ListenerArgs) => {
       args.device.cmdDismiss();
     });
@@ -86,6 +96,18 @@ export default class UlanziAwtrix extends Driver {
     });
     this.homey.flow.getActionCard('indicatorDismiss').registerRunListener(async (args: ListenerArgsIndicator) => {
       args.device.cmdIndicator(args.indicator, {});
+    });
+
+    // Custom app
+    this.homey.flow.getActionCard('customApp').registerRunListener(async (args: ListenerArgsCustomApp) => {
+      args.device.cmdCustomApp(args.name, { ...JSON.parse(args.options), ...{ text: args.msg, color: args.color, icon: args.icon.id, duration: args.duration }});
+    }).getArgument('icon').registerAutocompleteListener(async (query: string, args: ListenerArgs) => {
+      return args.device.icons.find(query);
+    });
+
+    // Remove custom app
+    this.homey.flow.getActionCard('removeCustomApp').registerRunListener(async (args: ListenerArgsRemoveCustomApp) => {
+      args.device.cmdRemoveCustomApp(args.name);
     });
   }
 
