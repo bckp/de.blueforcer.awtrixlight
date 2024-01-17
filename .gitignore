@@ -2,3 +2,5 @@
 /node_modules/
 /.homeybuild/
 /.idea/
+/.fleet/
+.DS_Store
