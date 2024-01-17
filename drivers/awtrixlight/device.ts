@@ -389,6 +389,14 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     this.api.notify(msg, params).catch(this.error);
   }
 
+  async cmdCustomApp(name: string, params: any): Promise<void> {
+    this.api.customApp(name, params).catch(this.error);
+  }
+
+  async cmdRemoveCustomApp(name: string): Promise<void> {
+    this.api.removeCustomApp(name).catch(this.error);
+  }
+
   async cmdDismiss(): Promise<void> {
     this.api.dismiss().catch(this.error);
   }

@@ -7,6 +7,7 @@ import {
   notifyOptions,
   powerOptions,
   settingOptions,
+  appOptions
 } from '../Normalizer';
 import { Status } from './Response';
 import { AwtrixImage, AwtrixStats, SettingOptions } from '../Types';
@@ -69,6 +70,14 @@ export default class Api {
 
   async notify(msg: string, options: any): Promise<boolean> {
     return this.clientPost('notify', notifyOptions({ ...options, text: msg }));
+  }
+
+  async customApp(name: string, options: any): Promise<boolean> {
+    return this.clientPost('custom?name=' + name, appOptions(options));
+  }
+
+  async removeCustomApp(name: string): Promise<boolean> {
+    return this.clientPost('custom?name=' + name, {});
   }
 
   async setSettings(options: any): Promise<boolean> {

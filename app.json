@@ -27,6 +27,13 @@
     "name": "Radovan Kepák",
     "email": "radovan@kepakovi.cz"
   },
+  "contributors": {
+    "developers": [
+      {
+        "name": "Dennie de Groot"
+      }
+    ]
+  },
   "flow": {
     "actions": [
       {
@@ -79,6 +86,77 @@
           }
         ],
         "id": "applicationIcon"
+      },
+      {
+        "title": {
+          "en": "Create custom app [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]]"
+        },
+        "titleFormatted": {
+          "en": "Create custom app [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]]"
+        },
+        "hint": {
+          "en": "Create custom app on device with icon (from device) and color"
+        },
+        "duration": true,
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight"
+          },
+          {
+            "type": "text",
+            "name": "name",
+            "placeholder": {
+              "en": "name"
+            }
+          },
+          {
+            "type": "text",
+            "name": "msg",
+            "placeholder": {
+              "en": "message"
+            }
+          },
+          {
+            "type": "autocomplete",
+            "name": "icon",
+            "title": {
+              "en": "icon"
+            },
+            "placeholder": {
+              "en": "icon"
+            }
+          },
+          {
+            "type": "color",
+            "name": "color",
+            "value": "#eeeeee"
+          },
+          {
+            "type": "range",
+            "name": "duration",
+            "value": 5,
+            "title": {
+              "en": "app duration"
+            },
+            "min": 1,
+            "max": 30,
+            "step": 1,
+            "label": "seconds",
+            "labelMultiplier": 1,
+            "labelDecimals": 0
+          },
+          {
+            "type": "text",
+            "name": "options",
+            "value": "{}",
+            "placeholder": {
+              "en": "JSON options"
+            }
+          }
+        ],
+        "id": "customApp"
       },
       {
         "title": {
@@ -265,126 +343,6 @@
       },
       {
         "title": {
-          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
-        },
-        "titleFormatted": {
-          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
-        },
-        "hint": {
-          "en": "Send color notification to device for specified duration with icon and color"
-        },
-        "duration": true,
-        "args": [
-          {
-            "name": "device",
-            "type": "device",
-            "filter": "driver_id=awtrixlight"
-          },
-          {
-            "type": "text",
-            "name": "msg",
-            "placeholder": {
-              "en": "message"
-            }
-          },
-          {
-            "type": "dropdown",
-            "name": "icon",
-            "value": "-",
-            "title": {
-              "en": "icon"
-            },
-            "values": [
-              {
-                "id": "-",
-                "title": {
-                  "en": "no"
-                }
-              },
-              {
-                "id": "homey",
-                "title": {
-                  "en": "Homey"
-                }
-              },
-              {
-                "id": "heater",
-                "title": {
-                  "en": "Heater"
-                }
-              },
-              {
-                "id": "warning",
-                "title": {
-                  "en": "Warning"
-                }
-              },
-              {
-                "id": "lightOn",
-                "title": {
-                  "en": "Light ON"
-                }
-              },
-              {
-                "id": "lightOff",
-                "title": {
-                  "en": "Light Off"
-                }
-              },
-              {
-                "id": "message",
-                "title": {
-                  "en": "Message"
-                }
-              },
-              {
-                "id": "tempC",
-                "title": {
-                  "en": "Temp °C"
-                }
-              },
-              {
-                "id": "tempF",
-                "title": {
-                  "en": "Temp °F"
-                }
-              },
-              {
-                "id": "smiley",
-                "title": {
-                  "en": "Smiley"
-                }
-              },
-              {
-                "id": "weather",
-                "title": {
-                  "en": "Weather"
-                }
-              },
-              {
-                "id": "tempIn",
-                "title": {
-                  "en": "Temperature indoor"
-                }
-              },
-              {
-                "id": "tempOut",
-                "title": {
-                  "en": "Temperature outdoor"
-                }
-              }
-            ]
-          },
-          {
-            "type": "color",
-            "name": "color",
-            "value": "#eeeeee"
-          }
-        ],
-        "id": "notification"
-      },
-      {
-        "title": {
           "en": "Dismiss notification"
         },
         "titleFormatted": {
@@ -404,10 +362,10 @@
       },
       {
         "title": {
-          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color (experimental)"
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
         },
         "titleFormatted": {
-          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color (experimental)"
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
         },
         "hint": {
           "en": "Send color notification to device for specified duration with icon (from device) and color"
@@ -468,92 +426,14 @@
             }
           },
           {
-            "type": "dropdown",
+            "type": "autocomplete",
             "name": "icon",
-            "value": "-",
             "title": {
               "en": "icon"
             },
-            "values": [
-              {
-                "id": "-",
-                "title": {
-                  "en": "no"
-                }
-              },
-              {
-                "id": "homey",
-                "title": {
-                  "en": "Homey"
-                }
-              },
-              {
-                "id": "heater",
-                "title": {
-                  "en": "Heater"
-                }
-              },
-              {
-                "id": "warning",
-                "title": {
-                  "en": "Warning"
-                }
-              },
-              {
-                "id": "lightOn",
-                "title": {
-                  "en": "Light ON"
-                }
-              },
-              {
-                "id": "lightOff",
-                "title": {
-                  "en": "Light Off"
-                }
-              },
-              {
-                "id": "message",
-                "title": {
-                  "en": "Message"
-                }
-              },
-              {
-                "id": "tempC",
-                "title": {
-                  "en": "Temp °C"
-                }
-              },
-              {
-                "id": "tempF",
-                "title": {
-                  "en": "Temp °F"
-                }
-              },
-              {
-                "id": "smiley",
-                "title": {
-                  "en": "Smiley"
-                }
-              },
-              {
-                "id": "weather",
-                "title": {
-                  "en": "Weather"
-                }
-              },
-              {
-                "id": "tempIn",
-                "title": {
-                  "en": "Temperature indoor"
-                }
-              },
-              {
-                "id": "tempOut",
-                "title": {
-                  "en": "Temperature outdoor"
-                }
-              }
-            ]
+            "placeholder": {
+              "en": "icon"
+            }
           },
           {
             "type": "color",
@@ -588,6 +468,33 @@
           }
         ],
         "id": "playRTTTL"
+      },
+      {
+        "title": {
+          "en": "Remove custom app [[name]]"
+        },
+        "titleFormatted": {
+          "en": "Remove custom app [[name]]"
+        },
+        "hint": {
+          "en": "Remove custom app on device"
+        },
+        "duration": true,
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight"
+          },
+          {
+            "type": "text",
+            "name": "name",
+            "placeholder": {
+              "en": "name"
+            }
+          }
+        ],
+        "id": "removeCustomApp"
       }
     ]
   },
@@ -809,7 +716,7 @@
                 {
                   "id": "9",
                   "label": {
-                    "en": "Reloat"
+                    "en": "Reload"
                   }
                 },
                 {
