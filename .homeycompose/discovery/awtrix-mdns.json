@@ -14,6 +14,15 @@
             "value": "awtrix_light"
           }
         }
+      ],
+      [
+        {
+          "field": "txt.type",
+          "match": {
+            "type": "string",
+            "value": "awtrix3"
+          }
+        }
       ]
     ]
   }
