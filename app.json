@@ -9,7 +9,7 @@
     "local"
   ],
   "name": {
-    "en": "AWTRIX Light"
+    "en": "AWTRIX 3"
   },
   "description": {
     "en": "Connected Smart Clock for your Smart Home"
@@ -501,7 +501,7 @@
   "drivers": [
     {
       "name": {
-        "en": "AwtrixLight"
+        "en": "Awtrix3"
       },
       "class": "other",
       "capabilities": [
@@ -853,6 +853,15 @@
             "match": {
               "type": "string",
               "value": "awtrix_light"
+            }
+          }
+        ],
+        [
+          {
+            "field": "txt.type",
+            "match": {
+              "type": "string",
+              "value": "awtrix3"
             }
           }
         ]
