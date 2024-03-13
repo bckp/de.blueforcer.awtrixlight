@@ -61,5 +61,8 @@
   },
   "1.2.0": {
     "en": "Added basic support for apps (danieldegroot)"
+  },
+  "1.2.1": {
+    "en": "Changed device name to Awtrix3"
   }
 }
