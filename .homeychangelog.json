@@ -64,5 +64,8 @@
   },
   "1.2.1": {
     "en": "Changed device name to Awtrix3"
+  },
+  "1.2.2": {
+    "en": "Fixed some texts"
   }
 }
