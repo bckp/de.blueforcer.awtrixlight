@@ -13,6 +13,11 @@ type ClientOptions = {
   log?: (message?: any, ...optionalParams: any[]) => void;
 }
 
+export interface RequestHeaders {
+  Authorization?: string;
+  [propName: string]: any;
+}
+
 function abortSignal(timeout: number): AbortSignal {
   const controller = new AbortController();
   setTimeout(() => controller.abort(), timeout);
@@ -71,13 +76,13 @@ export default class Client {
 
   async #getRequest(url: string): Promise<Response> {
     try {
-      this.#debugInfo('GET: ', url);
+      this.#debugRequest('GET: ', url);
       const result = await axios.get(url, {
         headers: this.#getHeaders(),
         timeout: Timeout,
         signal: abortSignal(TimeoutRequest),
       });
-      this.#debugInfo('GET: ', url, result);
+      this.#debugResponse('GET: ', url, result);
       return {
         status: this.#translateStatusCode(result.status),
         data: result.data,
@@ -87,16 +92,16 @@ export default class Client {
     }
   }
 
-  async post(cmd: string, data: any): Promise<Response> {
+  async post(cmd: string, data: any, headers?: RequestHeaders): Promise<Response> {
     const url: string = this.#getApiUrl(cmd);
     try {
-      this.#debugInfo('POST: ', url);
+      this.#debugRequest('POST: ', url, data);
       const result = await axios.post(url, data, {
-        headers: this.#getHeaders(),
+        headers: this.#getHeaders(headers),
         timeout: Timeout,
         signal: abortSignal(TimeoutRequest),
       });
-      this.#debugInfo('POST: ', url, result);
+      this.#debugResponse('POST: ', url, result);
       return {
         status: this.#translateStatusCode(result.status),
       };
@@ -108,16 +113,13 @@ export default class Client {
   async upload(path: string, form: FormData): Promise<Response> {
     const url: string = this.#getUrl(path);
     try {
-      this.#debugInfo('POST(upload): ', url);
+      this.#debugRequest('POST(upload): ', url);
       const result = await axios.post(url, form, {
-        headers: {
-          ...this.#getHeaders(),
-          ...form.getHeaders(),
-        },
+        headers: this.#getHeaders(form.getHeaders()),
         timeout: TimeoutUpload,
         signal: abortSignal(TimeoutRequest),
       });
-      this.#debugInfo('POST(upload): ', url, result);
+      this.#debugResponse('POST(upload): ', url, result);
       return {
         status: this.#translateStatusCode(result.status),
       };
@@ -146,15 +148,15 @@ export default class Client {
     return Status.Error;
   }
 
-  #getHeaders(): object {
+  #getHeaders(headers: RequestHeaders = {}): object {
     if (!this.user || !this.pass) {
-      return {};
+      return headers;
     }
 
     const token = Buffer.from(`${this.user}:${this.pass}`).toString('base64');
-    return {
-      Authorization: `Basic ${token}`,
-    };
+    headers.Authorization = `Basic ${token}`;
+
+    return headers;
   }
 
   #requestError(error: any, url: string): Response {
@@ -181,7 +183,18 @@ export default class Client {
     };
   }
 
-  #debugInfo(message: string, url: string, args?: AxiosResponse): void {
+  #debugRequest(message: string, url: string, headers?: RequestHeaders): void {
+    if (!this.debug) {
+      return;
+    }
+    this.log({
+      message,
+      url,
+      headers,
+    });
+  }
+
+  #debugResponse(message: string, url: string, args?: AxiosResponse): void {
     if (!this.debug) {
       return;
     }
@@ -193,14 +206,22 @@ export default class Client {
       dump.data = args.data;
       dump.headers = args.headers;
     }
-    this.log(message, url, dump);
+    this.log({
+      message,
+      url,
+      dump,
+    });
   }
 
   #debugError(message: string, url: string, arg: any): void {
     if (!this.debug) {
       return;
     }
-    this.log(message, url, arg);
+    this.log({
+      message,
+      url,
+      arg,
+    });
   }
 
 }

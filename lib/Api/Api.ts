@@ -1,6 +1,6 @@
 import { Device } from 'homey';
 import FormData from 'form-data';
-import Client from './Client';
+import Client, { RequestHeaders } from './Client';
 import {
   indicatorNumber,
   indicatorOptions,
@@ -45,7 +45,7 @@ export default class Api {
   }
 
   async rtttl(melody: string): Promise<boolean> {
-    return this.clientPost('rtttl', melody);
+    return this.clientPost('rtttl', melody, { 'Content-Type': 'text/plain' });
   }
 
   async power(power: boolean): Promise<boolean> {
@@ -73,11 +73,11 @@ export default class Api {
   }
 
   async customApp(name: string, options: any): Promise<boolean> {
-    return this.clientPost('custom?name=' + name, appOptions(options));
+    return this.clientPost(`custom?name=${name}!`, appOptions(options));
   }
 
   async removeCustomApp(name: string): Promise<boolean> {
-    return this.clientPost('custom?name=' + name, {});
+    return this.clientPost(`custom?name=${name}!`, {});
   }
 
   async setSettings(options: any): Promise<boolean> {
@@ -128,8 +128,8 @@ export default class Api {
     }
   }
 
-  async clientPost(endpoint: string, options?: any): Promise<boolean> {
-    const response = await this.client.post(endpoint, options);
+  async clientPost(endpoint: string, options?: any, headers?: RequestHeaders): Promise<boolean> {
+    const response = await this.client.post(endpoint, options, headers);
     this.processResponseCode(response.status, response.message);
 
     return response?.status === Status.Ok;
