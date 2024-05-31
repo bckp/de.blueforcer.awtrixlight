@@ -73,5 +73,8 @@
   },
   "1.2.4": {
     "en": "Small fixes"
+  },
+  "1.2.5": {
+    "en": "Reworked app names (please reboot awtrix to clear all old apps)"
   }
 }
