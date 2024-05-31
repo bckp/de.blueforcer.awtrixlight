@@ -73,11 +73,11 @@ export default class Api {
   }
 
   async customApp(name: string, options: any): Promise<boolean> {
-    return this.clientPost(`custom?name=${name}!`, appOptions(options));
+    return this.clientPost(`custom?name=homey:${name}`, appOptions(options));
   }
 
   async removeCustomApp(name: string): Promise<boolean> {
-    return this.clientPost(`custom?name=${name}!`, {});
+    return this.clientPost(`custom?name=homey:${name}`, {});
   }
 
   async setSettings(options: any): Promise<boolean> {
