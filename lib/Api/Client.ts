@@ -76,13 +76,13 @@ export default class Client {
 
   async #getRequest(url: string): Promise<Response> {
     try {
-      this.#debugRequest('GET: ', url);
+      this.#debugRequest('GET', url);
       const result = await axios.get(url, {
         headers: this.#getHeaders(),
         timeout: Timeout,
         signal: abortSignal(TimeoutRequest),
       });
-      this.#debugResponse('GET: ', url, result);
+      this.#debugResponse('GET', url, result);
       return {
         status: this.#translateStatusCode(result.status),
         data: result.data,
@@ -95,13 +95,13 @@ export default class Client {
   async post(cmd: string, data: any, headers?: RequestHeaders): Promise<Response> {
     const url: string = this.#getApiUrl(cmd);
     try {
-      this.#debugRequest('POST: ', url, data);
+      this.#debugRequest('POST', url, this.#getHeaders(headers), data);
       const result = await axios.post(url, data, {
         headers: this.#getHeaders(headers),
         timeout: Timeout,
         signal: abortSignal(TimeoutRequest),
       });
-      this.#debugResponse('POST: ', url, result);
+      this.#debugResponse('POST', url, result);
       return {
         status: this.#translateStatusCode(result.status),
       };
@@ -113,13 +113,13 @@ export default class Client {
   async upload(path: string, form: FormData): Promise<Response> {
     const url: string = this.#getUrl(path);
     try {
-      this.#debugRequest('POST(upload): ', url);
+      this.#debugRequest('POST(upload)', url);
       const result = await axios.post(url, form, {
         headers: this.#getHeaders(form.getHeaders()),
         timeout: TimeoutUpload,
         signal: abortSignal(TimeoutRequest),
       });
-      this.#debugResponse('POST(upload): ', url, result);
+      this.#debugResponse('POST(upload)', url, result);
       return {
         status: this.#translateStatusCode(result.status),
       };
@@ -149,6 +149,10 @@ export default class Client {
   }
 
   #getHeaders(headers: RequestHeaders = {}): object {
+    headers['Content-Type'] = 'application/json';
+    headers['User-Agent'] = 'Homey/1.0';
+    headers.Accept = '*/*';
+
     if (!this.user || !this.pass) {
       return headers;
     }
@@ -160,7 +164,7 @@ export default class Client {
   }
 
   #requestError(error: any, url: string): Response {
-    this.#debugError('Result(error): ', url, error.message || error);
+    this.#debugError('Result(error)', url, error.message || error);
 
     // Device did not respond in time
     if (error.code === 'ECONNABORTED' || error.code === 'ERR_CANCELED') {
@@ -183,7 +187,7 @@ export default class Client {
     };
   }
 
-  #debugRequest(message: string, url: string, headers?: RequestHeaders): void {
+  #debugRequest(message: string, url: string, headers?: RequestHeaders, data?: any): void {
     if (!this.debug) {
       return;
     }
@@ -191,20 +195,21 @@ export default class Client {
       message,
       url,
       headers,
+      data
     });
   }
 
-  #debugResponse(message: string, url: string, args?: AxiosResponse): void {
+  #debugResponse(message: string, url: string, response?: AxiosResponse): void {
     if (!this.debug) {
       return;
     }
 
     const dump: {status?: number, statusText?: string, data?: any, headers?: any} = {};
-    if (args) {
-      dump.status = args.status;
-      dump.statusText = args.statusText;
-      dump.data = args.data;
-      dump.headers = args.headers;
+    if (response) {
+      dump.status = response.status;
+      dump.statusText = response.statusText;
+      dump.data = response.data;
+      dump.headers = response.headers;
     }
     this.log({
       message,

@@ -33,6 +33,11 @@ type ListenerArgsNotificationIcon = ListenerArgsNotification & {
   icon: HomeyAwtrixIcon
 }
 
+type ListenerArgsNotificationJson = ListenerArgs &{
+  msg: string,
+  options: string
+}
+
 type ListenerArgsCustomApp = ListenerArgs & {
   name: string,
   msg: string,
@@ -70,10 +75,13 @@ export default class UlanziAwtrix extends Driver {
 
     // Sticky notification
     this.homey.flow.getActionCard('notificationSticky').registerRunListener(async (args: ListenerArgsNotificationIcon) => {
-      const msg = args.msg || '';
-      args.device.cmdNotify(msg, { color: args.color, hold: true, icon: args.icon.id });
+      args.device.cmdNotify(args.msg, { color: args.color, duration: args.duration });
     }).getArgument('icon').registerAutocompleteListener(async (query: string, args: ListenerArgs) => {
       return args.device.icons.find(query);
+    });
+
+    this.homey.flow.getActionCard('notificationJson').registerRunListener(async (args: ListenerArgsNotificationJson) => {
+      args.device.cmdNotify(args.msg, { ...JSON.parse(args.options) });
     });
 
     this.homey.flow.getActionCard('notificationDismiss').registerRunListener(async (args: ListenerArgs) => {
@@ -92,15 +100,21 @@ export default class UlanziAwtrix extends Driver {
 
     // Indicators
     this.homey.flow.getActionCard('indicator').registerRunListener(async (args: ListenerArgsIndicator) => {
-      args.device.cmdIndicator(args.indicator, { color: args.color, duration: args.duration, effect: args.effect });
+      await args.device.cmdIndicator(args.indicator, { color: args.color, duration: args.duration, effect: args.effect });
     });
+
     this.homey.flow.getActionCard('indicatorDismiss').registerRunListener(async (args: ListenerArgsIndicator) => {
       args.device.cmdIndicator(args.indicator, {});
     });
 
     // Custom app
     this.homey.flow.getActionCard('customApp').registerRunListener(async (args: ListenerArgsCustomApp) => {
-      args.device.cmdCustomApp(args.name, { ...JSON.parse(args.options), ...{ text: args.msg, color: args.color, icon: args.icon.id, duration: args.duration }});
+      let params = { ...JSON.parse(args.options), duration: args.duration, text: args.msg };
+
+      args.color && (params.color = args.color);
+      args.icon.id && args.icon.id !== '-' && (params.icon = args.icon.id);
+
+      args.device.cmdCustomApp(args.name, params);
     }).getArgument('icon').registerAutocompleteListener(async (query: string, args: ListenerArgs) => {
       return args.device.icons.find(query);
     });

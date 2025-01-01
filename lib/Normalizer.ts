@@ -135,8 +135,7 @@ const basicOptions = (options: Record<keyof BaseOptions, any>): BaseOptions => {
     opt.rainbow = !!options.rainbow;
   }
 
-  // TODO: Add support for base64 icons, or rewrite this to use only base64 icons
-  if (options.icon && options.icon !== '-') {
+  if (options.icon && options.icon !== '-' && (options.icon.length < 32 || options.icon.startsWith('data:image/jpeg;base64,'))) {
     opt.icon = options.icon.toString();
   }
 
@@ -160,14 +159,34 @@ const basicOptions = (options: Record<keyof BaseOptions, any>): BaseOptions => {
     opt.scrollSpeed = toNumber(options.scrollSpeed);
   }
 
-  /*
-  blinkText?: number; // Blinks the text in an given interval, not compatible with gradient or rainbow
-  fadeText?: number; // Fades the text on and off in an given interval, not compatible with gradient or rainbow
-  progress?: number; // Shows a progress bar. Value can be 0-100.
-  progressC?: Color; // The color of the progress bar.
-  progressBC?: Color; // The color of the progress bar background.
-  effect?: string; // Shows an effect as background.
-  */
+  if (options.effect && isString(options.effect)) {
+    opt.effect = options.effect;
+  }
+
+  if (options.effectSettings) {
+    //TODO: add validation for effectSettings
+    opt.effectSettings = options.effectSettings;
+  }
+
+  if (options.progress && isNumeric(options.progress)) {
+    opt.progress = minMaxNumber(0, 100, options.progress); // 0-100
+  }
+
+  if (options.progressC && isColor(options.progressC)) {
+    opt.progressC = options.progressC;
+  }
+
+  if (options.progressBC && isColor(options.progressBC)) {
+    opt.progressBC = options.progressBC;
+  }
+
+  if (options.blinkText && isNumeric(options.blinkText) && !opt.gradient && !opt.rainbow) {
+    opt.blinkText = toNumber(options.blinkText);
+  }
+
+  if (options.fadeText && isNumeric(options.fadeText) && !opt.gradient && !opt.rainbow) {
+    opt.fadeText = toNumber(options.fadeText);
+  }
 
   return opt;
 };

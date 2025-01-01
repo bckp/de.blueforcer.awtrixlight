@@ -32,6 +32,7 @@
     {
       "type": "autocomplete",
       "name": "icon",
+      "required": false,
       "title": {
         "en": "icon"
       },
@@ -42,6 +43,7 @@
     {
       "type": "color",
       "name": "color",
+      "required": false,
       "value": "#eeeeee"
     },
     {
