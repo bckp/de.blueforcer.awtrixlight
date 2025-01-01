@@ -1,4 +1,4 @@
-import { isColor, isNumeric } from './Validator';
+import { isColor, isNumeric, isOverlay, isEffectSettings, isBarLineValues, isArrayOfStrings } from './Validator';
 import {
   AppOptions,
   NotifyOptions,
@@ -163,8 +163,7 @@ const basicOptions = (options: Record<keyof BaseOptions, any>): BaseOptions => {
     opt.effect = options.effect;
   }
 
-  if (options.effectSettings) {
-    //TODO: add validation for effectSettings
+  if (options.effectSettings && isEffectSettings(options.effectSettings)) {
     opt.effectSettings = options.effectSettings;
   }
 
@@ -186,6 +185,22 @@ const basicOptions = (options: Record<keyof BaseOptions, any>): BaseOptions => {
 
   if (options.fadeText && isNumeric(options.fadeText) && !opt.gradient && !opt.rainbow) {
     opt.fadeText = toNumber(options.fadeText);
+  }
+
+  if (options.overlay && isOverlay(options.overlay)) {
+    opt.overlay = options.overlay;
+  }
+
+  if (options.bar && isBarLineValues(options.bar, !!opt.icon)) {
+    opt.bar = options.bar;
+  }
+
+  if (options.Line && isBarLineValues(options.Line, !!opt.icon)) {
+    opt.Line = options.Line;
+  }
+
+  if (options.barBC && isColor(options.barBC) && (opt.bar || opt.Line)) {
+    opt.barBC = options.barBC;
   }
 
   return opt;
@@ -212,6 +227,10 @@ export const notifyOptions = (options: Record<keyof NotifyOptions, any>): Notify
 
   if (options.wakeup) {
     opt.wakeup = !!options.wakeup;
+  }
+
+  if (options.clients && isArrayOfStrings(options.clients)) {
+    opt.clients = options.clients;
   }
 
   return opt;

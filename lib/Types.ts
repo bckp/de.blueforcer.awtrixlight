@@ -3,8 +3,29 @@ export type PushIcon = 0 | 1 | 2;
 export type TextCase = 0 | 1 | 2;
 export type LifetimeMode = 0 | 1;
 export type IndicatorEffect = 'fade' | 'blink';
-export type ColorPallete = 'Cloud' | 'Lava' | 'Ocean' | 'Forest' | 'Stripe' | 'Party' | 'Heat' | 'Rainbow';
+export type ColorPaletteBuildIn = 'Cloud' | 'Lava' | 'Ocean' | 'Forest' | 'Stripe' | 'Party' | 'Heat' | 'Rainbow';
+export type ColorPaletteColors = [Color, Color, Color, Color, Color, Color, Color, Color, Color, Color, Color, Color, Color, Color, Color, Color];
+export type ColorPalette = ColorPaletteBuildIn | ColorPaletteColors;
+export type Overlay = "clear"| "snow" | "rain" | "drizzle" | "storm" | "thunder" | "frost";
 export type TransitionEffect = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+
+export type BarLineValues = 
+| [number]
+| [number, number]
+| [number, number, number]
+| [number, number, number, number]
+| [number, number, number, number, number]
+| [number, number, number, number, number, number]
+| [number, number, number, number, number, number, number]
+| [number, number, number, number, number, number, number, number]
+| [number, number, number, number, number, number, number, number, number]
+| [number, number, number, number, number, number, number, number, number, number]
+| [number, number, number, number, number, number, number, number, number, number, number]
+| [number, number, number, number, number, number, number, number, number, number, number, number]
+| [number, number, number, number, number, number, number, number, number, number, number, number, number]
+| [number, number, number, number, number, number, number, number, number, number, number, number, number, number]
+| [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]
+| [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number];
 
 export type IndicatorOptions = {
   color: Color;
@@ -48,9 +69,9 @@ export type HomeyAwtrixIcon = {
   description?: string,
 }
 
-type EffectSettings = {
+export type EffectSettings = {
   speed: number,
-  palette: ColorPallete,
+  palette: ColorPalette,
   blend: boolean,
 }
 
@@ -70,9 +91,10 @@ type Base = {
   pushIcon?: PushIcon; // 0 = Icon doesn't move. 1 = Icon moves with text and will not appear again. 2 = Icon moves with text but appears again when the text starts to scroll again.
   repeat?: number; // Sets how many times the text should be scrolled through the matrix before the app ends.
   duration?: number; // Sets how long the app or notification should be displayed.
-  // bar?: array of integers; //Draws a bargraph. Without icon maximum 16 values, with icon 11 values.
-  // line?: array of integers; //Draws a linechart. Without icon maximum 16 values, with icon 11 values.
-  // autoscale?: boolean; //Enables or disables autoscaling for bar and linechart.
+  bar?: BarLineValues ; //Draws a bargraph. Without icon maximum 16 values, with icon 11 values.
+  Line?: BarLineValues; //Draws a linechart. Without icon maximum 16 values, with icon 11 values.
+  barBC?: Color; // Backgroundcolor of the bars.
+  autoscale?: boolean; //Enables or disables autoscaling for bar and linechart.
   progress?: number; // Shows a progress bar. Value can be 0-100.
   progressC?: Color; // The color of the progress bar.
   progressBC?: Color; // The color of the progress bar background.
@@ -80,6 +102,7 @@ type Base = {
   scrollSpeed?: number; // Modifies the scroll speed. Enter a percentage value of the original scroll speed.
   effect?: string; // Shows an effect as background.
   effectSettings?: EffectSettings; //Changes color and speed of the effect.
+  overlay?: Overlay; // Shows an overlay effect.
 }
 
 type OnlyNotify = {
@@ -88,6 +111,7 @@ type OnlyNotify = {
   loopSound?: boolean; // Loops the sound or rtttl as long as the notification is running.
   stack?: boolean; // Defines if the notification will be stacked. false will immediately replace the current notification.
   wakeup?: boolean; // If the Matrix is off, the notification will wake it up for the time of the notification.
+  clients?: string[]; // Allows forwarding a notification to other awtrix devices. Use the IP addresses.
 }
 
 type OnlyApp = {
