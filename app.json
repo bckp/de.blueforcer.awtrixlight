@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "de.blueforcer.awtrixlight",
-  "version": "1.2.5",
+  "version": "1.3.0",
   "compatibility": ">=7.4.0",
   "sdk": 3,
   "brandColor": "#222222",
@@ -18,6 +18,8 @@
     "appliances"
   ],
   "permissions": [],
+  "homeyCommunityTopicId": 91888,
+  "source": "https://github.com/bckp/de.blueforcer.awtrixlight",
   "images": {
     "small": "/assets/images/small.png",
     "large": "/assets/images/large.png",
@@ -121,6 +123,7 @@
           {
             "type": "autocomplete",
             "name": "icon",
+            "required": false,
             "title": {
               "en": "icon"
             },
@@ -131,6 +134,7 @@
           {
             "type": "color",
             "name": "color",
+            "required": false,
             "value": "#eeeeee"
           },
           {
@@ -401,6 +405,41 @@
           }
         ],
         "id": "notificationIcon"
+      },
+      {
+        "title": {
+          "en": "Send notification [[msg]] with [[options]]"
+        },
+        "titleFormatted": {
+          "en": "Send notification [[msg]] with [[options]]"
+        },
+        "hint": {
+          "en": "Send notification to device with all custom options in JSON format"
+        },
+        "duration": true,
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight"
+          },
+          {
+            "type": "text",
+            "name": "msg",
+            "placeholder": {
+              "en": "message"
+            }
+          },
+          {
+            "type": "text",
+            "name": "options",
+            "value": "{}",
+            "placeholder": {
+              "en": "JSON options"
+            }
+          }
+        ],
+        "id": "notificationJson"
       },
       {
         "title": {

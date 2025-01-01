@@ -1,6 +1,6 @@
 {
   "id": "de.blueforcer.awtrixlight",
-  "version": "1.2.5",
+  "version": "1.3.0",
   "compatibility": ">=7.4.0",
   "sdk": 3,
   "brandColor": "#222222",
@@ -17,6 +17,8 @@
     "appliances"
   ],
   "permissions": [],
+  "homeyCommunityTopicId": 91888,
+  "source": "https://github.com/bckp/de.blueforcer.awtrixlight",
   "images": {
     "small": "/assets/images/small.png",
     "large": "/assets/images/large.png",
