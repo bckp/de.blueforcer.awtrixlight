@@ -69,11 +69,11 @@ export default class Api {
   }
 
   async notify(msg: string, options: any): Promise<boolean> {
-    return this.clientPost('notify', notifyOptions({ ...options, text: msg }));
+    return this.clientPost('notify', notifyOptions({ ...options, text: msg }, this.device.getStoreValue('effects') || []));
   }
 
   async customApp(name: string, options: any): Promise<boolean> {
-    return this.clientPost(`custom?name=homey:${name}`, appOptions(options));
+    return this.clientPost(`custom?name=homey:${name}`, appOptions(options, this.device.getStoreValue('effects') || []));
   }
 
   async removeCustomApp(name: string): Promise<boolean> {
@@ -90,6 +90,10 @@ export default class Api {
 
   async getStats(): Promise<AwtrixStats|null> {
     return this.clientGet('stats');
+  }
+
+  async getEffects(): Promise<string[]|null> {
+    return this.clientGet('effects');
   }
 
   async uploadImage(data: any, name: string): Promise<boolean> {

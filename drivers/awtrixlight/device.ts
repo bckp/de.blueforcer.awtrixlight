@@ -216,6 +216,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   refreshAll() {
     this.refreshCapabilities();
     this.refreshSettings();
+    this.refreshEffects();
   }
 
   async tryRediscover(): Promise<boolean> {
@@ -228,6 +229,10 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       this.log('Discovery error: ', error);
     }
     return false;
+  }
+
+  async refreshEffects(): Promise<void> {
+    this.setStoreValue('effects', await this.cmdGetEffects());
   }
 
   // Refresh device capabilities, this is expensive so we do not want to poll too often
@@ -429,6 +434,15 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   async cmdGetStats(): Promise<AwtrixStats|null> {
     try {
       return await this.api?.getStats();
+    } catch (error: any) {
+      this.error(error);
+      return null;
+    }
+  }
+
+  async cmdGetEffects(): Promise<string[]|null> {
+    try {
+      return await this.api?.getEffects();
     } catch (error: any) {
       this.error(error);
       return null;

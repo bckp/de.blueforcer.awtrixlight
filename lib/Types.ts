@@ -92,7 +92,7 @@ type Base = {
   repeat?: number; // Sets how many times the text should be scrolled through the matrix before the app ends.
   duration?: number; // Sets how long the app or notification should be displayed.
   bar?: BarLineValues ; //Draws a bargraph. Without icon maximum 16 values, with icon 11 values.
-  Line?: BarLineValues; //Draws a linechart. Without icon maximum 16 values, with icon 11 values.
+  line?: BarLineValues; //Draws a linechart. Without icon maximum 16 values, with icon 11 values.
   barBC?: Color; // Backgroundcolor of the bars.
   autoscale?: boolean; //Enables or disables autoscaling for bar and linechart.
   progress?: number; // Shows a progress bar. Value can be 0-100.

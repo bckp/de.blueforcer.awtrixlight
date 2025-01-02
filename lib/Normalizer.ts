@@ -13,6 +13,7 @@ import {
   PushIcon,
   PowerOptions,
 } from './Types';
+import { Device } from 'homey';
 
 const appPrefix: string = 'homey:';
 
@@ -96,7 +97,7 @@ export const powerOptions = (options: Record<'power', any>): PowerOptions => {
   };
 };
 
-const basicOptions = (options: Record<keyof BaseOptions, any>): BaseOptions => {
+const basicOptions = (options: Record<keyof BaseOptions, any>, effects: string[]): BaseOptions => {
   const opt: BaseOptions = {};
 
   if (options.text && isString(options.text)) {
@@ -159,7 +160,7 @@ const basicOptions = (options: Record<keyof BaseOptions, any>): BaseOptions => {
     opt.scrollSpeed = toNumber(options.scrollSpeed);
   }
 
-  if (options.effect && isString(options.effect)) {
+  if (options.effect && isString(options.effect) && effects.includes(options.effect)) {
     opt.effect = options.effect;
   }
 
@@ -195,19 +196,19 @@ const basicOptions = (options: Record<keyof BaseOptions, any>): BaseOptions => {
     opt.bar = options.bar;
   }
 
-  if (options.Line && isBarLineValues(options.Line, !!opt.icon)) {
-    opt.Line = options.Line;
+  if (options.line && isBarLineValues(options.line, !!opt.icon)) {
+    opt.line = options.line;
   }
 
-  if (options.barBC && isColor(options.barBC) && (opt.bar || opt.Line)) {
+  if (options.barBC && isColor(options.barBC) && (opt.bar || opt.line)) {
     opt.barBC = options.barBC;
   }
 
   return opt;
 };
 
-export const notifyOptions = (options: Record<keyof NotifyOptions, any>): NotifyOptions => {
-  const opt: NotifyOptions = basicOptions(options);
+export const notifyOptions = (options: Record<keyof NotifyOptions, any>, effects: string[]): NotifyOptions => {
+  const opt: NotifyOptions = basicOptions(options, effects);
 
   if (options.hold) {
     opt.hold = !!options.hold;
@@ -236,8 +237,8 @@ export const notifyOptions = (options: Record<keyof NotifyOptions, any>): Notify
   return opt;
 };
 
-export const appOptions = (options: any): AppOptions => {
-  const opt: AppOptions = basicOptions(options);
+export const appOptions = (options: any, effects: string[]): AppOptions => {
+  const opt: AppOptions = basicOptions(options, effects);
 
   if (options.lifetime && isNumeric(options.lifetime)) {
     opt.lifetime = toNumber(options.lifetime);
