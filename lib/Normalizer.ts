@@ -248,6 +248,10 @@ export const appOptions = (options: any, effects: string[]): AppOptions => {
     opt.lifetimeMode = toLifetimeMode(options.lifetimeMode);
   }
 
+  if (options.pos && isNumeric(options.pos)) {
+    opt.pos = Math.abs(toNumber(options.pos));
+  }
+
   return opt;
 };
 

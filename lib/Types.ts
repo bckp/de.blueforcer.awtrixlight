@@ -117,6 +117,7 @@ type OnlyNotify = {
 type OnlyApp = {
   lifetime?: number; // Removes the custom app when there is no update after the given time in seconds.
   lifetimeMode?: LifetimeMode; // 0 = deletes the app, 1 = marks it as staled with a red rectangle around the app
+  pos?: number; // Sets position of the app, starting from 0
 }
 
 export type BaseOptions = Base;
