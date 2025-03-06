@@ -75,7 +75,8 @@ export default class UlanziAwtrix extends Driver {
 
     // Sticky notification
     this.homey.flow.getActionCard('notificationSticky').registerRunListener(async (args: ListenerArgsNotificationIcon) => {
-      args.device.cmdNotify(args.msg, { color: args.color, duration: args.duration });
+      const msg = args.msg || '';
+      args.device.cmdNotify(msg, { color: args.color, hold: true, icon: args.icon.id });
     }).getArgument('icon').registerAutocompleteListener(async (query: string, args: ListenerArgs) => {
       return args.device.icons.find(query);
     });
