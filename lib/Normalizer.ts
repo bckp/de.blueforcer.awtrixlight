@@ -1,4 +1,4 @@
-import { isColor, isNumeric, isOverlay, isEffectSettings, isBarLineValues, isArrayOfStrings } from './Validator';
+import { isColor, isNumeric, isOverlay, isEffectSettings, isBarLineValues, isArrayOfStrings, isArrayOfTextFragments, isTextFragment } from './Validator';
 import {
   AppOptions,
   NotifyOptions,
@@ -12,6 +12,7 @@ import {
   TextCase,
   PushIcon,
   PowerOptions,
+  TextFragment,
 } from './Types';
 import { Device } from 'homey';
 
@@ -83,6 +84,16 @@ export const indicatorOptions = (options: any): IndicatorOptions => {
   return ret;
 };
 
+export const toTextFragments = (fragments: any): TextFragment[] => {
+  const ret = [];
+  for (const fragment of fragments) {
+    if (isTextFragment(fragment)) {
+      ret.push({t: fragment.t, c: toColor(fragment.c)});
+    }
+  }
+  return ret;
+}
+
 export const indicatorNumber = (id: number | string): number => {
   return minMaxNumber(1, 3, toNumber(id));
 };
@@ -100,10 +111,10 @@ export const powerOptions = (options: Record<'power', any>): PowerOptions => {
 const basicOptions = (options: Record<keyof BaseOptions, any>, effects: string[]): BaseOptions => {
   const opt: BaseOptions = {};
 
-  if (options.text && isString(options.text)) {
+  if (options.text && (isString(options.text) || isArrayOfTextFragments(options.text))) {
     opt.text = options.text;
-  }
-
+  } 
+  
   if (options.textCase) {
     opt.textCase = toTextCase(options.textCase);
   }
@@ -203,6 +214,8 @@ const basicOptions = (options: Record<keyof BaseOptions, any>, effects: string[]
   if (options.barBC && isColor(options.barBC) && (opt.bar || opt.line)) {
     opt.barBC = options.barBC;
   }
+
+  console.log('opt', opt);
 
   return opt;
 };

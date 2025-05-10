@@ -1,4 +1,4 @@
-import { IndicatorEffect, Overlay, EffectSettings, ColorPalette, ColorPaletteBuildIn, ColorPaletteColors, BarLineValues } from "./Types";
+import { IndicatorEffect, Overlay, EffectSettings, ColorPalette, ColorPaletteBuildIn, ColorPaletteColors, BarLineValues, TextFragment } from "./Types";
 
 export const isColor = (color: any): color is string => {
   if (typeof color === 'number' || typeof color === 'string') {
@@ -52,6 +52,20 @@ const isColorPaletteColors = (colors: any): colors is ColorPaletteColors => {
 const isPaletteBuildIn = (pallete: any): pallete is ColorPaletteBuildIn => {
   if (typeof pallete === 'string') {
     return pallete === 'Cloud' || pallete === 'Lava' || pallete === 'Ocean' || pallete === 'Forest' || pallete === 'Stripe' || pallete === 'Party' || pallete === 'Heat' || pallete === 'Rainbow';
+  }
+  return false;
+}
+
+export const isArrayOfTextFragments = (fragments: any): fragments is TextFragment[] => {
+  if (Array.isArray(fragments)) {
+    return fragments.every((item) => isTextFragment(item));
+  }
+  return false;
+}
+
+export const isTextFragment = (fragment: any): fragment is TextFragment => {
+  if (typeof fragment === 'object') {
+    return typeof fragment.t === 'string' && isColor(fragment.c);
   }
   return false;
 }

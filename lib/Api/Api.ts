@@ -69,7 +69,7 @@ export default class Api {
   }
 
   async notify(msg: string, options: any): Promise<boolean> {
-    return this.clientPost('notify', notifyOptions({ ...options, text: msg }, this.device.getStoreValue('effects') || []));
+    return this.clientPost('notify', notifyOptions({ text: msg, ...options }, this.device.getStoreValue('effects') || []));
   }
 
   async customApp(name: string, options: any): Promise<boolean> {
