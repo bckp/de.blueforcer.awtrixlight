@@ -116,6 +116,7 @@
           {
             "type": "text",
             "name": "msg",
+            "required": false,
             "placeholder": {
               "en": "message"
             }

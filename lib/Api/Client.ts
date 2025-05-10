@@ -2,10 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 import FormData from 'form-data';
 import { Response, Status } from './Response';
 
-const Timeout = 5000; // 5 seconds
-const TimeoutUpload = Timeout * 2; // 4 seconds
-const TimeoutRequest = Timeout / 2; // 2.5 seconds
-
+const Timeout = 10000;
 type ClientOptions = {
   ip: string;
   user?: string;
@@ -80,7 +77,7 @@ export default class Client {
       const result = await axios.get(url, {
         headers: this.#getHeaders(),
         timeout: Timeout,
-        signal: abortSignal(TimeoutRequest),
+        signal: abortSignal(Timeout),
       });
       this.#debugResponse('GET', url, result);
       return {
@@ -99,7 +96,7 @@ export default class Client {
       const result = await axios.post(url, data, {
         headers: this.#getHeaders(headers),
         timeout: Timeout,
-        signal: abortSignal(TimeoutRequest),
+        signal: abortSignal(Timeout),
       });
       this.#debugResponse('POST', url, result);
       return {
@@ -116,8 +113,8 @@ export default class Client {
       this.#debugRequest('POST(upload)', url);
       const result = await axios.post(url, form, {
         headers: this.#getHeaders(form.getHeaders()),
-        timeout: TimeoutUpload,
-        signal: abortSignal(TimeoutRequest),
+        timeout: Timeout,
+        signal: abortSignal(Timeout),
       });
       this.#debugResponse('POST(upload)', url, result);
       return {

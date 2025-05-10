@@ -12,7 +12,7 @@ export default class Icons {
   empty: HomeyAwtrixIcon;
 
   list: HomeyAwtrixIcon[] = [];
-  timer!: NodeJS.Timer;
+  timer!: NodeJS.Timeout;
 
   constructor(api: Api, device: Device) {
     this.api = api;
@@ -60,5 +60,4 @@ export default class Icons {
       }),
     ];
   }
-
 }
