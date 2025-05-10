@@ -1,4 +1,4 @@
-import { isColor, isNumeric, isOverlay, isEffectSettings, isBarLineValues, isArrayOfStrings, isArrayOfTextFragments, isTextFragment } from './Validator';
+import { isColor, isNumeric, isOverlay, isEffectSettings, isIndicatorEffect, isBarLineValues, isArrayOfStrings, isArrayOfTextFragments, isTextFragment } from './Validator';
 import {
   AppOptions,
   NotifyOptions,
@@ -12,6 +12,7 @@ import {
   TextCase,
   PushIcon,
   PowerOptions,
+  Text,
   TextFragment,
 } from './Types';
 import { Device } from 'homey';
@@ -29,13 +30,6 @@ const toNumber = (input: string | number): number => {
 const minMaxNumber = (min: number, max: number, number: number | string): number => {
   return Math.min(max, Math.max(min, toNumber(number)));
 };
-
-function isIndicatorEffect(effect: any): effect is IndicatorEffect {
-  if (typeof effect === 'string') {
-    return effect === 'blink' || effect === 'fade';
-  }
-  return false;
-}
 
 function toNumericType<Type>(input: any, min: number, max: number): Type {
   if (isNumeric(input)) {
@@ -65,6 +59,24 @@ function toColor(color: any): Color {
     return color;
   }
   return '0';
+}
+
+function toText(text: any): Text | undefined {
+  try {
+    text = JSON.parse(text);
+    if (isString(text)) {
+      return text;
+    }
+
+    if (isArrayOfTextFragments(text)) {
+      return text.map((fragment) => ({t: fragment.t, c: toColor(fragment.c)}));
+    }
+  } catch {
+  }
+
+  if (isString(text)) {
+    return text;
+  }
 }
 
 export const isHomeyApp = (app: string): boolean => {
@@ -111,9 +123,9 @@ export const powerOptions = (options: Record<'power', any>): PowerOptions => {
 const basicOptions = (options: Record<keyof BaseOptions, any>, effects: string[]): BaseOptions => {
   const opt: BaseOptions = {};
 
-  if (options.text && (isString(options.text) || isArrayOfTextFragments(options.text))) {
-    opt.text = options.text;
-  } 
+  if (options.text && toText(options.text)) {
+    opt.text = toText(options.text);
+  }
   
   if (options.textCase) {
     opt.textCase = toTextCase(options.textCase);
@@ -214,8 +226,6 @@ const basicOptions = (options: Record<keyof BaseOptions, any>, effects: string[]
   if (options.barBC && isColor(options.barBC) && (opt.bar || opt.line)) {
     opt.barBC = options.barBC;
   }
-
-  console.log('opt', opt);
 
   return opt;
 };

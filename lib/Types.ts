@@ -80,8 +80,10 @@ export type TextFragment = {
   c: Color; // The text color.
 }
 
+export type Text = string | TextFragment[]; // The text to display. Can be a string or an array of text fragments.
+
 type Base = {
-  text?: string|TextFragment[]; // The text to display.
+  text?: Text; // The text to display.
   textCase?: TextCase; // Changes the Uppercase setting. 0=global setting, 1=forces uppercase; 2=shows as it sent.
   topText?: boolean; // Draw the text on top.
   textOffset?: number; // Sets an offset for the x position of a starting text.
