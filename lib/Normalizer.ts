@@ -64,8 +64,8 @@ function toColor(color: any): Color {
 function toText(text: any): Text | undefined {
   try {
     text = JSON.parse(text);
-    if (isString(text)) {
-      return text;
+    if (isString(text) || isNumeric(text)) {
+      return text.toString();
     }
 
     if (isArrayOfTextFragments(text)) {
@@ -74,8 +74,8 @@ function toText(text: any): Text | undefined {
   } catch {
   }
 
-  if (isString(text)) {
-    return text;
+  if (isString(text) || isNumeric(text)) {
+    return text.toString();
   }
 }
 
@@ -123,9 +123,13 @@ export const powerOptions = (options: Record<'power', any>): PowerOptions => {
 const basicOptions = (options: Record<keyof BaseOptions, any>, effects: string[]): BaseOptions => {
   const opt: BaseOptions = {};
 
+  console.log('options', options);
+
   if (options.text && toText(options.text)) {
     opt.text = toText(options.text);
   }
+
+  console.log('text', opt.text);
   
   if (options.textCase) {
     opt.textCase = toTextCase(options.textCase);
