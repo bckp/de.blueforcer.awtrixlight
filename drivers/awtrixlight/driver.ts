@@ -110,7 +110,11 @@ export default class UlanziAwtrix extends Driver {
 
     // Custom app
     this.homey.flow.getActionCard('customApp').registerRunListener(async (args: ListenerArgsCustomApp) => {
-      let params = {text: args.msg, duration: args.duration, ...JSON.parse(args.options)};
+      let parsed = JSON.parse(args.options);
+      let text = args.msg || parsed.text || '';
+      let duration = args.duration || parsed.duration || undefined;
+
+      let params = {text: text, duration: duration, ...parsed};
 
       args.color && (params.color = args.color);
       args.icon.id && args.icon.id !== '-' && (params.icon = args.icon.id);
