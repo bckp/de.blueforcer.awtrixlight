@@ -4,10 +4,12 @@
     "allowJs": true,
     "outDir": ".homeybuild/",
     "target": "ES6",
-    "lib": ["es6", "dom"]
+    "lib": ["es6", "dom"],
+    "baseUrl": ".",
+    "paths": {
+      "drivers/*": ["drivers/*"],
+      "lib/*": ["lib/*"]
+    }
   },
-  "paths": {
-    "drivers/*": ["./drivers/*"],
-    "lib/*": ["./lib/*"],
-},
+  "exclude": [".homeybuild", "node_modules", "test"]
 }

@@ -3,6 +3,14 @@ import FormData from 'form-data';
 import { Response, Status } from './Response';
 
 const Timeout = 10000;
+
+export const statusFromHttpCode = (code: number): Status => {
+  if (code >= 200 && code < 400) return Status.Ok;
+  if (code === 401) return Status.AuthRequired;
+  if (code === 403) return Status.AuthFailed;
+  if (code === 404) return Status.NotFound;
+  return Status.Error;
+};
 type ClientOptions = {
   ip: string;
   user?: string;
@@ -81,7 +89,7 @@ export default class Client {
       });
       this.#debugResponse('GET', url, result);
       return {
-        status: this.#translateStatusCode(result.status),
+        status: statusFromHttpCode(result.status),
         data: result.data,
       };
     } catch (error: any) {
@@ -100,7 +108,7 @@ export default class Client {
       });
       this.#debugResponse('POST', url, result);
       return {
-        status: this.#translateStatusCode(result.status),
+        status: statusFromHttpCode(result.status),
       };
     } catch (error: any) {
       return this.#requestError(error, url);
@@ -118,31 +126,11 @@ export default class Client {
       });
       this.#debugResponse('POST(upload)', url, result);
       return {
-        status: this.#translateStatusCode(result.status),
+        status: statusFromHttpCode(result.status),
       };
     } catch (error: any) {
       return this.#requestError(error, url);
     }
-  }
-
-  #translateStatusCode(code: number): Status {
-    if (code >= 200 && code <= 400) {
-      return Status.Ok;
-    }
-
-    if (code === 401) {
-      return Status.AuthRequired;
-    }
-
-    if (code === 403) {
-      return Status.AuthFailed;
-    }
-
-    if (code === 404) {
-      return Status.NotFound;
-    }
-
-    return Status.Error;
   }
 
   #getHeaders(headers: RequestHeaders = {}): object {
@@ -175,7 +163,7 @@ export default class Client {
 
     if (axios.isAxiosError(error)) {
       message = error.message;
-      status = this.#translateStatusCode(error.response?.status || 500);
+      status = statusFromHttpCode(error.response?.status || 500);
     }
 
     return {
@@ -192,7 +180,7 @@ export default class Client {
       message,
       url,
       headers,
-      data
+      data,
     });
   }
 

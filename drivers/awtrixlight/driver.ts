@@ -68,7 +68,7 @@ export default class UlanziAwtrix extends Driver {
     // Notification
     this.homey.flow.getActionCard('notificationIcon').registerRunListener(async (args: ListenerArgsNotificationIcon) => {
       const duration = typeof args.duration === 'number' ? Math.ceil(args.duration / 1000) : undefined;
-      args.device.cmdNotify(args.msg, { color: args.color, duration, icon: args.icon.id });
+      await args.device.cmdNotify(args.msg, { color: args.color, duration, icon: args.icon.id });
     }).getArgument('icon').registerAutocompleteListener(async (query: string, args: ListenerArgs) => {
       return args.device.icons.find(query);
     });
@@ -76,27 +76,27 @@ export default class UlanziAwtrix extends Driver {
     // Sticky notification
     this.homey.flow.getActionCard('notificationSticky').registerRunListener(async (args: ListenerArgsNotificationIcon) => {
       const msg = args.msg || '';
-      args.device.cmdNotify(msg, { color: args.color, hold: true, icon: args.icon.id });
+      await args.device.cmdNotify(msg, { color: args.color, hold: true, icon: args.icon.id });
     }).getArgument('icon').registerAutocompleteListener(async (query: string, args: ListenerArgs) => {
       return args.device.icons.find(query);
     });
 
     this.homey.flow.getActionCard('notificationJson').registerRunListener(async (args: ListenerArgsNotificationJson) => {
-      args.device.cmdNotify(args.msg, { ...JSON.parse(args.options) });
+      await args.device.cmdNotify(args.msg, { ...JSON.parse(args.options) });
     });
 
     this.homey.flow.getActionCard('notificationDismiss').registerRunListener(async (args: ListenerArgs) => {
-      args.device.cmdDismiss();
+      await args.device.cmdDismiss();
     });
 
     // Displau
     this.homey.flow.getActionCard('displaySet').registerRunListener(async (args: ListenerArgsDisplay) => {
-      args.device.cmdPower(args.power === '1');
+      await args.device.cmdPower(args.power === '1');
     });
 
     // RTTTL sound
     this.homey.flow.getActionCard('playRTTTL').registerRunListener(async (args: ListenerArgsRtttl) => {
-      args.device.cmdRtttl(args.rtttl);
+      await args.device.cmdRtttl(args.rtttl);
     });
 
     // Indicators
@@ -105,28 +105,27 @@ export default class UlanziAwtrix extends Driver {
     });
 
     this.homey.flow.getActionCard('indicatorDismiss').registerRunListener(async (args: ListenerArgsIndicator) => {
-      args.device.cmdIndicator(args.indicator, {});
+      await args.device.cmdIndicator(args.indicator, {});
     });
 
     // Custom app
     this.homey.flow.getActionCard('customApp').registerRunListener(async (args: ListenerArgsCustomApp) => {
-      let parsed = JSON.parse(args.options);
-      let text = args.msg || parsed.text || '';
-      let duration = args.duration || parsed.duration || undefined;
+      const parsed = JSON.parse(args.options);
+      const text = args.msg || parsed.text || '';
+      const duration = args.duration ?? parsed.duration;
+      const params = { ...parsed, text, duration };
 
-      let params = {text: text, duration: duration, ...parsed};
+      if (args.color) params.color = args.color;
+      if (args.icon.id && args.icon.id !== '-') params.icon = args.icon.id;
 
-      args.color && (params.color = args.color);
-      args.icon.id && args.icon.id !== '-' && (params.icon = args.icon.id);
-
-      args.device.cmdCustomApp(args.name, params);
+      await args.device.cmdCustomApp(args.name, params);
     }).getArgument('icon').registerAutocompleteListener(async (query: string, args: ListenerArgs) => {
       return args.device.icons.find(query);
     });
 
     // Remove custom app
     this.homey.flow.getActionCard('removeCustomApp').registerRunListener(async (args: ListenerArgsRemoveCustomApp) => {
-      args.device.cmdRemoveCustomApp(args.name);
+      await args.device.cmdRemoveCustomApp(args.name);
     });
   }
 

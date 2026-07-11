@@ -7,7 +7,7 @@ import {
   notifyOptions,
   powerOptions,
   settingOptions,
-  appOptions
+  appOptions,
 } from '../Normalizer';
 import { Status } from './Response';
 import { AwtrixImage, AwtrixStats, SettingOptions } from '../Types';
@@ -113,7 +113,7 @@ export default class Api {
       const response = await this.client.get(endpoint);
       this.processResponseCode(response.status, response.message);
 
-      return response.data || null;
+      return response.data ?? null;
     } catch (error: any) {
       this.device.log(error);
       return null;
@@ -125,7 +125,7 @@ export default class Api {
       const response = await this.client.getDirect(endpoint);
       this.processResponseCode(response.status, response.message);
 
-      return response.data || null;
+      return response.data ?? null;
     } catch (error: any) {
       this.device.log(error);
       return null;

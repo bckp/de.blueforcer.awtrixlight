@@ -6,10 +6,10 @@ export type IndicatorEffect = 'fade' | 'blink';
 export type ColorPaletteBuildIn = 'Cloud' | 'Lava' | 'Ocean' | 'Forest' | 'Stripe' | 'Party' | 'Heat' | 'Rainbow';
 export type ColorPaletteColors = [Color, Color, Color, Color, Color, Color, Color, Color, Color, Color, Color, Color, Color, Color, Color, Color];
 export type ColorPalette = ColorPaletteBuildIn | ColorPaletteColors;
-export type Overlay = "clear"| "snow" | "rain" | "drizzle" | "storm" | "thunder" | "frost";
+export type Overlay = 'clear'| 'snow' | 'rain' | 'drizzle' | 'storm' | 'thunder' | 'frost';
 export type TransitionEffect = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
-export type BarLineValues = 
+export type BarLineValues =
 | [number]
 | [number, number]
 | [number, number, number]
@@ -98,17 +98,17 @@ type Base = {
   pushIcon?: PushIcon; // 0 = Icon doesn't move. 1 = Icon moves with text and will not appear again. 2 = Icon moves with text but appears again when the text starts to scroll again.
   repeat?: number; // Sets how many times the text should be scrolled through the matrix before the app ends.
   duration?: number; // Sets how long the app or notification should be displayed.
-  bar?: BarLineValues ; //Draws a bargraph. Without icon maximum 16 values, with icon 11 values.
-  line?: BarLineValues; //Draws a linechart. Without icon maximum 16 values, with icon 11 values.
+  bar?: BarLineValues ; // Draws a bargraph. Without icon maximum 16 values, with icon 11 values.
+  line?: BarLineValues; // Draws a linechart. Without icon maximum 16 values, with icon 11 values.
   barBC?: Color; // Backgroundcolor of the bars.
-  autoscale?: boolean; //Enables or disables autoscaling for bar and linechart.
+  autoscale?: boolean; // Enables or disables autoscaling for bar and linechart.
   progress?: number; // Shows a progress bar. Value can be 0-100.
   progressC?: Color; // The color of the progress bar.
   progressBC?: Color; // The color of the progress bar background.
   noScroll?: boolean; // Disables the text scrolling.
   scrollSpeed?: number; // Modifies the scroll speed. Enter a percentage value of the original scroll speed.
   effect?: string; // Shows an effect as background.
-  effectSettings?: EffectSettings; //Changes color and speed of the effect.
+  effectSettings?: EffectSettings; // Changes color and speed of the effect.
   overlay?: Overlay; // Shows an overlay effect.
 }
 

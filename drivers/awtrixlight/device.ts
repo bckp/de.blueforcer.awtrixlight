@@ -379,47 +379,47 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
 
   /** bckp ******* Commands ******* */
   async cmdNotify(msg: string, params: any): Promise<void> {
-    this.api?.notify(msg, params).catch(this.error);
+    await this.api.notify(msg, params);
   }
 
   async cmdCustomApp(name: string, params: any): Promise<void> {
-    this.api?.customApp(name, params).catch(this.error);
+    await this.api.customApp(name, params);
   }
 
   async cmdRemoveCustomApp(name: string): Promise<void> {
-    this.api?.removeCustomApp(name).catch(this.error);
+    await this.api.removeCustomApp(name);
   }
 
   async cmdDismiss(): Promise<void> {
-    this.api?.dismiss().catch(this.error);
+    await this.api.dismiss();
   }
 
   async cmdRtttl(melody: string): Promise<void> {
-    this.api?.rtttl(melody).catch(this.error);
+    await this.api.rtttl(melody);
   }
 
   async cmdPower(power: boolean): Promise<void> {
-    this.api?.power(power).catch(this.error);
+    await this.api.power(power);
   }
 
   async cmdIndicator(id: number | string, options: any): Promise<void> {
-    this.api?.indicator(id, options).catch(this.error);
+    await this.api.indicator(id, options);
   }
 
   async cmdAppNext(): Promise<void> {
-    this.api?.appNext().catch(this.error);
+    await this.api.appNext();
   }
 
   async cmdAppPrev(): Promise<void> {
-    this.api?.appPrev().catch(this.error);
+    await this.api.appPrev();
   }
 
   async cmdReboot(): Promise<void> {
-    this.api?.reboot().catch(this.error);
+    await this.api.reboot();
   }
 
   async cmdSetSettings(options: any): Promise<void> {
-    this.api?.setSettings(options).catch(this.error);
+    await this.api.setSettings(options);
   }
 
   async cmdGetSettings(): Promise<SettingOptions|null> {
@@ -433,7 +433,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
 
   async cmdGetStats(): Promise<AwtrixStats|null> {
     try {
-      return await this.api?.getStats();
+      return await this.api.getStats();
     } catch (error: any) {
       this.error(error);
       return null;
@@ -442,7 +442,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
 
   async cmdGetEffects(): Promise<string[]|null> {
     try {
-      return await this.api?.getEffects();
+      return await this.api.getEffects();
     } catch (error: any) {
       this.error(error);
       return null;
@@ -451,7 +451,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
 
   async cmdGetImages(): Promise<AwtrixImage[]|null> {
     try {
-      return await this.api?.getImages();
+      return await this.api.getImages();
     } catch (error: any) {
       this.error(error);
       return null;
@@ -459,7 +459,9 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   }
 
   async setCapabilityValues(values: { [key: string]: any }): Promise<void> {
-    Object.keys(values).map((key) => this.setCapabilityValue(key, values[key]).catch(this.error));
+    await Promise.all(
+      Object.entries(values).map(([key, value]) => this.setCapabilityValue(key, value)),
+    );
   }
 
   /** bckp ******* API related ****** */
@@ -468,7 +470,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   }
 
   failsAdd(): void {
-    this.failCount++;
+    this.failCount += 1;
   }
 
   failsExceeded(): boolean {

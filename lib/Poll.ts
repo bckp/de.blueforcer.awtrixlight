@@ -2,16 +2,16 @@ import { Homey } from 'homey/lib/Device';
 
 export default class Poll {
 
-  callback: () => void;
+  callback: () => void | Promise<void>;
   homey: Homey;
 
   interval: number;
   failsafe: number;
   extended: boolean = false;
 
-  poll!: NodeJS.Timeout;
+  poll?: ReturnType<typeof setInterval>;
 
-  constructor(callback: () => void, homey: Homey, interval: number = 30000, failsafe: number = 18000000) {
+  constructor(callback: () => void | Promise<void>, homey: Homey, interval: number = 30000, failsafe: number = 18000000) {
     this.callback = callback;
     this.homey = homey;
 
@@ -21,18 +21,21 @@ export default class Poll {
 
   start(): void {
     this.stop();
-    this.poll = this.homey.setInterval(() => this.callback(), this.interval);
+    this.poll = this.homey.setInterval(this.callback, this.interval);
   }
 
   extend(): void {
     this.stop();
     this.extended = true;
-    this.poll = this.homey.setInterval(() => this.callback(), this.failsafe);
+    this.poll = this.homey.setInterval(this.callback, this.failsafe);
   }
 
   stop(): void {
     this.extended = false;
-    this.homey.clearTimeout(this.poll);
+    if (this.poll) {
+      this.homey.clearInterval(this.poll);
+      this.poll = undefined;
+    }
   }
 
   isActive(): boolean {

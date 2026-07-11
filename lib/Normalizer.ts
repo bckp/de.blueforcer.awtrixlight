@@ -1,4 +1,14 @@
-import { isColor, isNumeric, isOverlay, isEffectSettings, isIndicatorEffect, isBarLineValues, isArrayOfStrings, isArrayOfTextFragments, isTextFragment } from './Validator';
+import {
+  isColor,
+  isNumeric,
+  isOverlay,
+  isEffectSettings,
+  isIndicatorEffect,
+  isBarLineValues,
+  isArrayOfStrings,
+  isArrayOfTextFragments,
+  isTextFragment,
+} from './Validator';
 import {
   AppOptions,
   NotifyOptions,
@@ -15,7 +25,6 @@ import {
   Text,
   TextFragment,
 } from './Types';
-import { Device } from 'homey';
 
 const appPrefix: string = 'homey:';
 
@@ -43,7 +52,7 @@ function toLifetimeMode(mode: any): LifetimeMode {
 }
 
 function toTextCase(textCase: any): TextCase {
-  return <PushIcon>toNumericType(textCase, 0, 2);
+  return <TextCase>toNumericType(textCase, 0, 2);
 }
 
 function toPushIcon(pushIcon: any): PushIcon {
@@ -72,7 +81,7 @@ function toText(text: any): Text | undefined {
     }
 
     if (isArrayOfTextFragments(text)) {
-      return text.map((fragment) => ({t: fragment.t, c: toColor(fragment.c)}));
+      return text.map((fragment) => ({ t: fragment.t, c: toColor(fragment.c) }));
     }
   } catch {
   }
@@ -80,6 +89,8 @@ function toText(text: any): Text | undefined {
   if (isString(text) || isNumeric(text)) {
     return text.toString();
   }
+
+  return undefined;
 }
 
 export const isHomeyApp = (app: string): boolean => {
@@ -103,11 +114,11 @@ export const toTextFragments = (fragments: any): TextFragment[] => {
   const ret = [];
   for (const fragment of fragments) {
     if (isTextFragment(fragment)) {
-      ret.push({t: fragment.t, c: toColor(fragment.c)});
+      ret.push({ t: fragment.t, c: toColor(fragment.c) });
     }
   }
   return ret;
-}
+};
 
 export const indicatorNumber = (id: number | string): number => {
   return minMaxNumber(1, 3, toNumber(id));
@@ -126,27 +137,28 @@ export const powerOptions = (options: Record<'power', any>): PowerOptions => {
 const basicOptions = (options: Record<keyof BaseOptions, any>, effects: string[]): BaseOptions => {
   const opt: BaseOptions = {};
 
-  if (options.text && toText(options.text)) {
-    opt.text = toText(options.text);
+  const text = toText(options.text);
+  if (text !== undefined) {
+    opt.text = text;
   }
-  
-  if (options.textCase) {
+
+  if (isNumeric(options.textCase)) {
     opt.textCase = toTextCase(options.textCase);
   }
 
-  if (options.topText) {
-    opt.topText = !!options.topText;
+  if (typeof options.topText === 'boolean') {
+    opt.topText = options.topText;
   }
 
-  if (options.textOffset && isNumeric(options.textOffset)) {
+  if (isNumeric(options.textOffset)) {
     opt.textOffset = toNumber(options.textOffset);
   }
 
-  if (options.center) {
-    opt.center = !!options.center;
+  if (typeof options.center === 'boolean') {
+    opt.center = options.center;
   }
 
-  if (options.color) {
+  if (options.color !== undefined) {
     opt.color = toColor(options.color);
   }
 
@@ -158,32 +170,32 @@ const basicOptions = (options: Record<keyof BaseOptions, any>, effects: string[]
     opt.background = options.background;
   }
 
-  if (options.rainbow) {
-    opt.rainbow = !!options.rainbow;
+  if (typeof options.rainbow === 'boolean') {
+    opt.rainbow = options.rainbow;
   }
 
-  if (options.icon && options.icon !== '-' && (options.icon.length < 32 || options.icon.startsWith('data:image/jpeg;base64,'))) {
-    opt.icon = options.icon.toString();
+  if (isString(options.icon) && options.icon !== '-' && (options.icon.length < 32 || options.icon.startsWith('data:image/jpeg;base64,'))) {
+    opt.icon = options.icon;
   }
 
-  if (options.pushIcon) {
+  if (isNumeric(options.pushIcon)) {
     opt.pushIcon = toPushIcon(options.pushIcon);
   }
 
-  if (options.repeat && isNumeric(options.repeat)) {
+  if (isNumeric(options.repeat)) {
     opt.repeat = toNumber(options.repeat);
     options.duration = undefined;
   }
 
-  if (options.duration && isNumeric(options.duration)) {
+  if (isNumeric(options.duration)) {
     opt.duration = toNumber(options.duration);
   }
 
-  if (options.noScroll) {
-    opt.noScroll = !!options.noScroll;
+  if (typeof options.noScroll === 'boolean') {
+    opt.noScroll = options.noScroll;
   }
 
-  if (options.scrollSpeed && isNumeric(options.scrollSpeed)) {
+  if (isNumeric(options.scrollSpeed)) {
     opt.scrollSpeed = toNumber(options.scrollSpeed);
   }
 
@@ -195,7 +207,7 @@ const basicOptions = (options: Record<keyof BaseOptions, any>, effects: string[]
     opt.effectSettings = options.effectSettings;
   }
 
-  if (options.progress && isNumeric(options.progress)) {
+  if (isNumeric(options.progress)) {
     opt.progress = minMaxNumber(0, 100, options.progress); // 0-100
   }
 
@@ -237,24 +249,24 @@ const basicOptions = (options: Record<keyof BaseOptions, any>, effects: string[]
 export const notifyOptions = (options: Record<keyof NotifyOptions, any>, effects: string[]): NotifyOptions => {
   const opt: NotifyOptions = basicOptions(options, effects);
 
-  if (options.hold) {
-    opt.hold = !!options.hold;
+  if (typeof options.hold === 'boolean') {
+    opt.hold = options.hold;
   }
 
   if (options.rtttl && isString(options.rtttl)) {
     opt.rtttl = options.rtttl;
   }
 
-  if (options.loopSound) {
-    opt.loopSound = !!options.loopSound;
+  if (typeof options.loopSound === 'boolean') {
+    opt.loopSound = options.loopSound;
   }
 
-  if (options.stack) {
-    opt.stack = !!options.stack;
+  if (typeof options.stack === 'boolean') {
+    opt.stack = options.stack;
   }
 
-  if (options.wakeup) {
-    opt.wakeup = !!options.wakeup;
+  if (typeof options.wakeup === 'boolean') {
+    opt.wakeup = options.wakeup;
   }
 
   if (options.clients && isArrayOfStrings(options.clients)) {
@@ -267,15 +279,15 @@ export const notifyOptions = (options: Record<keyof NotifyOptions, any>, effects
 export const appOptions = (options: any, effects: string[]): AppOptions => {
   const opt: AppOptions = basicOptions(options, effects);
 
-  if (options.lifetime && isNumeric(options.lifetime)) {
+  if (isNumeric(options.lifetime)) {
     opt.lifetime = toNumber(options.lifetime);
   }
 
-  if (options.lifetimeMode) {
+  if (isNumeric(options.lifetimeMode)) {
     opt.lifetimeMode = toLifetimeMode(options.lifetimeMode);
   }
 
-  if (options.pos && isNumeric(options.pos)) {
+  if (isNumeric(options.pos)) {
     opt.pos = Math.abs(toNumber(options.pos));
   }
 
@@ -293,22 +305,22 @@ const defaultSettingsOptions: SettingOptions = {
   TEMP: false,
   TIM: false,
   UPPERCASE: false,
-}
+};
 
 type OptionalSettingOptions = keyof Omit<SettingOptions, 'TEFF'>
 
 export const settingOptions = (options: Record<string, any>): SettingOptions => {
   const opt: SettingOptions = {};
-  const { TEFF, ...optionalOptions } = { ...defaultSettingsOptions, ...options }
-  if (TEFF) {
+  const { TEFF, ...optionalOptions } = { ...defaultSettingsOptions, ...options };
+  if (isNumeric(TEFF)) {
     opt.TEFF = toTransitionEffect(TEFF);
   }
 
-  for (const key in optionalOptions) {
+  Object.keys(optionalOptions).forEach((key) => {
     if (key in options) {
       opt[key as OptionalSettingOptions] = !!options[key];
     }
-  }
+  });
 
   return opt;
 };

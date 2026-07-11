@@ -12,7 +12,7 @@ export default class Icons {
   empty: HomeyAwtrixIcon;
 
   list: HomeyAwtrixIcon[] = [];
-  timer!: NodeJS.Timeout;
+  timer?: ReturnType<typeof setTimeout>;
 
   constructor(api: Api, device: Device) {
     this.api = api;
@@ -40,7 +40,9 @@ export default class Icons {
   }
 
   resetTimer(): void {
-    this.device.homey.clearTimeout(this.timer);
+    if (this.timer) {
+      this.device.homey.clearTimeout(this.timer);
+    }
     this.timer = this.device.homey.setTimeout(() => {
       this.list = [];
     }, Timeout);

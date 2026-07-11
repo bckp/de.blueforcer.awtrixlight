@@ -4,7 +4,8 @@
   "main": "app.ts",
   "scripts": {
     "build": "tsc",
-    "lint": "eslint --ext .js,.ts --ignore-path .gitignore ."
+    "lint": "eslint --ext .js,.ts --ignore-path .gitignore .",
+    "test": "npm run build && node --test test/*.test.js"
   },
   "engines": {
     "node": ">=16.1.1"
@@ -25,5 +26,10 @@
     "axios": "^1.5.1",
     "form-data": "^4.0.0",
     "mime-types": "^2.1.35"
+  },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^9.0.9"
+    }
   }
 }

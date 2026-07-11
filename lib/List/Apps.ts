@@ -1,4 +1,3 @@
-import { Homey } from 'homey/lib/Device';
 import { AppOptions } from '../Types';
 import Api from '../Api/Api';
 import AwtrixLightDevice from '../../drivers/awtrixlight/device';

@@ -16,13 +16,39 @@
   },
   "overrides": [
     {
-      "files": ["*.ts"],
+      "files": ["*.ts", "**/*.ts"],
+      "env": {
+        "node": true
+      },
       "rules": {
-        "strict": "off"
+        "strict": "off",
+        "node/no-missing-import": "off",
+        "import/extensions": [
+          "error",
+          "ignorePackages",
+          {
+            "ts": "never"
+          }
+        ]
+      }
+    },
+    {
+      "files": ["test/**/*.js"],
+      "env": {
+        "node": true
+      },
+      "rules": {
+        "mocha/no-global-tests": "off",
+        "node/no-unpublished-require": "off"
       }
     }
   ],
   "settings": {
+    "import/core-modules": [
+      "homey",
+      "homey/lib/Device",
+      "homey/lib/PairSession"
+    ],
     "import/resolver": {
         "typescript": {
           "directory": "./tsconfig.json"
