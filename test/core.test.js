@@ -1,11 +1,11 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const normalizer = require('../.homeybuild/lib/Normalizer');
-const validator = require('../.homeybuild/lib/Validator');
-const Poll = require('../.homeybuild/lib/Poll').default;
-const { statusFromHttpCode } = require('../.homeybuild/lib/Api/Client');
-const { Status } = require('../.homeybuild/lib/Api/Response');
+const normalizer = require('../.homeybuild/lib/awtrix3/Normalizer');
+const validator = require('../.homeybuild/lib/awtrix3/Validator');
+const Poll = require('../.homeybuild/lib/awtrix3/Poll').default;
+const { statusFromHttpCode } = require('../.homeybuild/lib/awtrix3/Api/Client');
+const { Status } = require('../.homeybuild/lib/awtrix3/Api/Response');
 
 test('isNumeric accepts complete finite values only', () => {
   for (const value of [0, -3, 1.5, '0', '-3', '1.5']) {

@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "forbidden",
+    "message": "operation forbidden while provisioning"
+  }
+}

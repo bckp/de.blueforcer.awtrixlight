@@ -1,0 +1,54 @@
+{
+  "type": "enum",
+  "title": {
+    "en": "Weather overlay"
+  },
+  "getable": true,
+  "setable": true,
+  "uiComponent": "picker",
+  "insights": false,
+  "values": [
+    {
+      "id": "none",
+      "title": {
+        "en": "None"
+      }
+    },
+    {
+      "id": "drizzle",
+      "title": {
+        "en": "Drizzle"
+      }
+    },
+    {
+      "id": "frost",
+      "title": {
+        "en": "Frost"
+      }
+    },
+    {
+      "id": "rain",
+      "title": {
+        "en": "Rain"
+      }
+    },
+    {
+      "id": "snow",
+      "title": {
+        "en": "Snow"
+      }
+    },
+    {
+      "id": "storm",
+      "title": {
+        "en": "Storm"
+      }
+    },
+    {
+      "id": "thunder",
+      "title": {
+        "en": "Thunder"
+      }
+    }
+  ]
+}

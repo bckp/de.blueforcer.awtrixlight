@@ -1,24 +1,24 @@
 {
   "title": {
-    "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with efect duration [[duration]]"
+    "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect for [[duration]]"
   },
   "titleFormatted": {
-    "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with efect duration [[duration]]"
+    "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect for [[duration]]"
   },
   "hint": {
-    "en": "Enable or disable identificator"
+    "en": "Set an indicator. Effect duration is in milliseconds."
   },
   "args": [
     {
       "name": "device",
       "type": "device",
-      "filter": "driver_id=awtrixlight"
+      "filter": "driver_id=awtrixlight|awtrixng"
     },
     {
       "type": "color",
       "name": "color",
       "title": {
-        "en": "Color"
+        "en": "color"
       }
     },
     {
@@ -26,12 +26,27 @@
       "name": "indicator",
       "value": "1",
       "title": {
-        "en": "identificator number"
+        "en": "indicator number"
       },
       "values": [
-        { "id": "1", "title": { "en": "top right" } },
-        { "id": "2", "title": { "en": "right" } },
-        { "id": "3", "title": { "en": "bottom right" } }
+        {
+          "id": "1",
+          "title": {
+            "en": "top right"
+          }
+        },
+        {
+          "id": "2",
+          "title": {
+            "en": "right"
+          }
+        },
+        {
+          "id": "3",
+          "title": {
+            "en": "bottom right"
+          }
+        }
       ]
     },
     {
@@ -42,9 +57,24 @@
         "en": "effect"
       },
       "values": [
-        { "id": "-", "title": { "en": "no" } },
-        { "id": "blink", "title": { "en": "blink" } },
-        { "id": "fade", "title": { "en": "fade" } }
+        {
+          "id": "-",
+          "title": {
+            "en": "no"
+          }
+        },
+        {
+          "id": "blink",
+          "title": {
+            "en": "blink"
+          }
+        },
+        {
+          "id": "fade",
+          "title": {
+            "en": "fade"
+          }
+        }
       ]
     },
     {

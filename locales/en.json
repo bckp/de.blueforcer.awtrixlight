@@ -19,5 +19,42 @@
       "loginFailed": "Authentication failed!",
       "unknownError": "Device did not respond!"
     }
+  },
+  "pair": {
+    "manual": {
+      "title": "Add manually",
+      "subtitle": "Enter the address and port of your device.",
+      "connectionLegend": "Connection",
+      "addressLabel": "Address or hostname",
+      "portLabel": "Port",
+      "addButton": "Add device",
+      "addingButton": "Adding device...",
+      "errors": {
+        "addressRequired": "Address is required.",
+        "invalidAddress": "Enter a hostname or IP address without protocol or path.",
+        "invalidPort": "Port must be a number between 1 and 65535.",
+        "notSupported": "The device responded, but it does not look like a supported device.",
+        "notReachable": "The device cannot be contacted."
+      }
+    },
+    "credentials": {
+      "title": "Authentication required",
+      "subtitle": "This device requires authentication.",
+      "legend": "Credentials",
+      "usernameLabel": "Username",
+      "passwordLabel": "Password",
+      "addButton": "Add device",
+      "addingButton": "Adding device...",
+      "errors": {
+        "required": "Username and password are required.",
+        "invalid": "Invalid username or password.",
+        "notSupported": "The device responded, but it does not look like a supported device.",
+        "notReachable": "The device cannot be contacted."
+      }
+    },
+    "router": {
+      "title": "Pair device",
+      "preparing": "Preparing pairing..."
+    }
   }
 }

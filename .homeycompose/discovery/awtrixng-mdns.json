@@ -1,0 +1,19 @@
+{
+  "type": "mdns-sd",
+  "mdns-sd": {
+    "name": "awtrixng",
+    "protocol": "tcp"
+  },
+  "id": "{{txt.id}}",
+  "conditions": [
+    [
+      {
+        "field": "txt.type",
+        "match": {
+          "type": "string",
+          "value": "awtrixng"
+        }
+      }
+    ]
+  ]
+}

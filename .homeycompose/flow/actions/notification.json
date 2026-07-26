@@ -1,0 +1,42 @@
+{
+  "title": {
+    "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
+  },
+  "titleFormatted": {
+    "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
+  },
+  "hint": {
+    "en": "Send a notification. Use Homey's Add duration option to override the device default duration."
+  },
+  "duration": true,
+  "args": [
+    {
+      "name": "device",
+      "type": "device",
+      "filter": "driver_id=awtrixlight|awtrixng"
+    },
+    {
+      "type": "text",
+      "name": "msg",
+      "placeholder": {
+        "en": "message"
+      }
+    },
+    {
+      "type": "autocomplete",
+      "name": "icon",
+      "required": false,
+      "title": {
+        "en": "icon"
+      },
+      "placeholder": {
+        "en": "icon"
+      }
+    },
+    {
+      "type": "color",
+      "name": "color",
+      "value": "#eeeeee"
+    }
+  ]
+}

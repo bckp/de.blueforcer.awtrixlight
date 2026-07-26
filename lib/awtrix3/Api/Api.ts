@@ -11,7 +11,7 @@ import {
 } from '../Normalizer';
 import { Status } from './Response';
 import { AwtrixImage, AwtrixStats, SettingOptions } from '../Types';
-import { DeviceFailer, DevicePoll } from '../../drivers/awtrixlight/interfaces';
+import { DeviceFailer, DevicePoll } from '../../../drivers/awtrixlight/interfaces';
 
 export default class Api {
 

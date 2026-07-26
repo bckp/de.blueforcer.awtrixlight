@@ -6,9 +6,9 @@
     "en": "Remove custom app [[name]]"
   },
   "hint": {
-    "en": "Remove custom app on device"
+    "en": "Legacy AWTRIX 3 remove custom app flow. Use Remove application for new flows."
   },
-  "duration": true,
+  "deprecated": true,
   "args": [
     {
       "name": "device",
@@ -19,7 +19,7 @@
       "type": "text",
       "name": "name",
       "placeholder": {
-        "en": "name"
+        "en": "app name"
       }
     }
   ]

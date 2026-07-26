@@ -12,7 +12,7 @@
     {
       "name": "device",
       "type": "device",
-      "filter": "driver_id=awtrixlight"
+      "filter": "driver_id=awtrixlight|awtrixng"
     },
     {
       "type": "dropdown",
@@ -21,8 +21,18 @@
         "en": "state"
       },
       "values": [
-        { "id": "1", "title": { "en": "on" } },
-        { "id": "0", "title": { "en": "off" } }
+        {
+          "id": "1",
+          "title": {
+            "en": "on"
+          }
+        },
+        {
+          "id": "0",
+          "title": {
+            "en": "off"
+          }
+        }
       ]
     }
   ]

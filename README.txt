@@ -3,3 +3,5 @@ AWTRIX 3 is an open‑source custom firmware for the Ulanzi Smart Pixel clock TC
 It is ready to use straight out of the box, with time, date, temperature, and humidity pages pre-installed. You don't need to do anything other than turning it on to start using these features.
 
 However, for those with more advanced skills, the customization options available with customapps and mqtt commands allows you to take Awtrix Light to its full potential. Just send all your customapps from your smarthome via MQTT or HTTP and update it in realtime. The powerful icon system brings your ideas to life and lets you enjoy a hassle-free experience.
+
+This app also contains separate AWTRIX NG support. AWTRIX NG devices must be added through the Awtrix NG driver and are not a drop-in replacement for AWTRIX 3 devices or flows. Existing AWTRIX 3 devices and flows are not migrated automatically. AWTRIX NG JSON flow cards accept AWTRIX NG-shaped payloads only; AWTRIX 3 JSON options are not silently translated.
