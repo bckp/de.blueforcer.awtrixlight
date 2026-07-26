@@ -6,8 +6,9 @@
     "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
   },
   "hint": {
-    "en": "Send color notification to device for specified duration with icon (from device) and color"
+    "en": "Deprecated. Use Send notification instead."
   },
+  "deprecated": true,
   "duration": true,
   "args": [
     {

@@ -1,12 +1,13 @@
 import fs from 'fs';
 import { Device, DiscoveryResultMDNSSD } from 'homey';
-import ApiClient from '../../lib/Api/Client';
-import { Status } from '../../lib/Api/Response';
-import Api from '../../lib/Api/Api';
-import { AwtrixImage, AwtrixStats, SettingOptions } from '../../lib/Types';
+import ApiClient from '../../lib/awtrix3/Api/Client';
+import { Status } from '../../lib/awtrix3/Api/Response';
+import Api from '../../lib/awtrix3/Api/Api';
+import { AwtrixImage, AwtrixStats, SettingOptions } from '../../lib/awtrix3/Types';
 import { DeviceFailer, DevicePoll } from './interfaces';
-import Icons from '../../lib/List/Icons';
-import Poll from '../../lib/Poll';
+import Icons from '../../lib/awtrix3/List/Icons';
+import Poll from '../../lib/awtrix3/Poll';
+import { AwtrixDeviceType } from '../awtrix-device-type';
 
 const RebootFields: ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'] = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
 const PollInterval: number = 60000; // 1 minute
@@ -22,13 +23,17 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   icons!: Icons;
   poll!: Poll;
 
+  getAwtrixDeviceType(): AwtrixDeviceType {
+    return 'awtrix3';
+  }
+
   /**
    * onInit is called when the device is initialized.
    */
   async onInit() {
     this.log('AwtrixLightDevice has been initialized');
     try {
-      await this.setUnavailable(this.homey.__('loading'));
+      await this.setUnavailable(this.homey.__('states.loading'));
       await this.migrate();
     } catch (error: any) {
       this.error(error.message || error);
@@ -160,7 +165,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
           typeof oldSettings.user === 'string' ? oldSettings.user : '',
           typeof oldSettings.pass === 'string' ? oldSettings.pass : '',
         );
-        throw new Error(this.homey.__('login.invalidCredentials'));
+        throw new Error(this.homey.__('states.invalidCredentials'));
       }
 
       // Enable pooling if not

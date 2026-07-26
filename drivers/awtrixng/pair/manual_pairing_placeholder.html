@@ -1,0 +1,202 @@
+<header class="homey-header">
+  <p id="manual-subtitle" class="homey-subtitle"></p>
+</header>
+
+<form id="manual-pairing-form" class="homey-form">
+  <fieldset class="homey-form-fieldset">
+    <legend id="manual-connection-legend" class="homey-form-legend"></legend>
+
+    <div class="homey-form-group">
+      <label id="manual-address-label" class="homey-form-label" for="manual-address"></label>
+      <input
+        class="homey-form-input"
+        id="manual-address"
+        type="text"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        placeholder="192.168.1.44"
+        value=""
+      />
+    </div>
+
+    <div class="homey-form-group">
+      <label id="manual-port-label" class="homey-form-label" for="manual-port"></label>
+      <input
+        class="homey-form-input"
+        id="manual-port"
+        type="number"
+        inputmode="numeric"
+        min="1"
+        max="65535"
+        step="1"
+        value="80"
+      />
+    </div>
+  </fieldset>
+
+  <button id="test-connection" class="homey-button-primary-full" type="submit"></button>
+  <!-- <button id="back-to-list" class="homey-button-transparent" type="button"></button> -->
+</form>
+
+<section id="manual-pairing-result" hidden="hidden">
+  <p id="manual-pairing-status"></p>
+</section>
+
+<script type="text/javascript">
+  Homey.setTitle(Homey.__('pair.manual.title'));
+
+  document.getElementById('manual-subtitle').textContent = Homey.__('pair.manual.subtitle');
+  document.getElementById('manual-connection-legend').textContent = Homey.__('pair.manual.connectionLegend');
+  document.getElementById('manual-address-label').textContent = Homey.__('pair.manual.addressLabel');
+  document.getElementById('manual-port-label').textContent = Homey.__('pair.manual.portLabel');
+
+  var form = document.getElementById('manual-pairing-form');
+  var addressInput = document.getElementById('manual-address');
+  var portInput = document.getElementById('manual-port');
+  var testButton = document.getElementById('test-connection');
+  var testButtonDefaultText = Homey.__('pair.manual.addButton');
+  var resultSection = document.getElementById('manual-pairing-result');
+  var statusText = document.getElementById('manual-pairing-status');
+
+  testButton.textContent = testButtonDefaultText;
+
+  function setBusy(isBusy) {
+    testButton.disabled = isBusy;
+
+    if (isBusy) {
+      testButton.textContent = Homey.__('pair.manual.addingButton');
+      testButton.classList.add('is-loading');
+    } else {
+      testButton.textContent = testButtonDefaultText;
+      testButton.classList.remove('is-loading');
+    }
+  }
+
+  function showMessage(message) {
+    resultSection.hidden = false;
+    statusText.textContent = message;
+  }
+
+  function emitHomey(eventName, payload) {
+    return new Promise(function (resolve, reject) {
+      try {
+        var emitResult = Homey.emit(eventName, payload, function (error, result) {
+          if (error) {
+            reject(error);
+            return;
+          }
+
+          resolve(result);
+        });
+
+        if (emitResult && typeof emitResult.then === 'function') {
+          emitResult.then(resolve).catch(reject);
+        } else if (emitResult && typeof emitResult.catch === 'function') {
+          emitResult.catch(reject);
+        }
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  function createHomeyDevice(device) {
+    return new Promise(function (resolve, reject) {
+      try {
+        var createResult = Homey.createDevice(device, function (error, result) {
+          if (error) {
+            reject(error);
+            return;
+          }
+
+          resolve(result);
+        });
+
+        if (createResult && typeof createResult.then === 'function') {
+          createResult.then(resolve).catch(reject);
+        } else if (createResult && typeof createResult.catch === 'function') {
+          createResult.catch(reject);
+        }
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  function getFormData() {
+    var address = addressInput.value.trim();
+    var port = Number(portInput.value);
+
+    if (!address) {
+      throw new Error(Homey.__('pair.manual.errors.addressRequired'));
+    }
+
+    if (address.indexOf('://') !== -1 || address.indexOf('/') !== -1) {
+      throw new Error(Homey.__('pair.manual.errors.invalidAddress'));
+    }
+
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      throw new Error(Homey.__('pair.manual.errors.invalidPort'));
+    }
+
+    return {
+      address: address,
+      port: port,
+    };
+  }
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    var payload;
+
+    try {
+      payload = getFormData();
+    } catch (error) {
+      Homey.alert(error.message || String(error));
+      return;
+    }
+
+    setBusy(true);
+    resultSection.hidden = true;
+    statusText.textContent = '';
+
+    emitHomey('manual_pairing_probe', payload)
+      .then(function (result) {
+        if (result.status === 'detected') {
+          return createHomeyDevice(result.device)
+            .then(function () {
+              Homey.done();
+            });
+        }
+
+        if (result.status === 'auth-required') {
+          Homey.showView('credentials_placeholder');
+          return undefined;
+        }
+
+        if (result.status === 'rejected') {
+          showMessage(Homey.__('pair.manual.errors.notSupported'));
+          return undefined;
+        }
+
+        showMessage(Homey.__('pair.manual.errors.notReachable'));
+        return undefined;
+      })
+      .catch(function (error) {
+        Homey.alert(error.message || String(error));
+      })
+      .then(function () {
+        setBusy(false);
+      });
+  });
+
+  var backButton = document.getElementById('back-to-list');
+
+  if (backButton) {
+    backButton.addEventListener('click', function () {
+      Homey.showView('list_my_devices');
+    });
+  }
+</script>

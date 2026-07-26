@@ -1,0 +1,265 @@
+[
+  {
+    "type": "group",
+    "label": {
+      "en": "Login details"
+    },
+    "children": [
+      {
+        "id": "authUser",
+        "type": "text",
+        "label": {
+          "en": "Username"
+        },
+        "value": "",
+        "hint": {
+          "en": "The API username. Leave empty when authentication is disabled. This is stored in Homey and is not sent as a device setting."
+        }
+      },
+      {
+        "id": "authPass",
+        "type": "password",
+        "label": {
+          "en": "Password"
+        },
+        "value": "",
+        "hint": {
+          "en": "The API password. Leave empty when authentication is disabled. This is stored in Homey and is not sent as a device setting."
+        }
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "en": "Device settings"
+    },
+    "children": [
+      {
+        "id": "autoBrightness",
+        "type": "checkbox",
+        "value": false,
+        "label": {
+          "en": "Auto-brightness"
+        }
+      },
+      {
+        "id": "autoTransition",
+        "type": "checkbox",
+        "value": true,
+        "label": {
+          "en": "Auto-cycle"
+        }
+      },
+      {
+        "id": "blockNavigation",
+        "type": "checkbox",
+        "value": false,
+        "label": {
+          "en": "Block buttons"
+        }
+      },
+      {
+        "id": "uppercase",
+        "type": "checkbox",
+        "value": true,
+        "label": {
+          "en": "Uppercase text"
+        }
+      },
+      {
+        "id": "transitionEffect",
+        "type": "dropdown",
+        "value": "Rain",
+        "label": {
+          "en": "Transition effect"
+        },
+        "hint": {
+          "en": "Static list from the documented capabilities."
+        },
+        "values": [
+          {
+            "id": "Random",
+            "label": {
+              "en": "Random"
+            }
+          },
+          {
+            "id": "Slide",
+            "label": {
+              "en": "Slide"
+            }
+          },
+          {
+            "id": "Dim",
+            "label": {
+              "en": "Dim"
+            }
+          },
+          {
+            "id": "Zoom",
+            "label": {
+              "en": "Zoom"
+            }
+          },
+          {
+            "id": "Rotate",
+            "label": {
+              "en": "Rotate"
+            }
+          },
+          {
+            "id": "Pixelate",
+            "label": {
+              "en": "Pixelate"
+            }
+          },
+          {
+            "id": "Curtain",
+            "label": {
+              "en": "Curtain"
+            }
+          },
+          {
+            "id": "Ripple",
+            "label": {
+              "en": "Ripple"
+            }
+          },
+          {
+            "id": "Blink",
+            "label": {
+              "en": "Blink"
+            }
+          },
+          {
+            "id": "Reload",
+            "label": {
+              "en": "Reload"
+            }
+          },
+          {
+            "id": "Fade",
+            "label": {
+              "en": "Fade"
+            }
+          },
+          {
+            "id": "Cover",
+            "label": {
+              "en": "Cover"
+            }
+          },
+          {
+            "id": "Uncover",
+            "label": {
+              "en": "Uncover"
+            }
+          },
+          {
+            "id": "Split",
+            "label": {
+              "en": "Split"
+            }
+          },
+          {
+            "id": "Blinds",
+            "label": {
+              "en": "Blinds"
+            }
+          },
+          {
+            "id": "Blocks",
+            "label": {
+              "en": "Blocks"
+            }
+          },
+          {
+            "id": "Flash",
+            "label": {
+              "en": "Flash"
+            }
+          },
+          {
+            "id": "Diamond",
+            "label": {
+              "en": "Diamond"
+            }
+          },
+          {
+            "id": "Wave",
+            "label": {
+              "en": "Wave"
+            }
+          },
+          {
+            "id": "Rain",
+            "label": {
+              "en": "Rain"
+            }
+          },
+          {
+            "id": "Melt",
+            "label": {
+              "en": "Melt"
+            }
+          },
+          {
+            "id": "Interlace",
+            "label": {
+              "en": "Interlace"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "en": "Default apps"
+    },
+    "children": [
+      {
+        "id": "showBuiltinTime",
+        "type": "checkbox",
+        "value": false,
+        "label": {
+          "en": "Time"
+        }
+      },
+      {
+        "id": "showBuiltinDate",
+        "type": "checkbox",
+        "value": false,
+        "label": {
+          "en": "Date"
+        }
+      },
+      {
+        "id": "showBuiltinTemperature",
+        "type": "checkbox",
+        "value": false,
+        "label": {
+          "en": "Temperature"
+        }
+      },
+      {
+        "id": "showBuiltinHumidity",
+        "type": "checkbox",
+        "value": false,
+        "label": {
+          "en": "Humidity"
+        }
+      },
+      {
+        "id": "showBuiltinBattery",
+        "type": "checkbox",
+        "value": false,
+        "label": {
+          "en": "Battery"
+        }
+      }
+    ]
+  }
+]

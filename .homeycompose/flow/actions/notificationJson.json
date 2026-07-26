@@ -6,8 +6,9 @@
     "en": "Send notification [[msg]] with [[options]]"
   },
   "hint": {
-    "en": "Send notification to device with all custom options in JSON format"
+    "en": "Legacy notification JSON flow for AWTRIX 3. Use Send raw notification for new flows."
   },
+  "deprecated": true,
   "duration": true,
   "args": [
     {

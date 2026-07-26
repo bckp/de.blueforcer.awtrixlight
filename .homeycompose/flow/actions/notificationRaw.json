@@ -1,0 +1,26 @@
+{
+  "title": {
+    "en": "Send raw notification [[options]]"
+  },
+  "titleFormatted": {
+    "en": "Send raw notification [[options]]"
+  },
+  "hint": {
+    "en": "Send a notification using a device-specific raw JSON payload. For AWTRIX NG, use NG-shaped JSON fields such as text and durationMs. For AWTRIX 3, use AWTRIX 3-shaped JSON fields such as text and duration."
+  },
+  "args": [
+    {
+      "name": "device",
+      "type": "device",
+      "filter": "driver_id=awtrixlight|awtrixng"
+    },
+    {
+      "type": "text",
+      "name": "options",
+      "value": "{\"text\":\"Hello\"}",
+      "placeholder": {
+        "en": "raw JSON payload"
+      }
+    }
+  ]
+}

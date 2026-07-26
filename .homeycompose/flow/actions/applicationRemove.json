@@ -1,0 +1,25 @@
+{
+  "title": {
+    "en": "Remove application [[name]]"
+  },
+  "titleFormatted": {
+    "en": "Remove application [[name]]"
+  },
+  "hint": {
+    "en": "Remove application from device"
+  },
+  "args": [
+    {
+      "name": "device",
+      "type": "device",
+      "filter": "driver_id=awtrixlight|awtrixng"
+    },
+    {
+      "type": "text",
+      "name": "name",
+      "placeholder": {
+        "en": "app name"
+      }
+    }
+  ]
+}

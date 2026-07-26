@@ -1,6 +1,6 @@
 import { AppOptions } from '../Types';
 import Api from '../Api/Api';
-import AwtrixLightDevice from '../../drivers/awtrixlight/device';
+import AwtrixLightDevice from '../../../drivers/awtrixlight/device';
 
 type AppBase = {
   name: string,

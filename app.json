@@ -1,15 +1,15 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "de.blueforcer.awtrixlight",
-  "version": "1.3.8",
-  "compatibility": ">=7.4.0",
+  "version": "2.0.0",
+  "compatibility": ">=12.9.0",
   "sdk": 3,
   "brandColor": "#222222",
   "platforms": [
     "local"
   ],
   "name": {
-    "en": "AWTRIX 3"
+    "en": "AWTRIX"
   },
   "description": {
     "en": "Connected Smart Clock for your Smart Home"
@@ -38,6 +38,69 @@
   },
   "flow": {
     "actions": [
+      {
+        "title": {
+          "en": "Create/update application [[name]] [[msg]] [[icon]] [[color]] [[options]]"
+        },
+        "titleFormatted": {
+          "en": "Create/update application [[name]] [[msg]] [[icon]] [[color]] [[options]]"
+        },
+        "hint": {
+          "en": "Create or update an application. Name must match A-Z, a-z, 0-9, _ or - and be at most 26 characters. Optional options must be device-specific JSON. Use Homey's Add duration option to override the JSON options or the device default duration."
+        },
+        "duration": true,
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight|awtrixng"
+          },
+          {
+            "type": "text",
+            "name": "name",
+            "placeholder": {
+              "en": "app name"
+            }
+          },
+          {
+            "type": "text",
+            "name": "msg",
+            "required": false,
+            "placeholder": {
+              "en": "message"
+            }
+          },
+          {
+            "type": "autocomplete",
+            "name": "icon",
+            "required": false,
+            "title": {
+              "en": "icon"
+            },
+            "placeholder": {
+              "en": "icon"
+            }
+          },
+          {
+            "type": "color",
+            "name": "color",
+            "required": false,
+            "value": "#eeeeee",
+            "title": {
+              "en": "color"
+            }
+          },
+          {
+            "type": "text",
+            "name": "options",
+            "required": false,
+            "placeholder": {
+              "en": "JSON options"
+            }
+          }
+        ],
+        "id": "application"
+      },
       {
         "title": {
           "en": "Create/update application [[name]], set [[msg]] with [[icon]] and [[options]] in json format (experimental)"
@@ -90,6 +153,67 @@
         "id": "applicationIcon"
       },
       {
+        "title": {
+          "en": "Create/update raw application [[name]] [[options]]"
+        },
+        "titleFormatted": {
+          "en": "Create/update raw application [[name]] [[options]]"
+        },
+        "hint": {
+          "en": "Create or update an application using a raw JSON payload. Enter the app name without the internal homey- prefix. This card is for advanced users and accepts only fields supported by the selected device."
+        },
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "type": "text",
+            "name": "name",
+            "placeholder": {
+              "en": "app name"
+            }
+          },
+          {
+            "type": "text",
+            "name": "options",
+            "value": "{\"text\":\"Hello\"}",
+            "placeholder": {
+              "en": "raw JSON payload"
+            }
+          }
+        ],
+        "id": "applicationRaw"
+      },
+      {
+        "title": {
+          "en": "Remove application [[name]]"
+        },
+        "titleFormatted": {
+          "en": "Remove application [[name]]"
+        },
+        "hint": {
+          "en": "Remove application from device"
+        },
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight|awtrixng"
+          },
+          {
+            "type": "text",
+            "name": "name",
+            "placeholder": {
+              "en": "app name"
+            }
+          }
+        ],
+        "id": "applicationRemove"
+      },
+      {
+        "deprecated": true,
         "title": {
           "en": "Create custom app [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]]"
         },
@@ -177,7 +301,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter": "driver_id=awtrixlight"
+            "filter": "driver_id=awtrixlight|awtrixng"
           },
           {
             "type": "dropdown",
@@ -205,25 +329,25 @@
       },
       {
         "title": {
-          "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with efect duration [[duration]]"
+          "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect for [[duration]]"
         },
         "titleFormatted": {
-          "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect with efect duration [[duration]]"
+          "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect for [[duration]]"
         },
         "hint": {
-          "en": "Enable or disable identificator"
+          "en": "Set an indicator. Effect duration is in milliseconds."
         },
         "args": [
           {
             "name": "device",
             "type": "device",
-            "filter": "driver_id=awtrixlight"
+            "filter": "driver_id=awtrixlight|awtrixng"
           },
           {
             "type": "color",
             "name": "color",
             "title": {
-              "en": "Color"
+              "en": "color"
             }
           },
           {
@@ -231,7 +355,7 @@
             "name": "indicator",
             "value": "1",
             "title": {
-              "en": "identificator number"
+              "en": "indicator number"
             },
             "values": [
               {
@@ -313,7 +437,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter": "driver_id=awtrixlight"
+            "filter": "driver_id=awtrixlight|awtrixng"
           },
           {
             "type": "dropdown",
@@ -348,6 +472,49 @@
       },
       {
         "title": {
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
+        },
+        "titleFormatted": {
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
+        },
+        "hint": {
+          "en": "Send a notification. Use Homey's Add duration option to override the device default duration."
+        },
+        "duration": true,
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight|awtrixng"
+          },
+          {
+            "type": "text",
+            "name": "msg",
+            "placeholder": {
+              "en": "message"
+            }
+          },
+          {
+            "type": "autocomplete",
+            "name": "icon",
+            "required": false,
+            "title": {
+              "en": "icon"
+            },
+            "placeholder": {
+              "en": "icon"
+            }
+          },
+          {
+            "type": "color",
+            "name": "color",
+            "value": "#eeeeee"
+          }
+        ],
+        "id": "notification"
+      },
+      {
+        "title": {
           "en": "Dismiss notification"
         },
         "titleFormatted": {
@@ -360,7 +527,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter": "driver_id=awtrixlight"
+            "filter": "driver_id=awtrixlight|awtrixng"
           }
         ],
         "id": "notificationDismiss"
@@ -373,8 +540,9 @@
           "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
         },
         "hint": {
-          "en": "Send color notification to device for specified duration with icon (from device) and color"
+          "en": "Deprecated. Use Send notification instead."
         },
+        "deprecated": true,
         "duration": true,
         "args": [
           {
@@ -415,8 +583,9 @@
           "en": "Send notification [[msg]] with [[options]]"
         },
         "hint": {
-          "en": "Send notification to device with all custom options in JSON format"
+          "en": "Legacy notification JSON flow for AWTRIX 3. Use Send raw notification for new flows."
         },
+        "deprecated": true,
         "duration": true,
         "args": [
           {
@@ -445,6 +614,33 @@
       },
       {
         "title": {
+          "en": "Send raw notification [[options]]"
+        },
+        "titleFormatted": {
+          "en": "Send raw notification [[options]]"
+        },
+        "hint": {
+          "en": "Send a notification using a device-specific raw JSON payload. For AWTRIX NG, use NG-shaped JSON fields such as text and durationMs. For AWTRIX 3, use AWTRIX 3-shaped JSON fields such as text and duration."
+        },
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixlight|awtrixng"
+          },
+          {
+            "type": "text",
+            "name": "options",
+            "value": "{\"text\":\"Hello\"}",
+            "placeholder": {
+              "en": "raw JSON payload"
+            }
+          }
+        ],
+        "id": "notificationRaw"
+      },
+      {
+        "title": {
           "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color"
         },
         "titleFormatted": {
@@ -457,7 +653,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter": "driver_id=awtrixlight"
+            "filter": "driver_id=awtrixlight|awtrixng"
           },
           {
             "type": "text",
@@ -469,6 +665,7 @@
           {
             "type": "autocomplete",
             "name": "icon",
+            "required": false,
             "title": {
               "en": "icon"
             },
@@ -498,7 +695,7 @@
           {
             "name": "device",
             "type": "device",
-            "filter": "driver_id=awtrixlight"
+            "filter": "driver_id=awtrixlight|awtrixng"
           },
           {
             "type": "text",
@@ -518,9 +715,9 @@
           "en": "Remove custom app [[name]]"
         },
         "hint": {
-          "en": "Remove custom app on device"
+          "en": "Legacy AWTRIX 3 remove custom app flow. Use Remove application for new flows."
         },
-        "duration": true,
+        "deprecated": true,
         "args": [
           {
             "name": "device",
@@ -531,11 +728,81 @@
             "type": "text",
             "name": "name",
             "placeholder": {
-              "en": "name"
+              "en": "app name"
             }
           }
         ],
         "id": "removeCustomApp"
+      },
+      {
+        "title": {
+          "en": "Set weather overlay [[overlay]]"
+        },
+        "titleFormatted": {
+          "en": "Set weather overlay [[overlay]]"
+        },
+        "hint": {
+          "en": "Set the weather overlay shown on the display."
+        },
+        "args": [
+          {
+            "name": "device",
+            "type": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "type": "dropdown",
+            "name": "overlay",
+            "title": {
+              "en": "overlay"
+            },
+            "values": [
+              {
+                "id": "none",
+                "title": {
+                  "en": "None"
+                }
+              },
+              {
+                "id": "drizzle",
+                "title": {
+                  "en": "Drizzle"
+                }
+              },
+              {
+                "id": "frost",
+                "title": {
+                  "en": "Frost"
+                }
+              },
+              {
+                "id": "rain",
+                "title": {
+                  "en": "Rain"
+                }
+              },
+              {
+                "id": "snow",
+                "title": {
+                  "en": "Snow"
+                }
+              },
+              {
+                "id": "storm",
+                "title": {
+                  "en": "Storm"
+                }
+              },
+              {
+                "id": "thunder",
+                "title": {
+                  "en": "Thunder"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "weatherOverlay"
       }
     ]
   },
@@ -819,6 +1086,346 @@
           ]
         }
       ]
+    },
+    {
+      "name": {
+        "en": "Awtrix NG"
+      },
+      "class": "other",
+      "capabilities": [
+        "button_prev",
+        "button_next",
+        "alarm_generic.indicator1",
+        "alarm_generic.indicator2",
+        "alarm_generic.indicator3",
+        "awtrix_matrix",
+        "awtrixng_weather_overlay",
+        "rssi",
+        "ip"
+      ],
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "lan"
+      ],
+      "capabilitiesOptions": {
+        "alarm_generic.indicator1": {
+          "preventInsights": true,
+          "title": {
+            "en": "Indicator top"
+          }
+        },
+        "alarm_generic.indicator2": {
+          "preventInsights": true,
+          "title": {
+            "en": "Indicator middle"
+          }
+        },
+        "alarm_generic.indicator3": {
+          "preventInsights": true,
+          "title": {
+            "en": "Indicator bottom"
+          }
+        }
+      },
+      "discovery": "awtrixng-mdns",
+      "pair": [
+        {
+          "id": "list_my_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "pair_selection_router"
+          },
+          "options": {
+            "singular": true
+          }
+        },
+        {
+          "id": "pair_selection_router"
+        },
+        {
+          "id": "manual_pairing_placeholder"
+        },
+        {
+          "id": "credentials_placeholder"
+        },
+        {
+          "id": "add_my_devices",
+          "template": "add_devices"
+        }
+      ],
+      "images": {
+        "small": "/drivers/awtrixng/assets/images/small.png",
+        "large": "/drivers/awtrixng/assets/images/large.png",
+        "xlarge": "/drivers/awtrixng/assets/images/xlarge.png"
+      },
+      "id": "awtrixng",
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Login details"
+          },
+          "children": [
+            {
+              "id": "authUser",
+              "type": "text",
+              "label": {
+                "en": "Username"
+              },
+              "value": "",
+              "hint": {
+                "en": "The API username. Leave empty when authentication is disabled. This is stored in Homey and is not sent as a device setting."
+              }
+            },
+            {
+              "id": "authPass",
+              "type": "password",
+              "label": {
+                "en": "Password"
+              },
+              "value": "",
+              "hint": {
+                "en": "The API password. Leave empty when authentication is disabled. This is stored in Homey and is not sent as a device setting."
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Device settings"
+          },
+          "children": [
+            {
+              "id": "autoBrightness",
+              "type": "checkbox",
+              "value": false,
+              "label": {
+                "en": "Auto-brightness"
+              }
+            },
+            {
+              "id": "autoTransition",
+              "type": "checkbox",
+              "value": true,
+              "label": {
+                "en": "Auto-cycle"
+              }
+            },
+            {
+              "id": "blockNavigation",
+              "type": "checkbox",
+              "value": false,
+              "label": {
+                "en": "Block buttons"
+              }
+            },
+            {
+              "id": "uppercase",
+              "type": "checkbox",
+              "value": true,
+              "label": {
+                "en": "Uppercase text"
+              }
+            },
+            {
+              "id": "transitionEffect",
+              "type": "dropdown",
+              "value": "Rain",
+              "label": {
+                "en": "Transition effect"
+              },
+              "hint": {
+                "en": "Static list from the documented capabilities."
+              },
+              "values": [
+                {
+                  "id": "Random",
+                  "label": {
+                    "en": "Random"
+                  }
+                },
+                {
+                  "id": "Slide",
+                  "label": {
+                    "en": "Slide"
+                  }
+                },
+                {
+                  "id": "Dim",
+                  "label": {
+                    "en": "Dim"
+                  }
+                },
+                {
+                  "id": "Zoom",
+                  "label": {
+                    "en": "Zoom"
+                  }
+                },
+                {
+                  "id": "Rotate",
+                  "label": {
+                    "en": "Rotate"
+                  }
+                },
+                {
+                  "id": "Pixelate",
+                  "label": {
+                    "en": "Pixelate"
+                  }
+                },
+                {
+                  "id": "Curtain",
+                  "label": {
+                    "en": "Curtain"
+                  }
+                },
+                {
+                  "id": "Ripple",
+                  "label": {
+                    "en": "Ripple"
+                  }
+                },
+                {
+                  "id": "Blink",
+                  "label": {
+                    "en": "Blink"
+                  }
+                },
+                {
+                  "id": "Reload",
+                  "label": {
+                    "en": "Reload"
+                  }
+                },
+                {
+                  "id": "Fade",
+                  "label": {
+                    "en": "Fade"
+                  }
+                },
+                {
+                  "id": "Cover",
+                  "label": {
+                    "en": "Cover"
+                  }
+                },
+                {
+                  "id": "Uncover",
+                  "label": {
+                    "en": "Uncover"
+                  }
+                },
+                {
+                  "id": "Split",
+                  "label": {
+                    "en": "Split"
+                  }
+                },
+                {
+                  "id": "Blinds",
+                  "label": {
+                    "en": "Blinds"
+                  }
+                },
+                {
+                  "id": "Blocks",
+                  "label": {
+                    "en": "Blocks"
+                  }
+                },
+                {
+                  "id": "Flash",
+                  "label": {
+                    "en": "Flash"
+                  }
+                },
+                {
+                  "id": "Diamond",
+                  "label": {
+                    "en": "Diamond"
+                  }
+                },
+                {
+                  "id": "Wave",
+                  "label": {
+                    "en": "Wave"
+                  }
+                },
+                {
+                  "id": "Rain",
+                  "label": {
+                    "en": "Rain"
+                  }
+                },
+                {
+                  "id": "Melt",
+                  "label": {
+                    "en": "Melt"
+                  }
+                },
+                {
+                  "id": "Interlace",
+                  "label": {
+                    "en": "Interlace"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Default apps"
+          },
+          "children": [
+            {
+              "id": "showBuiltinTime",
+              "type": "checkbox",
+              "value": false,
+              "label": {
+                "en": "Time"
+              }
+            },
+            {
+              "id": "showBuiltinDate",
+              "type": "checkbox",
+              "value": false,
+              "label": {
+                "en": "Date"
+              }
+            },
+            {
+              "id": "showBuiltinTemperature",
+              "type": "checkbox",
+              "value": false,
+              "label": {
+                "en": "Temperature"
+              }
+            },
+            {
+              "id": "showBuiltinHumidity",
+              "type": "checkbox",
+              "value": false,
+              "label": {
+                "en": "Humidity"
+              }
+            },
+            {
+              "id": "showBuiltinBattery",
+              "type": "checkbox",
+              "value": false,
+              "label": {
+                "en": "Battery"
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "capabilities": {
@@ -832,6 +1439,60 @@
       "insights": false,
       "uiComponent": "button",
       "icon": "/assets/capability_awtrix_matrix.svg"
+    },
+    "awtrixng_weather_overlay": {
+      "type": "enum",
+      "title": {
+        "en": "Weather overlay"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker",
+      "insights": false,
+      "values": [
+        {
+          "id": "none",
+          "title": {
+            "en": "None"
+          }
+        },
+        {
+          "id": "drizzle",
+          "title": {
+            "en": "Drizzle"
+          }
+        },
+        {
+          "id": "frost",
+          "title": {
+            "en": "Frost"
+          }
+        },
+        {
+          "id": "rain",
+          "title": {
+            "en": "Rain"
+          }
+        },
+        {
+          "id": "snow",
+          "title": {
+            "en": "Snow"
+          }
+        },
+        {
+          "id": "storm",
+          "title": {
+            "en": "Storm"
+          }
+        },
+        {
+          "id": "thunder",
+          "title": {
+            "en": "Thunder"
+          }
+        }
+      ]
     },
     "button_next": {
       "type": "boolean",
@@ -903,6 +1564,25 @@
             "match": {
               "type": "string",
               "value": "awtrix3"
+            }
+          }
+        ]
+      ]
+    },
+    "awtrixng-mdns": {
+      "type": "mdns-sd",
+      "mdns-sd": {
+        "name": "awtrixng",
+        "protocol": "tcp"
+      },
+      "id": "{{txt.id}}",
+      "conditions": [
+        [
+          {
+            "field": "txt.type",
+            "match": {
+              "type": "string",
+              "value": "awtrixng"
             }
           }
         ]

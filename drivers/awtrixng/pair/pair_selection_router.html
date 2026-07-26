@@ -1,0 +1,22 @@
+<p id="pair-router-preparing"></p>
+
+<script type="text/javascript">
+  Homey.setTitle(Homey.__('pair.router.title'));
+
+  document.getElementById('pair-router-preparing').textContent = Homey.__('pair.router.preparing');
+
+  function showError(error) {
+    Homey.alert(error && error.message ? error.message : String(error));
+    Homey.showView('list_my_devices');
+  }
+
+  try {
+    var emitResult = Homey.emit('resolve_pair_selection', {});
+
+    if (emitResult && typeof emitResult.catch === 'function') {
+      emitResult.catch(showError);
+    }
+  } catch (error) {
+    showError(error);
+  }
+</script>

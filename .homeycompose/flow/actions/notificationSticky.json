@@ -12,7 +12,7 @@
     {
       "name": "device",
       "type": "device",
-      "filter": "driver_id=awtrixlight"
+      "filter": "driver_id=awtrixlight|awtrixng"
     },
     {
       "type": "text",
@@ -24,6 +24,7 @@
     {
       "type": "autocomplete",
       "name": "icon",
+      "required": false,
       "title": {
         "en": "icon"
       },

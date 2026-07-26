@@ -1,0 +1,34 @@
+{
+  "title": {
+    "en": "Set weather overlay [[overlay]]"
+  },
+  "titleFormatted": {
+    "en": "Set weather overlay [[overlay]]"
+  },
+  "hint": {
+    "en": "Set the weather overlay shown on the display."
+  },
+  "args": [
+    {
+      "name": "device",
+      "type": "device",
+      "filter": "driver_id=awtrixng"
+    },
+    {
+      "type": "dropdown",
+      "name": "overlay",
+      "title": {
+        "en": "overlay"
+      },
+      "values": [
+        { "id": "none", "title": { "en": "None" } },
+        { "id": "drizzle", "title": { "en": "Drizzle" } },
+        { "id": "frost", "title": { "en": "Frost" } },
+        { "id": "rain", "title": { "en": "Rain" } },
+        { "id": "snow", "title": { "en": "Snow" } },
+        { "id": "storm", "title": { "en": "Storm" } },
+        { "id": "thunder", "title": { "en": "Thunder" } }
+      ]
+    }
+  ]
+}
