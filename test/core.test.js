@@ -138,7 +138,7 @@ test('Poll clears its interval and active state when stopped', () => {
       cleared.push(handle);
     },
   };
-  const poll = new Poll(() => {}, homey, 10, 50);
+  const poll = new Poll(() => {}, homey, () => {}, 10, 50);
 
   poll.start();
   assert.equal(poll.isActive(), true);
@@ -153,4 +153,67 @@ test('Poll clears its interval and active state when stopped', () => {
   assert.equal(poll.isActive(), false);
   assert.equal(poll.isExtended(), false);
   assert.deepEqual(cleared, handles);
+});
+
+test('AWTRIX 3 Poll skips overlapping callbacks', async () => {
+  let intervalCallback;
+  const homey = {
+    setInterval(callback) {
+      intervalCallback = callback;
+      return 1;
+    },
+    clearInterval() {},
+  };
+  let finishFirstRun;
+  const firstRun = new Promise((resolve) => {
+    finishFirstRun = resolve;
+  });
+  let callbackCalls = 0;
+  const poll = new Poll(async () => {
+    callbackCalls += 1;
+    if (callbackCalls === 1) {
+      await firstRun;
+    }
+  }, homey, () => {}, 10, 50);
+
+  poll.start();
+  const pendingRun = intervalCallback();
+  await Promise.resolve();
+
+  await intervalCallback();
+  assert.equal(callbackCalls, 1);
+
+  finishFirstRun();
+  await pendingRun;
+  await intervalCallback();
+  assert.equal(callbackCalls, 2);
+});
+
+test('AWTRIX 3 Poll reports rejection and continues polling', async () => {
+  let intervalCallback;
+  const homey = {
+    setInterval(callback) {
+      intervalCallback = callback;
+      return 1;
+    },
+    clearInterval() {},
+  };
+  const callbackError = new Error('AWTRIX 3 poll failed');
+  const errors = [];
+  let callbackCalls = 0;
+  const poll = new Poll(async () => {
+    callbackCalls += 1;
+    if (callbackCalls === 1) {
+      throw callbackError;
+    }
+  }, homey, (error) => errors.push(error), 10, 50);
+
+  poll.start();
+  await intervalCallback();
+
+  assert.deepEqual(errors, [callbackError]);
+  assert.equal(poll.isActive(), true);
+
+  await intervalCallback();
+  assert.equal(callbackCalls, 2);
 });

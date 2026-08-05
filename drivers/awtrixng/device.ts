@@ -84,7 +84,7 @@ class AwtrixNgDevice extends Device {
 
     this.poll = new AwtrixNgPoll(async () => {
       await this.refreshDeviceState({ allowAddCapabilities: false });
-    }, this.homey, PollIntervalMs);
+    }, this.homey, PollIntervalMs, (error: unknown) => this.error(error));
 
     try {
       const deviceStateResult = await this.refreshDeviceState({ allowAddCapabilities: true });

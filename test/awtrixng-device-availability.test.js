@@ -224,4 +224,14 @@ test('AWTRIX NG starts polling and preserves API error details when initial sett
   assert.equal(homey.setIntervalCalls.length, 1);
   assert.equal(homey.setIntervalCalls[0].intervalMs, 60000);
   assert.equal(awtrixNgDevice.poll.isActive(), true);
+
+  const pollingError = calls.error[0];
+  awtrixNgDevice.refreshDeviceState = async () => {
+    throw pollingError;
+  };
+
+  await homey.tick(60000);
+
+  assert.equal(calls.error[1], pollingError, 'poll logger receives the complete original NG error object');
+  assert.equal(awtrixNgDevice.poll.isActive(), true);
 });

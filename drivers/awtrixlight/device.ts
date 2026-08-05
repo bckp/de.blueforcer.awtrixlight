@@ -57,18 +57,15 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     // Setup polling
     this.poll = new Poll(
       async () => {
-        try {
-          this.log('polling...');
-          await this.refreshCapabilities();
+        this.log('polling...');
+        await this.refreshCapabilities();
 
-          if (!this.getAvailable()) {
-            await this.tryRediscover();
-          }
-        } catch (error) {
-          this.error(error);
+        if (!this.getAvailable()) {
+          await this.tryRediscover();
         }
       },
       this.homey,
+      (error: unknown) => this.error(error),
       PollInterval,
       PollIntervalLong,
     );
