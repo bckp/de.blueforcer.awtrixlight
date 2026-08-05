@@ -734,7 +734,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | A2 | ✅ | package, lockfile a Homey compose sjednoceny na 2.0.1; přidán consistency test |
 | A3 | ✅ | nepoužité přímé závislosti odebrány; `mime-types` zůstává jen tranzitivně přes `form-data` |
 | A4 | ✅ | inertní volby odstraněny; struktura `.homeybuild` před/po beze změny |
-| A5 | ⬜ | |
+| A5 | ✅ | README popisuje sdílené karty a NG-only `applicationRaw`/`weatherOverlay` |
 | A6 | ⬜ | |
 | A7 | ⬜ | |
 | A8 | ⬜ | dočasný allowlist `applicationIcon` odstraní C6 |
