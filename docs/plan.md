@@ -733,7 +733,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | A1 | ✅ | R2: rozměry i publish validace ověřeny; NG používá schválený samostatný vizuál |
 | A2 | ✅ | package, lockfile a Homey compose sjednoceny na 2.0.1; přidán consistency test |
 | A3 | ✅ | nepoužité přímé závislosti odebrány; `mime-types` zůstává jen tranzitivně přes `form-data` |
-| A4 | ⬜ | |
+| A4 | ✅ | inertní volby odstraněny; struktura `.homeybuild` před/po beze změny |
 | A5 | ⬜ | |
 | A6 | ⬜ | |
 | A7 | ⬜ | |
