@@ -43,9 +43,11 @@ session, i kdyby se zdály triviální. A2 a A3 se oba dotýkají `package.json`
    v obou vrstvách se řeší dvěma nezávislými implementacemi. Žádná sdílená třída,
    žádný společný transport, žádný import mezi `lib/awtrix3` a `lib/awtrixng`.
 2. Před začátkem ověř `git status` – čistý strom. Jediná výjimka je A1: tři předem
-   připravené `xlarge.png` smějí být jeho přesně vyjmenovaný vstupní diff. Dokumentační
-   změny tohoto plánu musí být před implementací commitnuté odděleně. Pracuj na větvi
-   `fix/<id-balíčku>`.
+   připravené `xlarge.png` smějí být jeho přesně vyjmenovaný vstupní diff. Předem
+   připravené dokumentační změny plánu musí být před implementací commitnuté odděleně;
+   checklist a upřesnění zjištěná při konkrétním balíčku patří do jeho commitu. Pracuj
+   přímo na aktuální implementační větvi a pro jednotlivé balíčky nezakládej samostatné
+   větve.
 3. Jeden balíček = jeden commit (formát zprávy je u balíčku). Nic navíc.
 4. `app.json` NIKDY needituj ručně – je generovaný. Změny dělej v `.homeycompose/`
    a přegeneruj přes `homey app build` (pokud CLI není dostupné, změň jen
@@ -143,9 +145,9 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 - **Kroky:** použij již připravené high-resolution varianty odvozené ze stávajícího
   vizuálu: (1) `assets/images/xlarge.png` 1000×700, (2)
   `drivers/awtrixlight/assets/images/xlarge.png` 1000×1000 a (3) náhradu
-  `drivers/awtrixng/assets/images/xlarge.png` 1000×1000. Oba driverové obrázky jsou
-  záměrně bitově totožné stejně jako původní předlohy. Negeneruj je znovu a
-  nedeformuj app-level poměr stran.
+  `drivers/awtrixng/assets/images/xlarge.png` 1000×1000. Driverové obrázky zachovávají
+  schválené samostatné vizuály: AWTRIX 3 původní ciferník a AWTRIX NG ciferník s nápisem
+  „NG“. Negeneruj je znovu a nedeformuj app-level poměr stran.
 - **Ověření:** rituál + rozměry všech tří (`sips -g pixelWidth -g pixelHeight *.png`)
   = app 1000×700, drivery 1000×1000; `homey app validate --level publish` musí projít.
 - **Commit:** `fix(assets): provide high-resolution xlarge app and driver images`
@@ -728,7 +730,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 
 | Balíček | Stav | Pozn. |
 |---|---|---|
-| A1 | ⬜ | R2: assety jsou připravené, zbývá ověření a samostatný commit |
+| A1 | ✅ | R2: rozměry i publish validace ověřeny; NG používá schválený samostatný vizuál |
 | A2 | ⬜ | průběžné sjednocení na vydanou 2.0.1 |
 | A3 | ⬜ | |
 | A4 | ⬜ | |
