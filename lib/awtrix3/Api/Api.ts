@@ -35,10 +35,6 @@ export default class Api {
     this.client.setDebug(debug);
   }
 
-  async isAvaible(): Promise<boolean> {
-    return await this.clientVerify() === Status.Ok;
-  }
-
   /** bckp ******* Commands ******* */
   async dismiss() {
     return this.clientPost('notify/dismiss');

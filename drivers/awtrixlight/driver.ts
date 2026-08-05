@@ -32,8 +32,6 @@ type ListenerArgsRemoveCustomApp = ListenerArgs & {
   name: string
 }
 
-const ManualAdd = false;
-
 export default class UlanziAwtrix extends Driver {
 
   async onInit(): Promise<void> {
@@ -99,23 +97,6 @@ export default class UlanziAwtrix extends Driver {
           },
         };
       });
-
-      // If we do not find device, push custom one so user can set IP directly
-      if (ManualAdd) {
-        devices.push({
-          name: 'Manual',
-          data: {
-            id: `custom_${Date.now().toString()}`,
-          },
-          store: {
-            address: '',
-          },
-          settings: {
-            user: null,
-            pass: null,
-          },
-        });
-      }
 
       this.log(devices);
       return devices;

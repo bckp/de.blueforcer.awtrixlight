@@ -3,7 +3,7 @@ import { Device, DiscoveryResultMDNSSD } from 'homey';
 import ApiClient from '../../lib/awtrix3/Api/Client';
 import { Status } from '../../lib/awtrix3/Api/Response';
 import Api from '../../lib/awtrix3/Api/Api';
-import { AwtrixImage, AwtrixStats, SettingOptions } from '../../lib/awtrix3/Types';
+import { AwtrixStats, SettingOptions } from '../../lib/awtrix3/Types';
 import { DeviceFailer, DevicePoll } from './interfaces';
 import Icons from '../../lib/awtrix3/List/Icons';
 import Poll from '../../lib/awtrix3/Poll';
@@ -271,10 +271,6 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
         rssi: stats.wifi_signal,
       });
 
-      if (stats.uptime <= this.getStoreValue('uptime')) {
-        this.log('reboot detected');
-      }
-
       await this.setStoreValue('uptime', stats.uptime);
     } catch (error: any) {
       this.log(error.message || error);
@@ -419,14 +415,6 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     await this.api.appPrev();
   }
 
-  async cmdReboot(): Promise<void> {
-    await this.api.reboot();
-  }
-
-  async cmdSetSettings(options: any): Promise<void> {
-    await this.api.setSettings(options);
-  }
-
   async cmdGetSettings(): Promise<SettingOptions|null> {
     try {
       return await this.api.getSettings();
@@ -448,15 +436,6 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   async cmdGetEffects(): Promise<string[]|null> {
     try {
       return await this.api.getEffects();
-    } catch (error: any) {
-      this.error(error);
-      return null;
-    }
-  }
-
-  async cmdGetImages(): Promise<AwtrixImage[]|null> {
-    try {
-      return await this.api.getImages();
     } catch (error: any) {
       this.error(error);
       return null;

@@ -3,7 +3,7 @@ import { Device } from 'homey';
 import path from 'path';
 import AxiosAwtrixNgHttpTransport from '../../lib/awtrixng/Http/AxiosTransport';
 import AwtrixNgClient from '../../lib/awtrixng/Api/Client';
-import { toAwtrixNgAvailabilityState } from '../../lib/awtrixng/Device/Availability';
+import { AwtrixNgAvailabilityState, toAwtrixNgAvailabilityState } from '../../lib/awtrixng/Device/Availability';
 import {
   runAwtrixNgMatrixPowerCapability,
   runAwtrixNgNextAppCapability,
@@ -170,11 +170,9 @@ class AwtrixNgDevice extends Device {
       return result;
     }
 
-    const availability = toAwtrixNgAvailabilityState(result);
+    const availability = toAwtrixNgAvailabilityState(result) as Extract<AwtrixNgAvailabilityState, { available: false }>;
 
-    if (!availability.available) {
-      await this.setUnavailable(availability.message);
-    }
+    await this.setUnavailable(availability.message);
 
     return result;
   }

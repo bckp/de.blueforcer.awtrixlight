@@ -264,14 +264,12 @@ const assertKnownFields = (input: Record<string, unknown>, allowedFields: Set<st
       });
     }
 
-    if (!allowedFields.has(field)) {
-      throw new UnsupportedAwtrixNgPayloadFieldError({
-        field,
-        target,
-        reason: 'unknown-field',
-        details: 'Unknown fields are rejected so they cannot be silently dropped before sending a request.',
-      });
-    }
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field,
+      target,
+      reason: 'unknown-field',
+      details: 'Unknown fields are rejected so they cannot be silently dropped before sending a request.',
+    });
   }
 };
 

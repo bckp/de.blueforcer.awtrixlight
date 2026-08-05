@@ -81,7 +81,7 @@ test('AWTRIX NG pairing uses discovery list with a custom selection router', () 
   ]);
 });
 
-test('AWTRIX NG custom pairing views route selected list item without DOMContentLoaded', () => {
+test('AWTRIX NG custom pairing views initialize without DOMContentLoaded or dead back navigation', () => {
   const router = readText('drivers/awtrixng/pair/pair_selection_router.html');
   const manualPairing = readText('drivers/awtrixng/pair/manual_pairing_placeholder.html');
 
@@ -93,8 +93,8 @@ test('AWTRIX NG custom pairing views route selected list item without DOMContent
   assert.equal(router.includes('<p>Preparing pairing...</p>'), false);
 
   assert.equal(manualPairing.includes('DOMContentLoaded'), false);
-  assert.ok(manualPairing.indexOf('id="back-to-list"') < manualPairing.indexOf("getElementById('back-to-list')"));
-  assert.ok(manualPairing.includes("Homey.showView('list_my_devices')"));
+  assert.equal(manualPairing.includes('back-to-list'), false);
+  assert.equal(manualPairing.includes("Homey.showView('list_my_devices')"), false);
 });
 
 test('AWTRIX NG manual pairing view uses Homey form styles and creates device after successful probe', () => {
