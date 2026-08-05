@@ -57,11 +57,15 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     // Setup polling
     this.poll = new Poll(
       async () => {
-        this.log('polling...');
-        this.refreshCapabilities();
+        try {
+          this.log('polling...');
+          await this.refreshCapabilities();
 
-        if (!this.getAvailable()) {
-          this.tryRediscover();
+          if (!this.getAvailable()) {
+            await this.tryRediscover();
+          }
+        } catch (error) {
+          this.error(error);
         }
       },
       this.homey,
@@ -70,7 +74,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     );
 
     // Initialize API etc
-    this.initializeDevice();
+    await this.initializeDevice();
   }
 
   async initializeDevice(): Promise<void> {
@@ -99,7 +103,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       this.failsCritical(true);
       if (this.getAvailable()) {
         this.log('Device availalible');
-        this.refreshAll();
+        await this.refreshAll();
         this.connected();
       } else {
         this.log('Polling set to extended mode, device is not available');
@@ -140,15 +144,29 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     this.setCapabilityValue('ip', this.getStoreValue('address'));
 
     // Upload files
-    fs.readdir(`${__dirname}/assets/images/icons`, (err, files) => {
-      if (files) {
-        files.forEach((file) => this.api.uploadImage(fs.readFileSync(`${__dirname}/assets/images/icons/${file}`), file));
-      }
+    const directory = `${__dirname}/assets/images/icons`;
+    let files: string[];
+    try {
+      files = await fs.promises.readdir(directory);
+    } catch (cause) {
+      this.error(new AggregateError([
+        new Error('Failed to read bundled icon directory', { cause }),
+      ], 'Failed to upload bundled AWTRIX 3 icons'));
+      return;
+    }
 
-      if (err) {
-        this.log(err);
+    const uploadErrors: Error[] = [];
+    for (const file of files) {
+      try {
+        await this.api.uploadImage(fs.readFileSync(`${directory}/${file}`), file);
+      } catch (cause) {
+        uploadErrors.push(new Error(`Failed to upload bundled icon: ${file}`, { cause }));
       }
-    });
+    }
+
+    if (uploadErrors.length > 0) {
+      this.error(new AggregateError(uploadErrors, 'Failed to upload bundled AWTRIX 3 icons'));
+    }
   }
 
   async onSettings({ oldSettings, newSettings, changedKeys }: {
@@ -206,8 +224,8 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   async onDiscoveryAddressChanged(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {
     // Set IP
     this.api.setIp(discoveryResult.address);
-    this.setStoreValue('address', discoveryResult.address).catch((error) => this.error(error));
-    this.setCapabilityValue('ip', discoveryResult.address);
+    await this.setStoreValue('address', discoveryResult.address);
+    await this.setCapabilityValue('ip', discoveryResult.address);
 
     // Verify
     try {
@@ -218,10 +236,19 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     return false;
   }
 
-  refreshAll() {
-    this.refreshCapabilities();
-    this.refreshSettings();
-    this.refreshEffects();
+  async refreshAll(): Promise<void> {
+    const results = await Promise.allSettled([
+      this.refreshCapabilities(),
+      this.refreshSettings(),
+      this.refreshEffects(),
+    ]);
+    const errors = results
+      .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+      .map((result) => result.reason);
+
+    if (errors.length > 0) {
+      throw new AggregateError(errors, 'Failed to refresh AWTRIX 3 device state');
+    }
   }
 
   async tryRediscover(): Promise<boolean> {
@@ -285,7 +312,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
         return;
       }
 
-      this.setSettings({
+      await this.setSettings({
         TIM: !!settings.TIM,
         DAT: !!settings.DAT,
         HUM: !!settings.HUM,

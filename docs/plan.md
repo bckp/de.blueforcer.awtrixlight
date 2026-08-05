@@ -743,7 +743,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | B1 | ✅ | fake Homey má řízené timery a oddělené AWTRIX 3/NG klienty; fail counter charakterizován pro pre-C1 stav |
 | C1 | ✅ | R5: 3 consecutive; úspěch resetuje; unavailable/recovery jsou awaitované a přechod nastane právě jednou |
 | C2 | ✅ | AWTRIX 3 write metody odmítají neúspěch; flow chyby propagují a onSettings awaituje setSettings |
-| C3 | ⬜ | R9: AWTRIX 3 icon upload nekritický, chyby neztratit |
+| C3 | ✅ | lifecycle operace jsou awaitované; refresh chyby agregované; upload ikon sekvenční a nekritický |
 | C4 | ⬜ | |
 | C5 | ⬜ | R3: bez dual-delete a bez changelogu |
 | C6 | ⬜ | R1: kartu zachovat a zprovoznit; smazat jen skeleton |
