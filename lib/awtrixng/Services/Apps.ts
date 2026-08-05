@@ -4,6 +4,9 @@ import {
   AwtrixNgApiAppsResponse,
   AwtrixNgApiOkResponse,
 } from '../Api/Types';
+import { AwtrixNgInvalidResponseError } from '../Api/InvalidResponseError';
+
+const AppsEndpoint = '/api/v1/apps';
 
 export const AwtrixNgBuiltinAppNamesBySetting = {
   showBuiltinTime: 'Time',
@@ -196,6 +199,15 @@ export const applyAwtrixNgBuiltinAppSettingsChange = async (
   }
 
   const apps = await client.getApps();
+
+  if (!Array.isArray(apps)) {
+    throw new AwtrixNgInvalidResponseError({
+      endpoint: AppsEndpoint,
+      expectedShape: 'an array',
+      actualValue: apps,
+    });
+  }
+
   const payload = createAwtrixNgAppsOrderPayloadFromBuiltinSettings(apps, newSettings);
 
   await client.putAppsOrder(payload);

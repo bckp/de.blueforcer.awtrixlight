@@ -7,6 +7,7 @@ const {
   toAwtrixNgAvailabilityState,
 } = require('../.homeybuild/lib/awtrixng/Device/Availability');
 const { AwtrixNgApiError } = require('../.homeybuild/lib/awtrixng/Api/ErrorParser');
+const { AwtrixNgInvalidResponseError } = require('../.homeybuild/lib/awtrixng/Api/InvalidResponseError');
 const { AwtrixNgHttpError } = require('../.homeybuild/lib/awtrixng/Http/Transport');
 const {
   createFakeHomey,
@@ -168,6 +169,48 @@ test('AWTRIX NG availability state reports wrong-shape probe as unavailable', ()
 test('AWTRIX NG error detail formatter handles non-API errors explicitly', () => {
   assert.equal(formatAwtrixNgErrorDetails(new Error('socket closed')), 'socket closed');
   assert.equal(formatAwtrixNgErrorDetails(null), 'Unknown error.');
+});
+
+test('AWTRIX NG settings refresh rejects a response that is not a plain object', async () => {
+  const { awtrixNgDevice } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
+
+  awtrixNgDevice.client = {
+    async getSettings() {
+      return [];
+    },
+  };
+
+  await assert.rejects(
+    () => awtrixNgDevice.refreshSettingsFromDevice(),
+    (error) => {
+      assert.equal(error instanceof AwtrixNgInvalidResponseError, true);
+      assert.equal(error.endpoint, '/api/v1/settings');
+      assert.equal(error.expectedShape, 'a plain object');
+      assert.equal(error.actualType, 'array');
+      return true;
+    },
+  );
+});
+
+test('AWTRIX NG apps refresh rejects a response that is not an array', async () => {
+  const { awtrixNgDevice } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
+
+  awtrixNgDevice.client = {
+    async getApps() {
+      return null;
+    },
+  };
+
+  await assert.rejects(
+    () => awtrixNgDevice.refreshAppsFromDevice(),
+    (error) => {
+      assert.equal(error instanceof AwtrixNgInvalidResponseError, true);
+      assert.equal(error.endpoint, '/api/v1/apps');
+      assert.equal(error.expectedShape, 'an array');
+      assert.equal(error.actualType, 'null');
+      return true;
+    },
+  );
 });
 
 test('AWTRIX NG starts polling and preserves API error details when initial settings sync fails', async () => {

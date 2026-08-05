@@ -95,7 +95,7 @@ export const toAwtrixNgHomeySettingsUpdate = (
   const update: AwtrixNgHomeySettingsPatch = {};
 
   for (const [key, value] of Object.entries(nextSettings)) {
-    if (currentSettings[key] !== value) {
+    if (value !== undefined && currentSettings[key] !== value) {
       update[key as AwtrixNgWritableSettingsField] = value;
     }
   }

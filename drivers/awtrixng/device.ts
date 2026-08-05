@@ -3,6 +3,7 @@ import { Device } from 'homey';
 import path from 'path';
 import AxiosAwtrixNgHttpTransport from '../../lib/awtrixng/Http/AxiosTransport';
 import AwtrixNgClient from '../../lib/awtrixng/Api/Client';
+import { AwtrixNgInvalidResponseError } from '../../lib/awtrixng/Api/InvalidResponseError';
 import {
   AwtrixNgAvailabilityState,
   formatAwtrixNgErrorDetails,
@@ -39,6 +40,16 @@ import { AwtrixDeviceType } from '../awtrix-device-type';
 
 const PollIntervalMs = 60000;
 const BundledIconsDirectory = path.join(__dirname, 'assets/images/icons');
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+
+  return prototype === Object.prototype || prototype === null;
+};
 
 interface AwtrixNgDeviceStore {
   baseUrl?: string;
@@ -188,6 +199,15 @@ class AwtrixNgDevice extends Device {
 
   private async refreshSettingsFromDevice(): Promise<void> {
     const apiSettings = await this.getClient().getSettings();
+
+    if (!isPlainObject(apiSettings)) {
+      throw new AwtrixNgInvalidResponseError({
+        endpoint: '/api/v1/settings',
+        expectedShape: 'a plain object',
+        actualValue: apiSettings,
+      });
+    }
+
     const currentSettings = await this.getSettings() as AwtrixNgHomeySettings;
     const homeySettingsUpdate = toAwtrixNgHomeySettingsUpdate(apiSettings, currentSettings);
 
@@ -207,6 +227,15 @@ class AwtrixNgDevice extends Device {
 
   private async refreshAppsFromDevice(): Promise<void> {
     const apps = await this.getClient().getApps();
+
+    if (!Array.isArray(apps)) {
+      throw new AwtrixNgInvalidResponseError({
+        endpoint: '/api/v1/apps',
+        expectedShape: 'an array',
+        actualValue: apps,
+      });
+    }
+
     const currentSettings = await this.getSettings() as AwtrixNgHomeySettings;
     const homeySettingsUpdate = toAwtrixNgBuiltinAppSettingsUpdate(apps, currentSettings);
 

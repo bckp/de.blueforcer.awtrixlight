@@ -233,6 +233,22 @@ test('AWTRIX NG settings response update includes only values changed by returne
   });
 });
 
+test('AWTRIX NG settings response update omits undefined values from a partial response', () => {
+  assert.deepEqual(toAwtrixNgHomeySettingsUpdate(createFullSettingsResponse({
+    autoBrightness: undefined,
+    transitionEffect: 'Slide',
+    uppercase: undefined,
+  }), {
+    autoBrightness: false,
+    autoTransition: true,
+    blockNavigation: false,
+    uppercase: true,
+    transitionEffect: 'Rain',
+  }), {
+    transitionEffect: 'Slide',
+  });
+});
+
 test('AWTRIX NG settings apply helper calls PATCH directly, then returns Homey update from full resource', async () => {
   const calls = [];
   const client = {
