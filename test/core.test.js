@@ -4,6 +4,7 @@ const test = require('node:test');
 const normalizer = require('../.homeybuild/lib/awtrix3/Normalizer');
 const validator = require('../.homeybuild/lib/awtrix3/Validator');
 const Poll = require('../.homeybuild/lib/awtrix3/Poll').default;
+const Api = require('../.homeybuild/lib/awtrix3/Api/Api').default;
 const { statusFromHttpCode } = require('../.homeybuild/lib/awtrix3/Api/Client');
 const { Status } = require('../.homeybuild/lib/awtrix3/Api/Response');
 
@@ -56,6 +57,22 @@ test('normalizer supports text fragments from JSON input', () => {
       { t: ' cold', c: '#0000FF' },
     ],
   });
+});
+
+test('AWTRIX 3 indicator rejects invalid ids before HTTP', async () => {
+  let requestCount = 0;
+  const api = new Api({
+    async post() {
+      requestCount += 1;
+      return { status: Status.Ok };
+    },
+  }, {});
+
+  for (const id of ['invalid', 0, 4, 1.5]) {
+    await assert.rejects(() => api.indicator(id, { color: '#ffffff' }), RangeError);
+  }
+
+  assert.equal(requestCount, 0);
 });
 
 test('settings retain transition effect zero', () => {

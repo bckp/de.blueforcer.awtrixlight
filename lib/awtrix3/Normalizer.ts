@@ -121,7 +121,12 @@ export const toTextFragments = (fragments: any): TextFragment[] => {
 };
 
 export const indicatorNumber = (id: number | string): number => {
-  return minMaxNumber(1, 3, toNumber(id));
+  const indicator = Number(id);
+  if (!Number.isInteger(indicator) || indicator < 1 || indicator > 3) {
+    throw new RangeError('Indicator id must be an integer from 1 to 3');
+  }
+
+  return indicator;
 };
 
 export const appName = (id: string): string => {
