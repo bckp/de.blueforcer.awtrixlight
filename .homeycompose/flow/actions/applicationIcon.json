@@ -1,6 +1,6 @@
 {
   "title": {
-    "en": "Create/update application [[name]], set [[msg]] with [[icon]] and [[options]] in json format (experimental)"
+    "en": "Create or update an application with an icon (experimental)"
   },
   "titleFormatted": {
     "en": "Create/update application [[name]], set [[msg]] with [[icon]] and [[options]] in json format (experimental)"

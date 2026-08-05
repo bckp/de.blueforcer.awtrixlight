@@ -6,8 +6,8 @@ const {
   AwtrixNgBuiltinAppSettingIds,
   AwtrixNgBuiltinAppUnavailableError,
   applyAwtrixNgBuiltinAppSettingsChange,
-  createAwtrixNgAppsOrderFromBuiltinSettings,
-  createAwtrixNgAppsOrderFromBuiltinSettingsChange,
+  createAwtrixNgAppsOrderPayloadFromBuiltinSettings,
+  createAwtrixNgAppsOrderPayloadFromBuiltinSettingsChange,
   hasAwtrixNgBuiltinAppSettingsChange,
   isAwtrixNgBuiltinAppSetting,
   toAwtrixNgBuiltinAppSettingsFromApps,
@@ -17,29 +17,39 @@ const {
 const createAppsInventory = (overrides = []) => [
   {
     name: 'Time',
+    enabled: true,
     inLoop: true,
-    position: 0,
+    slot: 0,
+    present: true,
     origin: 'builtin',
   },
   {
     name: 'Date',
+    enabled: true,
     inLoop: true,
-    position: 1,
+    slot: 1,
+    present: true,
     origin: 'builtin',
   },
   {
     name: 'homey-weather',
+    enabled: true,
     inLoop: true,
-    position: 2,
+    slot: 2,
+    present: true,
     origin: 'pushed',
     icon: '1',
   },
   {
     name: 'clock',
+    enabled: true,
     inLoop: true,
-    position: 3,
+    slot: 3,
+    present: true,
     origin: 'script',
     skipped: false,
+    headless: false,
+    config: true,
     error: null,
     meta: {
       name: 'Wall Clock',
@@ -50,14 +60,18 @@ const createAppsInventory = (overrides = []) => [
   },
   {
     name: 'Temperature',
+    enabled: false,
     inLoop: false,
-    position: null,
+    slot: null,
+    present: true,
     origin: 'builtin',
   },
   {
     name: 'Humidity',
+    enabled: false,
     inLoop: false,
-    position: null,
+    slot: null,
+    present: true,
     origin: 'builtin',
   },
   ...overrides,
@@ -81,8 +95,8 @@ const createFakeAppsClient = (apps = createAppsInventory()) => {
         calls.push({ method: 'getApps' });
         return apps;
       },
-      async putAppsOrder(order) {
-        calls.push({ method: 'putAppsOrder', order });
+      async putAppsOrder(payload) {
+        calls.push({ method: 'putAppsOrder', payload });
         return { ok: true };
       },
     },
@@ -138,46 +152,40 @@ test('AWTRIX NG built-in app settings update includes only changed Homey setting
   assert.deepEqual(toAwtrixNgBuiltinAppSettingsUpdate(createAppsInventory(), allBuiltinSettings), {});
 });
 
-test('AWTRIX NG built-in app order disables selected built-in apps and preserves other app order', () => {
-  assert.deepEqual(createAwtrixNgAppsOrderFromBuiltinSettings(createAppsInventory(), {
+test('AWTRIX NG app order disables selected built-in apps and preserves other app order', () => {
+  assert.deepEqual(createAwtrixNgAppsOrderPayloadFromBuiltinSettings(createAppsInventory(), {
     ...allBuiltinSettings,
     showBuiltinDate: false,
-  }), [
-    'Time',
-    'homey-weather',
-    'clock',
-  ]);
+  }), {
+    order: ['Time', 'homey-weather', 'clock'],
+    disabled: ['Temperature', 'Humidity', 'Date', 'Battery'],
+  });
 });
 
-test('AWTRIX NG built-in app order appends re-enabled available built-in apps to the end', () => {
-  assert.deepEqual(createAwtrixNgAppsOrderFromBuiltinSettings(createAppsInventory(), {
+test('AWTRIX NG app order appends a re-enabled available built-in app', () => {
+  assert.deepEqual(createAwtrixNgAppsOrderPayloadFromBuiltinSettings(createAppsInventory(), {
     ...allBuiltinSettings,
     showBuiltinTemperature: true,
-  }), [
-    'Time',
-    'Date',
-    'homey-weather',
-    'clock',
-    'Temperature',
-  ]);
+  }), {
+    order: ['Time', 'Date', 'homey-weather', 'clock', 'Temperature'],
+    disabled: ['Humidity', 'Battery'],
+  });
 });
 
-test('AWTRIX NG built-in app order preserves pushed and script apps when changing built-in visibility', () => {
-  assert.deepEqual(createAwtrixNgAppsOrderFromBuiltinSettings(createAppsInventory(), {
+test('AWTRIX NG app order preserves pushed and script apps when changing built-in visibility', () => {
+  assert.deepEqual(createAwtrixNgAppsOrderPayloadFromBuiltinSettings(createAppsInventory(), {
     ...allBuiltinSettings,
     showBuiltinTime: false,
     showBuiltinTemperature: true,
-  }), [
-    'Date',
-    'homey-weather',
-    'clock',
-    'Temperature',
-  ]);
+  }), {
+    order: ['Date', 'homey-weather', 'clock', 'Temperature'],
+    disabled: ['Humidity', 'Time', 'Battery'],
+  });
 });
 
-test('AWTRIX NG built-in app order rejects unavailable built-in app when enabling it', () => {
+test('AWTRIX NG app order rejects unavailable built-in app when enabling it', () => {
   assert.throws(
-    () => createAwtrixNgAppsOrderFromBuiltinSettings(createAppsInventory(), {
+    () => createAwtrixNgAppsOrderPayloadFromBuiltinSettings(createAppsInventory(), {
       ...allBuiltinSettings,
       showBuiltinBattery: true,
     }),
@@ -191,9 +199,9 @@ test('AWTRIX NG built-in app order rejects unavailable built-in app when enablin
   );
 });
 
-test('AWTRIX NG built-in app order rejects invalid setting values before creating order', () => {
+test('AWTRIX NG app order rejects invalid setting values before creating payload', () => {
   assert.throws(
-    () => createAwtrixNgAppsOrderFromBuiltinSettings(createAppsInventory(), {
+    () => createAwtrixNgAppsOrderPayloadFromBuiltinSettings(createAppsInventory(), {
       ...allBuiltinSettings,
       showBuiltinDate: 'false',
     }),
@@ -201,23 +209,22 @@ test('AWTRIX NG built-in app order rejects invalid setting values before creatin
   );
 });
 
-test('AWTRIX NG built-in app order change helper returns undefined for unrelated setting changes', () => {
-  assert.equal(createAwtrixNgAppsOrderFromBuiltinSettingsChange(createAppsInventory(), allBuiltinSettings, [
+test('AWTRIX NG app order change helper returns undefined for unrelated setting changes', () => {
+  assert.equal(createAwtrixNgAppsOrderPayloadFromBuiltinSettingsChange(createAppsInventory(), allBuiltinSettings, [
     'transitionEffect',
   ]), undefined);
-  assert.deepEqual(createAwtrixNgAppsOrderFromBuiltinSettingsChange(createAppsInventory(), {
+  assert.deepEqual(createAwtrixNgAppsOrderPayloadFromBuiltinSettingsChange(createAppsInventory(), {
     ...allBuiltinSettings,
     showBuiltinDate: false,
   }, [
     'showBuiltinDate',
-  ]), [
-    'Time',
-    'homey-weather',
-    'clock',
-  ]);
+  ]), {
+    order: ['Time', 'homey-weather', 'clock'],
+    disabled: ['Temperature', 'Humidity', 'Date', 'Battery'],
+  });
 });
 
-test('AWTRIX NG built-in app settings apply helper calls getApps then putAppsOrder for relevant changes', async () => {
+test('AWTRIX NG app settings apply helper sends the complete order payload', async () => {
   const fake = createFakeAppsClient();
 
   assert.deepEqual(await applyAwtrixNgBuiltinAppSettingsChange(fake.client, {
@@ -228,27 +235,89 @@ test('AWTRIX NG built-in app settings apply helper calls getApps then putAppsOrd
     'showBuiltinDate',
     'showBuiltinTemperature',
   ]), {
-    order: [
-      'Time',
-      'homey-weather',
-      'clock',
-      'Temperature',
-    ],
+    order: ['Time', 'homey-weather', 'clock', 'Temperature'],
+    disabled: ['Humidity', 'Date', 'Battery'],
   });
   assert.deepEqual(fake.calls, [{
     method: 'getApps',
   }, {
     method: 'putAppsOrder',
-    order: [
-      'Time',
-      'homey-weather',
-      'clock',
-      'Temperature',
-    ],
+    payload: {
+      order: ['Time', 'homey-weather', 'clock', 'Temperature'],
+      disabled: ['Humidity', 'Date', 'Battery'],
+    },
   }]);
 });
 
-test('AWTRIX NG built-in app settings apply helper skips API calls for unrelated changes', async () => {
+test('AWTRIX NG app order preserves disabled apps, headless slots, placeholders and duplicates', () => {
+  const apps = createAppsInventory([{
+    name: 'headless-script',
+    enabled: true,
+    inLoop: false,
+    slot: 4,
+    present: true,
+    origin: 'script',
+    headless: true,
+    config: false,
+    skipped: false,
+    error: null,
+  }, {
+    name: 'future-app',
+    enabled: true,
+    inLoop: false,
+    slot: 5,
+    present: false,
+    origin: null,
+  }, {
+    name: 'Time',
+    enabled: true,
+    inLoop: true,
+    slot: 6,
+    present: true,
+    origin: 'builtin',
+  }, {
+    name: 'disabled-script',
+    enabled: false,
+    inLoop: false,
+    slot: null,
+    present: true,
+    origin: 'script',
+    skipped: false,
+    error: null,
+  }, {
+    name: 'shared-module',
+    origin: 'module',
+    import: 'shared',
+    config: true,
+    error: null,
+  }]);
+
+  assert.deepEqual(createAwtrixNgAppsOrderPayloadFromBuiltinSettings(apps, allBuiltinSettings), {
+    order: ['Time', 'Date', 'homey-weather', 'clock', 'headless-script', 'future-app', 'Time'],
+    disabled: ['Temperature', 'Humidity', 'disabled-script', 'Battery'],
+  });
+});
+
+test('AWTRIX NG does not treat an absent app placeholder as an available built-in app', () => {
+  const apps = createAppsInventory([{
+    name: 'Battery',
+    enabled: true,
+    inLoop: false,
+    slot: 4,
+    present: false,
+    origin: null,
+  }]);
+
+  assert.throws(
+    () => createAwtrixNgAppsOrderPayloadFromBuiltinSettings(apps, {
+      ...allBuiltinSettings,
+      showBuiltinBattery: true,
+    }),
+    AwtrixNgBuiltinAppUnavailableError,
+  );
+});
+
+test('AWTRIX NG app settings apply helper skips API calls for unrelated changes', async () => {
   const fake = createFakeAppsClient();
 
   assert.deepEqual(await applyAwtrixNgBuiltinAppSettingsChange(fake.client, allBuiltinSettings, [
@@ -257,7 +326,7 @@ test('AWTRIX NG built-in app settings apply helper skips API calls for unrelated
   assert.deepEqual(fake.calls, []);
 });
 
-test('AWTRIX NG built-in app settings apply helper rejects unavailable enabled app without putAppsOrder', async () => {
+test('AWTRIX NG app settings apply helper rejects unavailable app without an order write', async () => {
   const fake = createFakeAppsClient();
 
   await assert.rejects(

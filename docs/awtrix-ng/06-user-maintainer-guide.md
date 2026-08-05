@@ -86,8 +86,11 @@ Běžné non-JSON flow karty pro notifikaci a custom/pushed app používají Hom
   "text": "Doorbell",
   "textColor": "#ff0000",
   "durationMs": 5000,
+  "repeat": 1,
+  "font": "large",
   "scroll": {
-    "mode": "static"
+    "mode": "loop",
+    "holdMs": 500
   }
 }
 ```
@@ -102,7 +105,8 @@ Běžné non-JSON flow karty pro notifikaci a custom/pushed app používají Hom
   "repeat": 2,
   "lifetimeMs": 60000,
   "scroll": {
-    "mode": "loop"
+    "mode": "loop",
+    "holdMs": 500
   }
 }
 ```
@@ -121,6 +125,9 @@ Běžné non-JSON flow karty pro notifikaci a custom/pushed app používají Hom
 | `save` | nepodporováno; NG pushed app flow neukládá AWTRIX 3 custom app stejným způsobem |
 
 Unknown keys se odmítají před HTTP requestem, aby nedošlo k tichému dropnutí.
+
+AWTRIX NG `draw` používá výhradně array příkazy, například `["pixel",0,0,"#FF0000"]`.
+Starý AWTRIX 3 objektový formát `{ "dp": [...] }` se nepřevádí a je explicitně odmítnut.
 
 ## Settings
 
@@ -201,7 +208,7 @@ Nikdy nechytat a neignorovat AWTRIX NG API chyby.
 | Automatická migrace AWTRIX 3 zařízení na AWTRIX NG | Nepodporováno | NG je nové zařízení/samostatný driver. |
 | Automatická migrace AWTRIX 3 flows na NG flows | Nepodporováno | Uživatel musí vytvořit nové flow karty, pokud původní karta není záměrně sdílená pro oba drivery. |
 | AWTRIX 3 JSON options v NG JSON flow | Nepodporováno | NG flow přijímá jen NG-shaped payload. |
-| Notification `repeat` | Nepodporováno pro NG notifications | `repeat` je povolené pouze pro pushed apps. |
+| Notification `repeat` | Podporováno | `repeat` je společné page pole pro notifications i pushed apps; počítá dokončené průchody scrollujícího textu. |
 | Multi-object/array pushed app payload | Nepodporováno | Homey NG driver podporuje jeden JSON object. |
 | `clients` forwarding | Nepodporováno | NG dokumentace neuvádí ekvivalent. |
 | `barBC` | UNKNOWN / nepodporováno | Bez ověření na zařízení nepředpokládat ekvivalent. |
@@ -222,6 +229,10 @@ Nikdy nechytat a neignorovat AWTRIX NG API chyby.
 - Unknown/unsupported fields odmítat explicitně; nikdy je potichu nedropovat.
 - Nepoužívat AWTRIX 3 endpointy jako fallback pro NG.
 - Nepředpokládat kompatibilitu podle podobných názvů endpointů nebo polí.
+- Při větším upstream update porovnat proti jednomu zaznamenanému commitu minimálně kontrakty
+  `/api/v1/device`, `/api/v1/settings`, `/api/v1/apps`, `/api/v1/apps/order`, page payload a
+  `/api/v1/system`; poté aktualizovat oba soubory v `docs/vendor` i metadata v
+  `docs/vendor/awtrixng-source.md`.
 - Každou nejasnost označit jako `UNKNOWN` a propsat do `docs/awtrix-ng/05-todo-list.md`, pokud jde o budoucí backlog, nebo přímo sem, pokud jde o dlouhodobé maintainer pravidlo.
 
 ## Související dokumenty

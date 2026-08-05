@@ -189,19 +189,25 @@ test('AWTRIX NG client maps app inventory and order routes', async () => {
   const { client, transport } = createClient();
   const appsResponse = [{
     name: 'Time',
+    enabled: true,
     inLoop: true,
-    position: 0,
+    slot: 0,
+    present: true,
     origin: 'builtin',
   }, {
     name: 'homey-weather',
+    enabled: true,
     inLoop: true,
-    position: 1,
+    slot: 1,
+    present: true,
     origin: 'pushed',
     icon: '1',
   }, {
     name: 'clock',
+    enabled: false,
     inLoop: false,
-    position: null,
+    slot: null,
+    present: true,
     origin: 'script',
     skipped: false,
     error: null,
@@ -217,7 +223,10 @@ test('AWTRIX NG client maps app inventory and order routes', async () => {
   assert.deepEqual(await client.getApps(), appsResponse);
 
   transport.responseData = ok;
-  assert.deepEqual(await client.putAppsOrder(['Time', 'homey-weather', 'Date']), ok);
+  assert.deepEqual(await client.putAppsOrder({
+    order: ['Time', 'homey-weather', 'Date'],
+    disabled: ['Battery', 'clock'],
+  }), ok);
 
   assert.deepEqual(transport.calls, [{
     method: 'GET',
@@ -227,6 +236,7 @@ test('AWTRIX NG client maps app inventory and order routes', async () => {
     path: '/api/v1/apps/order',
     body: {
       order: ['Time', 'homey-weather', 'Date'],
+      disabled: ['Battery', 'clock'],
     },
   }]);
 });

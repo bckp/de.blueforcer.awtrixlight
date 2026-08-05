@@ -4,6 +4,13 @@ export type AwtrixNgApiColor = string;
 
 export type AwtrixNgApiColorInput = AwtrixNgApiColor | number | [number, number, number] | ['HSV', number, number, number];
 
+export interface AwtrixNgApiPaletteStop {
+  color: AwtrixNgApiColorInput;
+  pos: number;
+}
+
+export type AwtrixNgApiPalette = string | AwtrixNgApiColorInput[] | AwtrixNgApiPaletteStop[] | null;
+
 export interface AwtrixNgApiOkResponse {
   ok: true;
 }
@@ -19,33 +26,51 @@ export interface AwtrixNgApiIndicatorState {
   fadeMs: number;
 }
 
+export type AwtrixNgApiLinkPhase = 'disabled' | 'offline' | 'connecting' | 'connected';
+
+export interface AwtrixNgApiLinkStatus {
+  enabled: boolean;
+  state: AwtrixNgApiLinkPhase;
+  host: string;
+  endpoint: string;
+  attempts: number;
+  retryInMs: number;
+  connects: number;
+  error: string | null;
+  lastError: string | null;
+}
+
 export interface AwtrixNgApiDeviceStateResponse {
   version: string;
   uid: string;
   boardType: string;
   soc: string;
   ipAddress: string;
+  hostname: string;
   wifiRssi: number;
   uptimeSeconds: number;
   resetReason: string;
   freeHeapBytes: number;
   minFreeHeapBytes: number;
   largestFreeBlockBytes: number;
+  scriptingRunning: boolean;
   scriptHeapPool: string;
   scriptHeapBudgetBytes: number;
   fps: number;
   brightness: number;
-  lightLevel: number;
-  ldrRaw: number;
+  lightLevel?: number;
+  ldrRaw?: number;
   matrixPower: boolean;
   currentApp: string;
   indicators: AwtrixNgApiIndicatorState[];
   messageCount: number;
+  wifi: AwtrixNgApiLinkStatus;
+  mqtt: AwtrixNgApiLinkStatus;
   psramTotalBytes?: number;
   psramFreeBytes?: number;
   batteryPercent?: number;
   batteryVoltage?: number;
-  batteryMillivolts?: number;
+  batteryPinMillivolts?: number;
   lowBattery?: boolean;
   temperature?: number;
   humidity?: number;
@@ -65,16 +90,18 @@ export interface AwtrixNgApiGpioCapabilities {
   label: string;
   max: number;
   missing: AwtrixNgApiGpioRange[];
-  inputOnly: number[];
+  inputOnly: AwtrixNgApiGpioRange[];
   reserved: AwtrixNgApiGpioReservedRange[];
   adc1: AwtrixNgApiGpioRange[];
   strapping: AwtrixNgApiGpioRange[];
+  rtc: AwtrixNgApiGpioRange[];
   matrix: number[];
   defaults: Record<string, AwtrixNgApiGpioDefaultValue>;
 }
 
 export interface AwtrixNgApiCapabilitiesResponse {
   effects: string[];
+  paletteEffects: string[];
   transitions: string[];
   overlays: string[];
   palettes: string[];
@@ -117,6 +144,7 @@ export interface AwtrixNgApiScrollSettings {
   whenFits: AwtrixNgApiScrollWhenFits;
   speed: number;
   gap: number;
+  holdMs: number;
 }
 
 export interface AwtrixNgApiSettingsResponse {
@@ -166,7 +194,7 @@ export type AwtrixNgApiSettingsPatch = Partial<AwtrixNgApiSettingsResponse>;
 
 export interface AwtrixNgApiOverlaySettings {
   speed?: number;
-  palette?: string | string[] | null;
+  palette?: AwtrixNgApiPalette;
   blend?: boolean;
 }
 
@@ -189,7 +217,7 @@ export interface AwtrixNgApiDisplayPatch {
   overlaySettings?: AwtrixNgApiOverlaySettings;
 }
 
-export type AwtrixNgApiAppOrigin = 'builtin' | 'pushed' | 'script';
+export type AwtrixNgApiAppOrigin = 'builtin' | 'pushed' | 'script' | 'module';
 
 export interface AwtrixNgApiScriptAppError {
   message: string;
@@ -206,11 +234,16 @@ export interface AwtrixNgApiScriptAppMeta {
 
 export interface AwtrixNgApiAppInventoryItem {
   name: string;
-  inLoop: boolean;
-  position: number | null;
-  origin: AwtrixNgApiAppOrigin;
+  enabled?: boolean;
+  inLoop?: boolean;
+  slot?: number | null;
+  present?: boolean;
+  origin: AwtrixNgApiAppOrigin | null;
+  import?: string;
   icon?: string;
   skipped?: boolean;
+  headless?: boolean;
+  config?: boolean;
   error?: AwtrixNgApiScriptAppError | null;
   meta?: AwtrixNgApiScriptAppMeta;
 }
@@ -218,7 +251,8 @@ export interface AwtrixNgApiAppInventoryItem {
 export type AwtrixNgApiAppsResponse = AwtrixNgApiAppInventoryItem[];
 
 export interface AwtrixNgApiAppsOrderPayload {
-  order: string[];
+  order?: string[];
+  disabled: string[];
 }
 
 export type AwtrixNgApiTextCase = 'inherit' | 'upper' | 'asTyped';
@@ -237,42 +271,39 @@ export interface AwtrixNgApiScrollPayload {
   whenFits?: AwtrixNgApiScrollWhenFits;
   speed?: number;
   gap?: number;
+  holdMs?: number;
 }
 
-export interface AwtrixNgApiDrawPixelCommand {
-  dp: [number, number, AwtrixNgApiColorInput];
-}
+export type AwtrixNgApiFont = 'small' | 'large';
 
-export interface AwtrixNgApiDrawLineCommand {
-  dl: [number, number, number, number, AwtrixNgApiColorInput];
-}
+export type AwtrixNgApiDrawPixelCommand = ['pixel', number, number, AwtrixNgApiColorInput?];
 
-export interface AwtrixNgApiDrawRectangleCommand {
-  dr: [number, number, number, number, AwtrixNgApiColorInput];
-}
+export type AwtrixNgApiDrawPixelsCommand = ['pixels', AwtrixNgApiColorInput | null, number, number, ...number[]];
 
-export interface AwtrixNgApiDrawFilledRectangleCommand {
-  df: [number, number, number, number, AwtrixNgApiColorInput];
-}
+export type AwtrixNgApiDrawLineCommand = ['line', number, number, number, number, AwtrixNgApiColorInput?];
 
-export interface AwtrixNgApiDrawCircleCommand {
-  dc: [number, number, number, AwtrixNgApiColorInput];
-}
+export type AwtrixNgApiDrawRectangleCommand = ['rect', number, number, number, number, AwtrixNgApiColorInput?];
 
-export interface AwtrixNgApiDrawFilledCircleCommand {
-  dfc: [number, number, number, AwtrixNgApiColorInput];
-}
+export type AwtrixNgApiDrawFilledRectangleCommand = ['rectFill', number, number, number, number, AwtrixNgApiColorInput?];
 
-export interface AwtrixNgApiDrawTextCommand {
-  dt: [number, number, string, AwtrixNgApiColorInput];
-}
+export type AwtrixNgApiDrawCircleCommand = ['circle', number, number, number, AwtrixNgApiColorInput?];
 
-export interface AwtrixNgApiDrawBitmapCommand {
-  db: [number, number, number, number, number[]];
-}
+export type AwtrixNgApiDrawFilledCircleCommand = ['circleFill', number, number, number, AwtrixNgApiColorInput?];
+
+export type AwtrixNgApiDrawTextCommand = ['text', number, number, string, AwtrixNgApiColorInput?];
+
+export type AwtrixNgApiDrawBitmapCommand = [
+  'bitmap',
+  number,
+  number,
+  number,
+  number,
+  string | AwtrixNgApiColorInput[],
+];
 
 export type AwtrixNgApiDrawCommand =
   | AwtrixNgApiDrawPixelCommand
+  | AwtrixNgApiDrawPixelsCommand
   | AwtrixNgApiDrawLineCommand
   | AwtrixNgApiDrawRectangleCommand
   | AwtrixNgApiDrawFilledRectangleCommand
@@ -284,6 +315,7 @@ export type AwtrixNgApiDrawCommand =
 export interface AwtrixNgApiPagePayload {
   text?: string | AwtrixNgApiTextFragment[];
   textCase?: AwtrixNgApiTextCase;
+  font?: AwtrixNgApiFont;
   textColor?: AwtrixNgApiColorInput | 'palette';
   textBlinkMs?: number;
   textFadeMs?: number;
@@ -295,6 +327,7 @@ export interface AwtrixNgApiPagePayload {
   iconMode?: AwtrixNgApiIconMode;
   iconOffsetX?: number;
   durationMs?: number;
+  repeat?: number;
   backgroundColor?: AwtrixNgApiColorInput;
   barChart?: number[];
   lineChart?: number[];
@@ -305,7 +338,7 @@ export interface AwtrixNgApiPagePayload {
   progressTrackColor?: AwtrixNgApiColorInput;
   effect?: string;
   effectSpeed?: number;
-  palette?: string | string[] | null;
+  palette?: AwtrixNgApiPalette;
   paletteBlend?: boolean;
   paletteSpan?: number;
   paletteSpeed?: number;
@@ -328,7 +361,6 @@ export type AwtrixNgApiPushedAppLifetimeExpiry = 'remove' | 'mark';
 export interface AwtrixNgApiPushedAppPayload extends AwtrixNgApiPagePayload {
   lifetimeMs?: number;
   lifetimeExpiry?: AwtrixNgApiPushedAppLifetimeExpiry;
-  repeat?: number;
 }
 
 export interface AwtrixNgApiIndicatorPayload {

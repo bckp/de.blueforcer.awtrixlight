@@ -131,4 +131,5 @@ export default class AwtrixNgIcons {
       this.#list = [];
     }, this.#cacheTtlMs);
   }
+
 }

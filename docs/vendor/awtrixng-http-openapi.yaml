@@ -17,16 +17,16 @@ info:
       `transitionEffect` and the string enums (`timeSeparatorMode`,
       `dateOrder`, `dateSeparator`, `dateYearMode`) accept any casing, so
       `"matrix"`, `"Matrix"` and `"MATRIX"` are the same name.
-      `GET /api/v1/capabilities` advertises the canonical spelling.
+      `GET /api/v1/capabilities` lists the spelling the API returns.
     - Request bodies must be sent with `Content-Type: application/json`. A
       body-carrying `PUT`/`PATCH`/`POST` sent with any other content type is
       rejected with `415 unsupportedMediaType` - it is never treated as an
       empty "no payload" body.
-    - On the mutating `PUT` routes (`.../apps/pushed/{name}`,
+    - On the writing `PUT` routes (`.../apps/pushed/{name}`,
       `.../display/moodlight`, `.../indicators/{id}`) an empty or `{}` body is
       rejected with `422`: a JSON body is required. Removing/turning off is
       done only via the explicit `DELETE` route (or an empty MQTT payload).
-    - Errors use one envelope (see `Error`) with the proper status code:
+    - Errors always come back in one shape (see `Error`) with the proper status code:
       400 malformed JSON, 401 auth, 403 disabled in provisioning mode,
       404 unknown resource/name, 405 wrong method, 415 wrong content type,
       413 body over 8192 bytes - or valid JSON whose structure is too large to
@@ -42,7 +42,7 @@ servers:
   - url: http://{device}
     variables:
       device:
-        default: awtrix_a1b2c3.local
+        default: awtrixng-a1b2c3.local
 security:
   - {}          # no auth when authEnabled is false (the default) or in AP mode
   - basicAuth: []
@@ -226,7 +226,7 @@ paths:
               schema: { $ref: "#/components/schemas/Settings" }
     patch:
       tags: [settings]
-      summary: Update settings (partial, atomic)
+      summary: Update settings (any subset, all or nothing)
       description: |
         Validates every field first; on error nothing is applied and a 422
         names the offending field. Returns the full resulting settings.
@@ -298,7 +298,7 @@ paths:
         light off. A request sent with a non-JSON `Content-Type` is rejected
         with `415`.
 
-        `kelvin` takes **precedence** over `color`: when `kelvin` is present,
+        `kelvin` **wins** over `color`: when `kelvin` is present,
         `color` is ignored entirely. An unparseable `color` is rejected with
         `422` (`field: "color"`) and nothing is stored.
 
@@ -325,7 +325,7 @@ paths:
                   type: integer
                   minimum: 1000
                   maximum: 40000
-                  description: Clamped to 1000-40000. Takes precedence over `color`.
+                  description: Limited to 1000-40000. Wins over `color` when both are sent.
                 brightness:
                   type: integer
                   minimum: 0
@@ -365,7 +365,7 @@ paths:
   /api/v1/apps:
     get:
       tags: [apps]
-      summary: Full app inventory (loop apps in order, then hidden apps)
+      summary: Full app inventory (the arranged apps in order, then the rest)
       responses:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "200":
@@ -377,18 +377,46 @@ paths:
                   type: object
                   properties:
                     name: { type: string }
+                    enabled:
+                      type: boolean
+                      description: >
+                        Whether the app runs at all. Independent of `inLoop`,
+                        which says whether it is drawn, and of `present`, which
+                        says whether it is there right now. All three agree for
+                        every app except a headless script, which runs without
+                        ever taking a turn, and a pushed app between two pushes,
+                        which is on and keeps its place with nothing to draw.
                     inLoop: { type: boolean }
-                    position:
+                    present:
+                      type: boolean
+                      description: >
+                        Whether the app is on the device right now. False for a
+                        name the device holds a place for while the app itself
+                        is away.
+                    slot:
                       type: [integer, "null"]
-                      description: rotation position; null when hidden
+                      description: >
+                        0-based place in the order the user arranged. Kept while
+                        the app is away. Null when the app has no place of its
+                        own.
                     origin:
-                      type: string
-                      enum: [builtin, pushed, script]
+                      type: [string, "null"]
+                      enum: [builtin, pushed, script, module, null]
                       description: >
                         Where the app's content comes from. `builtin` is
                         firmware code; `pushed` is a JSON spec sent from
                         outside and held in RAM only; `script` is Berry source
-                        stored on the device.
+                        stored on the device. `module` is a stored Berry file
+                        that other scripts import: it is listed here because it
+                        shares the file collection and the script limit, but it
+                        never draws, so it carries no `enabled`, `inLoop` or
+                        `slot`.
+                    import:
+                      type: string
+                      description: >
+                        Modules only. The name scripts write in their `import`
+                        line - the file name unless the header's `@module`
+                        gives another.
                     icon:
                       type: string
                       description: >
@@ -402,11 +430,29 @@ paths:
                         walks past it. Independent of `inLoop`: the app is
                         still in the rotation and can still be switched to by
                         name. Reports the last answer given, not a fresh one.
+                    headless:
+                      type: boolean
+                      description: >
+                        Script apps only. True when the script carries
+                        `@headless true` and so never draws: it is never given
+                        a slot, and `draw()`, `should_show()` and `duration()`
+                        are never called.
+                    config:
+                      type: boolean
+                      description: >
+                        Scripts and modules. True when the file declares settings
+                        with `@config` header lines, so
+                        `GET /api/v1/apps/{name}/config` has fields to show and
+                        a client can offer them. On a module these are the
+                        settings every app importing it reads, which is how
+                        several apps come to share one value. Omitted for
+                        builtin and pushed apps, and on a build with no
+                        scripting platform.
                     error:
                       type: string
                       description: >
                         Script apps only. `""` while healthy, otherwise the
-                        latched error shown as `ERR:<name>`. Omitted for other
+                        error it is stuck on, shown as `ERR:<name>`. Omitted for other
                         origins and on a build with no scripting platform.
                     meta:
                       $ref: "#/components/schemas/ScriptMeta"
@@ -447,23 +493,35 @@ paths:
   /api/v1/apps/order:
     put:
       tags: [apps]
-      summary: Set the rotation loop (exact membership and order)
+      summary: Set which apps are on, and the order of the ones that draw
       description: |
-        The list IS the loop: apps rotate exactly in the given order. Known
-        apps that are omitted become hidden (they stay in the inventory, see
-        `GET /api/v1/apps`, and can be re-enabled by listing them again).
-        Apps registered later (e.g. new pushed apps) join the loop
-        automatically. The same app may appear MULTIPLE times to show it more
-        than once per cycle (each instance gets its own position).
+        `order` is what runs, in the order it draws; `disabled` is what is
+        switched off. An app named in neither list keeps what it had.
+
+        `disabled` is always required; `order` is optional and requires `disabled`
+        beside it. Nothing is worked out on the caller's behalf, so a list can
+        never switch off an app it was never told about. `{"disabled":[...]}`
+        alone switches those off and leaves the arrangement untouched. A body
+        without `disabled`, or one that is not an object, is 400.
+
+        A switched-off script runs nothing at all. A headless script never
+        draws, so naming it in `order` keeps it running without giving it a
+        slot. A name reserves its slot even when no such app exists yet, and a
+        name in `disabled` stays off while the app is absent. The same app may
+        appear MULTIPLE times in `order` to show it more than once per cycle
+        (each instance gets its own slot).
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [order]
+              required: [disabled]
               properties:
                 order:
+                  type: array
+                  items: { type: string }
+                disabled:
                   type: array
                   items: { type: string }
       responses:
@@ -475,8 +533,8 @@ paths:
       tags: [apps]
       summary: Create or update a pushed app (a JSON body is required)
       description: |
-        Payload fields follow the AWTRIX pushed-app schema (text, icon, color,
-        draw, effect, ...). An ARRAY payload creates indexed apps
+        Payload fields follow the AWTRIX pushed-app schema (text, icon,
+        textColor, draw, effect, ...). An ARRAY payload creates indexed apps
         `{name}0..n`; non-object elements are skipped. Time fields are
         milliseconds: `durationMs`, `lifetimeMs`, `textBlinkMs`, `textFadeMs`.
 
@@ -485,8 +543,8 @@ paths:
         an app and its indexed children. A request sent with a non-JSON
         `Content-Type` is rejected with `415`.
 
-        `effect` and `overlay` names are validated against the registries
-        advertised by `GET /api/v1/capabilities` (case-insensitively). An
+        `effect` and `overlay` names are checked against the lists
+        returned by `GET /api/v1/capabilities` (case-insensitively). An
         unknown name is rejected with `422 validationFailed` and
         `field: "effect"` / `"overlay"`, and NOTHING is stored - an array
         payload is all-or-nothing here too.
@@ -501,8 +559,8 @@ paths:
         written to flash for it. Content that must return by itself after a
         reboot belongs in a script (`PUT /api/v1/apps/script/{name}`).
 
-        Removal is not here - it is the kind-agnostic
-        `DELETE /api/v1/apps/{name}`.
+        Removal is not here - it is `DELETE /api/v1/apps/{name}`, which
+        removes any kind of app.
       parameters:
         - name: name
           in: path
@@ -528,7 +586,7 @@ paths:
                       description: >
                         Overrides the device's `scroll` setting field by field;
                         an omitted field keeps the configured default.
-                    textOffset:
+                    textOffsetX:
                       type: integer
                       description: >
                         X shift applied after positioning, and part of every
@@ -555,11 +613,14 @@ paths:
       tags: [apps]
       summary: Delete an app, whatever kind it is
       description: |
-        Kind-agnostic and idempotent. For a pushed app this erases the exact
-        name plus every indexed child (`{name}0`, `{name}1`, ... from an array
-        payload); for a script it erases the source AND its persisted store,
-        which is the only way to reset that store. A built-in or an unknown
-        name is also `200` - nothing is removed and nothing is an error.
+        Works for any kind of app, and calling it twice is safe. For a pushed app this erases the exact
+        name plus the indexed children an array payload sent to `{name}`
+        created (`{name}0`, `{name}1`, ...). It is the array push that ties
+        them together, not the spelling: an app pushed to `{name}1` directly is
+        its own app and is left alone. For a script it erases the source AND
+        its persisted store, which is the only way to reset that store. A
+        built-in or an unknown name is also `200` - nothing is removed and
+        nothing is an error.
       parameters:
         - name: name
           in: path
@@ -580,11 +641,12 @@ paths:
       tags: [notifications]
       summary: Show a notification
       description: |
-        Accepts all pushed-app fields plus `hold`, `stack`, `wakeup`, `sound`,
-        `rtttl`, `loopSound`. `durationMs` defaults to the global app time.
+        Accepts all pushed-app fields plus `name`, `hold`, `stack`, `wakeup`,
+        `sound`, `soundRtttl`, `soundLoop`. `durationMs` defaults to the global
+        app time.
 
-        `effect` and `overlay` names are validated against the registries
-        advertised by `GET /api/v1/capabilities` (case-insensitively). An
+        `effect` and `overlay` names are checked against the lists
+        returned by `GET /api/v1/capabilities` (case-insensitively). An
         unknown name is rejected with `422 validationFailed` and
         `field: "effect"` / `"overlay"`, and the notification is not queued.
 
@@ -900,7 +962,7 @@ paths:
         app with an `origin`, and a script entry carries its `error` state and
         its `@name`/`@desc`/`@author`/`@version` header in `meta`. `error` is
         `""` while the script is healthy; anything else is the message the
-        matrix is showing as `ERR:<name>`, and it LATCHES - a script that
+        matrix is showing as `ERR:<name>`, and it STICKS - a script that
         raised once stays broken until it is replaced. The source is
         deliberately not part of that listing: it can be as large as
         `scriptMaxBytes` allows (8192 bytes by default, up to 32768).
@@ -954,10 +1016,17 @@ paths:
         The device holds `scriptLimit` scripts (default 16, see
         `PUT /api/v1/system`). A NEW name beyond that -- or past the shared-heap
         soft limit -- is rejected with `507` and nothing is stored; replacing an
-        existing one always works.
+        existing one always works. Modules count against the same limit.
 
-        Removal is the kind-agnostic `DELETE /api/v1/apps/{name}`, which erases
-        the source and the persisted store together.
+        A source whose header carries `@module` installs as a module instead of
+        an app: it is stored and listed the same way, but it never draws and is
+        reached by other scripts with `import`. Its import name is the file name
+        unless `@module <name>` gives another; a name that is not an identifier,
+        is already taken, or belongs to a built-in module is rejected with `422`
+        and nothing is stored.
+
+        Removal is `DELETE /api/v1/apps/{name}` - the route for any kind of app -
+        which erases the source and the saved store together.
       parameters:
         - name: name
           in: path
@@ -1002,6 +1071,124 @@ paths:
         "422": { $ref: "#/components/responses/Invalid" }
         "500":
           description: This build has no scripting platform (`internalError`)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "507": { $ref: "#/components/responses/InsufficientStorage" }
+
+  /api/v1/apps/{name}/config:
+    get:
+      tags: [scripts]
+      summary: The settings a script offers, with their current values
+      description: |
+        A script declares its user-changeable values as `@config` lines in its
+        header, and this route hands them back as field descriptors: what to
+        show, what it holds now, and what it would fall back to. `GET
+        /api/v1/apps` already flags which scripts have any, under `config`, so a
+        client only asks for the ones that do.
+
+        A script that declares none answers `200` with an empty `fields` list,
+        not a `404`. `warnings` carries the `@config` lines the device could not
+        read, each with its line number - a malformed one is skipped rather than
+        failing the install, so this is where the author finds out.
+
+        The values themselves are ordinary entries in the script's persisted
+        store, which is why `value` can differ from `default` without anyone
+        having used this API: the script may have written it. Installing a
+        source that no longer declares a setting drops its stored value, so
+        nothing invisible accumulates against the store's 2 KB.
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[A-Za-z0-9_-]{1,32}$" }
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "200":
+          description: The declared settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ScriptConfig" }
+        "400":
+          description: "`name` is not `[A-Za-z0-9_-]{1,32}` (`invalidName`)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503":
+          description: This build has no scripting platform (`unavailable`)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    patch:
+      tags: [scripts]
+      summary: Change a script's settings
+      description: |
+        Send only the keys to change; every other setting keeps its value, and
+        so does anything else the script has stored.
+
+        **All or nothing.** One bad field rejects the whole body with `422` and
+        `field` naming it - nothing is written and the script is not disturbed.
+        Rejected are: a key the script never declared, a value of the wrong
+        type, a `select` value that is not on the offered list, and text longer
+        than the field allows. A `number` outside its `min`/`max` is CLAMPED
+        instead, so an automation need not know the range to be safe.
+
+        A `color` takes either the number (`0`-`16777215`) or an HTML-style
+        `"#RRGGBB"` string, and is always stored as the number - the form the
+        drawing calls want.
+
+        **Saving restarts the script**, exactly as re-uploading its source
+        would: `init()` and `setup()` run again and see the new values, in-memory
+        state and subscriptions are dropped, the app keeps its place in the
+        rotation. The reply therefore carries the same `error` field as
+        `PUT /api/v1/apps/script/{name}` - a `200` with a non-empty `error`
+        means the settings were applied and the restarted script then threw.
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[A-Za-z0-9_-]{1,32}$" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              description: >
+                Setting key to new value. Keys must be ones the script declared;
+                an unknown key is a `422`, never silently ignored.
+              additionalProperties:
+                oneOf:
+                  - type: string
+                  - type: number
+                  - type: boolean
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "200":
+          description: Applied (check `error` for what the restarted script did)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  name: { type: string }
+                  error:
+                    type: string
+                    description: Runtime error from the restart; `""` when healthy.
+        "400":
+          description: "`name` is not `[A-Za-z0-9_-]{1,32}` (`invalidName`)"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "415": { $ref: "#/components/responses/WrongContentType" }
+        "422": { $ref: "#/components/responses/Invalid" }
+        "503":
+          description: Scripting is switched off (`unavailable`), or busy (`serviceBusy`)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -1071,7 +1258,7 @@ paths:
       tags: [device]
       summary: Effect, transition, overlay and palette names, and the chip's pin rules
       description: >
-        Lists the canonical spelling of every registered name. Requests may use
+        Lists every name in the spelling the API returns. Requests may use
         any casing. Also carries `gpio`: which GPIOs this chip has and what each
         one can do, so a client validates pin changes against the device rather
         than against a hardcoded table that is wrong on the other SoC.
@@ -1148,7 +1335,16 @@ paths:
                         items: { type: array, items: { type: integer } }
                         description: >
                           Boot-mode pins, reported as a caution and never
-                          rejected - the Ulanzi TC001 defaults use three of them.
+                          rejected - the ESP32 defaults use one of them
+                          (the buzzer, GPIO 15).
+                      rtc:
+                        type: array
+                        items: { type: array, items: { type: integer } }
+                        description: >
+                          Pins the RTC domain keeps powered during deep sleep.
+                          Only a `pinBtnSelect` inside this set can end a
+                          `POST /api/v1/device/sleep` early; any other pin is
+                          accepted and simply cannot wake the device.
                       matrix:
                         type: array
                         items: { type: integer }
@@ -1172,8 +1368,8 @@ paths:
         Includes the runtime GPIO map (pinMatrix, pinBtnLeft/Select/Right,
         pinBattery, pinLdr, pinBuzzer, pinI2cSda/Scl, pinDfRx/Tx; -1 = disabled).
         Which values are accepted depends on the chip - read `gpio` from
-        `GET /api/v1/capabilities`. On an ESP32 the defaults are the Ulanzi TC001
-        wiring.
+        `GET /api/v1/capabilities`. On an ESP32 the defaults are the stock 32×8
+        clock wiring.
 
         Secrets (`wifiPass`, `mqttPass`, `authPass`) are omitted from the
         response - 49 of the 52 configuration fields are returned - UNLESS
@@ -1350,9 +1546,9 @@ components:
       description: |
         HTTP Basic, realm "AWTRIX NG". Enabled only when the `authEnabled` device
         configuration flag is true; the shipping default is false, so the whole
-        API is open. The check is also bypassed entirely while the device is in
-        AP/provisioning mode. A failure answers 401 with the standard JSON
-        error envelope (code `unauthorized`) plus a `WWW-Authenticate` header.
+        API is open. Once on, it applies in every mode, including
+        AP/provisioning - there is no bypass. A failure answers 401 with the standard JSON
+        error body (code `unauthorized`) plus a `WWW-Authenticate` header.
         Applies to every route below, and to `GET /` and the static asset
         directories.
   responses:
@@ -1424,6 +1620,74 @@ components:
         desc: { type: string }
         author: { type: string }
         version: { type: string }
+    ScriptConfig:
+      type: object
+      description: >
+        What `GET /api/v1/apps/{name}/config` answers - the settings a script
+        declared in its header, each with the value it currently holds.
+      required: [name, fields, warnings]
+      properties:
+        name: { type: string, description: The script's install name. }
+        fields:
+          type: array
+          maxItems: 12
+          items: { $ref: "#/components/schemas/ScriptConfigField" }
+        warnings:
+          type: array
+          description: >
+            `@config` lines the device could not read, each prefixed with its
+            line number. A malformed line is skipped, never fatal.
+          items: { type: string }
+    ScriptConfigField:
+      type: object
+      description: >
+        One setting. `key` is what the script reads and what a `PATCH` sends.
+        The optional members are present only when the declaration gave them.
+      required: [key, type, label, default, value]
+      properties:
+        key:
+          type: string
+          pattern: "^[A-Za-z_][A-Za-z0-9_]{0,23}$"
+          description: The name the script reads its value under.
+        type:
+          type: string
+          enum: [bool, text, number, slider, select, color]
+        label:
+          type: string
+          description: >
+            What to show, exactly as the script author wrote it. AWTRIX ships
+            no translation for it - it is one string, in whatever language the
+            author chose.
+        help: { type: string, description: One line of explanation under the label. }
+        unit: { type: string, description: "`number`/`slider` - shown after the control." }
+        min: { type: number }
+        max: { type: number }
+        step: { type: number }
+        maxlen:
+          type: integer
+          description: "`text` - longest value accepted, at most 256."
+        options:
+          type: array
+          maxItems: 12
+          description: "`select` - the accepted values; a `PATCH` outside this list is a 422."
+          items: { type: string }
+        default:
+          description: >
+            What the header declared, so a client can offer a reset. A `color`
+            is a number 0-16777215; every other type is the JSON type its name
+            suggests.
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+        value:
+          description: >
+            What the setting holds now - the default until somebody changes it.
+            Same type as `default`.
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
     Error:
       type: object
       properties:
@@ -1525,6 +1789,13 @@ components:
               minimum: 0
               default: 8
               description: "`loop` only - pixels between repetitions."
+            holdMs:
+              type: integer
+              minimum: 0
+              default: 1000
+              description: >
+                How long the text rests before it starts moving, and at each
+                `bounce` turning point. `0` removes the pause.
     WeekdayBar:
       description: >
         The seven-segment weekday bar the Time app (position follows `timeMode`)
@@ -1709,7 +1980,7 @@ components:
       description: |
         Device configuration - 58 fields. The JSON key is the field name for
         every one. Unknown keys are silently ignored on PUT. Defaults below are
-        the Ulanzi TC001 wiring; -1 disables a pin.
+        the stock ESP32 pin map; -1 disables a pin.
       properties:
         # --- Wi-Fi ---
         wifiSsid: { type: string, default: "" }
@@ -1766,7 +2037,7 @@ components:
         tz: { type: string, default: "CET-1CEST,M3.5.0,M10.5.0/3", description: "POSIX TZ string, daylight-saving rules included. Applied immediately, no reboot." }
         tzName: { type: string, default: "Europe/Berlin", description: "IANA zone tz was picked from. Never read by the firmware; the web UI shows the city back from it." }
         # --- identity / web / auth ---
-        hostname: { type: string, default: "", description: "empty becomes awtrix_<uid>" }
+        hostname: { type: string, default: "", description: "empty becomes awtrixng-<uid>" }
         webPort:
           type: integer
           default: 80
@@ -1799,7 +2070,7 @@ components:
           maximum: 10
           description: >
             V_cell / V_pin. Calibrate on a full cell as
-            4.2 / (batteryMillivolts / 1000) using GET /api/v1/device.
+            4.2 / (batteryPinMillivolts / 1000) using GET /api/v1/device.
         lowBatteryThreshold:
           type: integer
           default: 0
@@ -1862,6 +2133,20 @@ components:
             Every second row or column runs backwards - the zigzag most panels
             are wired in. false = every run starts on the same side. Applies on
             the next frame.
+        panelChainReverse:
+          type: boolean
+          default: false
+          description: >
+            The data cable enters the chain of panels at the other end, without
+            changing how a single panel is wired inside. Applies on the next
+            frame.
+        panelChainSerpentine:
+          type: boolean
+          default: false
+          description: >
+            Every second panel along the cable is mounted rotated 180 degrees,
+            so one panel's output sits next to the next panel's input. Applies
+            on the next frame.
         mirror:
           type: boolean
           default: false
@@ -1894,7 +2179,7 @@ components:
           default: true
           description: >
             Whether the Berry scripting stack exists at all. Off skips the
-            interpreter and its HTTP worker at boot (frees ~20 KB internal RAM);
+            interpreter and its HTTP worker at boot (frees ~40 KB internal RAM);
             script endpoints then answer 503. Stored scripts survive on flash.
             Applies after a reboot.
         scriptLimit:
@@ -1931,7 +2216,7 @@ components:
           default: 34
           description: >
             -1 disables battery monitoring entirely (no batteryPercent/
-            batteryVoltage/batteryMillivolts in GET /api/v1/device, no Battery
+            batteryVoltage/batteryPinMillivolts in GET /api/v1/device, no Battery
             app). When enabled it must be an ADC1 pin (32-39).
         pinLdr: { type: integer, default: 35, description: "-1 = disabled; when enabled must be ADC1 (32-39)" }
         pinBuzzer: { type: integer, default: 15, description: "-1 = disabled; output-capable pin required" }
@@ -2008,9 +2293,9 @@ components:
         uid: { type: string }
         boardType:
           type: string
-          enum: [awtrix]
+          enum: [awtrixng]
           description: >
-            Always "awtrix". The GPIO map is runtime configuration, so this
+            Always "awtrixng". The GPIO map is runtime configuration, so this
             value does not vary with the wiring or the board.
         soc:
           type: string
@@ -2020,6 +2305,12 @@ components:
             `gpio` in `/api/v1/capabilities`.
           enum: [esp32, esp32s3]
         ipAddress: { type: string }
+        hostname:
+          type: string
+          description: >
+            The name AWTRIX actually answers to on the network and over mDNS.
+            When `hostname` in `/api/v1/system` is empty this is the name
+            derived from the MAC address, so the two differ by design.
         wifiRssi: { type: integer }
         uptimeSeconds: { type: integer }
         resetReason:
@@ -2051,6 +2342,11 @@ components:
         psramFreeBytes:
           type: integer
           description: Free PSRAM. Absent on a board without PSRAM.
+        scriptingRunning:
+          type: boolean
+          description: >
+            Whether scripts are running at all. False when scriptingEnabled is
+            off: installed scripts stay listed and editable, none of them runs.
         scriptHeapPool:
           type: string
           enum: [internal, psram]
@@ -2074,7 +2370,12 @@ components:
             Relative ambient light in percent. Deliberately not lux: a bare LDR
             on an unknown divider has no absolute unit. Linear in ldrRaw; the
             ldrGamma curve applies only to brightness, not to this value.
-        ldrRaw: { type: integer, description: raw ADC counts behind lightLevel (diagnostic) }
+            Present only when pinLdr >= 0.
+        ldrRaw:
+          type: integer
+          description: >
+            Unprocessed light-sensor reading behind lightLevel: 0 in the dark,
+            4095 in bright light. Present only when pinLdr >= 0.
         batteryPercent:
           type: integer
           description: >
@@ -2085,12 +2386,12 @@ components:
           description: >
             Cell voltage in V, rounded to 2 decimals. Present only when
             pinBattery >= 0.
-        batteryMillivolts:
+        batteryPinMillivolts:
           type: integer
           description: >
             Millivolts at the battery pin, BEFORE the divider. Present only when
             pinBattery >= 0. Use it to calibrate batteryDividerRatio on a full
-            cell: ratio = 4.2 / (batteryMillivolts / 1000).
+            cell: ratio = 4.2 / (batteryPinMillivolts / 1000).
         lowBattery:
           type: boolean
           description: >
@@ -2117,3 +2418,91 @@ components:
         messageCount:
           type: integer
           description: MQTT commands received since boot (HTTP does not count)
+        wifi:
+          type: object
+          description: >
+            State of the WiFi station connection, in the same shape as `mqtt`.
+            `host` is the network name (SSID) and `endpoint` the address AWTRIX
+            holds on it. `state` is "disabled" when no network is stored.
+          properties:
+            enabled:
+              type: boolean
+              description: A network name is stored.
+            state:
+              type: string
+              enum: [disabled, offline, connecting, connected]
+            host:
+              type: string
+              description: The network name (SSID) AWTRIX joined.
+            endpoint:
+              type: string
+              description: >
+                The address AWTRIX holds on that network. Empty string while not
+                joined.
+            attempts:
+              type: integer
+              description: Consecutive failed attempts. Zero while connected.
+            retryInMs:
+              type: integer
+              description: Milliseconds until the next attempt. Zero while connected.
+            connects:
+              type: integer
+              description: >
+                Successful associations since boot. A number that keeps climbing
+                is an access point that keeps dropping the device.
+            error:
+              type: string
+              nullable: true
+              description: Why the connection is not up right now. Null when it is.
+              enum: [hostNotFound, badCredentials, timeout, lost]
+            lastError:
+              type: string
+              nullable: true
+              description: >
+                The last reason this link went down, kept after it recovers.
+                While WiFi is down this API is unreachable, so this is what you
+                read afterwards. Null until something goes wrong.
+              enum: [hostNotFound, badCredentials, timeout, lost]
+        mqtt:
+          type: object
+          description: >
+            State of the broker connection. Present whether or not MQTT is
+            enabled; `state` is "disabled" when it is off.
+          properties:
+            enabled:
+              type: boolean
+              description: Mirrors mqttEnabled in the system configuration.
+            state:
+              type: string
+              enum: [disabled, offline, connecting, connected]
+            host:
+              type: string
+              description: The configured broker host, as entered.
+            endpoint:
+              type: string
+              description: >
+                The address and port actually in use, once the host has been
+                resolved. Empty string before that.
+            attempts:
+              type: integer
+              description: Consecutive failed attempts. Zero while connected.
+            retryInMs:
+              type: integer
+              description: >
+                Milliseconds until the next attempt. Zero while connected, and
+                while an attempt is in progress.
+            connects:
+              type: integer
+              description: Successful connections since boot.
+            error:
+              type: string
+              nullable: true
+              description: Why the connection is not up right now. Null when it is.
+              enum: [noWifi, hostNotFound, refused, badCredentials, rejected, timeout, lost]
+            lastError:
+              type: string
+              nullable: true
+              description: >
+                The last reason this link went down, kept after it recovers.
+                Null until something goes wrong.
+              enum: [noWifi, hostNotFound, refused, badCredentials, rejected, timeout, lost]

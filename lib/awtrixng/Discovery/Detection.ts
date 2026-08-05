@@ -84,7 +84,7 @@ const hasAwtrixNgDeviceSignature = (value: Record<string, unknown>): boolean => 
 const hasValidOptionalSensorFields = (value: Record<string, unknown>): boolean => (
   hasOptionalNumberField(value, 'batteryPercent')
   && hasOptionalNumberField(value, 'batteryVoltage')
-  && hasOptionalNumberField(value, 'batteryMillivolts')
+  && hasOptionalNumberField(value, 'batteryPinMillivolts')
   && hasOptionalBooleanField(value, 'lowBattery')
   && hasOptionalNumberField(value, 'temperature')
   && hasOptionalNumberField(value, 'humidity')

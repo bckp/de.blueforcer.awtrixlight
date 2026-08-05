@@ -40,7 +40,7 @@
     "actions": [
       {
         "title": {
-          "en": "Create/update application [[name]] [[msg]] [[icon]] [[color]] [[options]]"
+          "en": "Create or update an application"
         },
         "titleFormatted": {
           "en": "Create/update application [[name]] [[msg]] [[icon]] [[color]] [[options]]"
@@ -103,7 +103,7 @@
       },
       {
         "title": {
-          "en": "Create/update application [[name]], set [[msg]] with [[icon]] and [[options]] in json format (experimental)"
+          "en": "Create or update an application with an icon (experimental)"
         },
         "titleFormatted": {
           "en": "Create/update application [[name]], set [[msg]] with [[icon]] and [[options]] in json format (experimental)"
@@ -154,7 +154,7 @@
       },
       {
         "title": {
-          "en": "Create/update raw application [[name]] [[options]]"
+          "en": "Create or update a raw application"
         },
         "titleFormatted": {
           "en": "Create/update raw application [[name]] [[options]]"
@@ -188,7 +188,7 @@
       },
       {
         "title": {
-          "en": "Remove application [[name]]"
+          "en": "Remove an application"
         },
         "titleFormatted": {
           "en": "Remove application [[name]]"
@@ -215,7 +215,7 @@
       {
         "deprecated": true,
         "title": {
-          "en": "Create custom app [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]]"
+          "en": "Create a custom app"
         },
         "titleFormatted": {
           "en": "Create custom app [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]]"
@@ -289,7 +289,7 @@
       },
       {
         "title": {
-          "en": "Set display [[power]]"
+          "en": "Set display power"
         },
         "titleFormatted": {
           "en": "Set display [[power]]"
@@ -329,7 +329,7 @@
       },
       {
         "title": {
-          "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect for [[duration]]"
+          "en": "Show indicator with color and effect for a period of time"
         },
         "titleFormatted": {
           "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect for [[duration]]"
@@ -425,7 +425,7 @@
       },
       {
         "title": {
-          "en": "Hide [[indicator]] indicator"
+          "en": "Hide an indicator"
         },
         "titleFormatted": {
           "en": "Hide [[indicator]] indicator"
@@ -472,7 +472,7 @@
       },
       {
         "title": {
-          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
+          "en": "Send a notification"
         },
         "titleFormatted": {
           "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
@@ -515,7 +515,7 @@
       },
       {
         "title": {
-          "en": "Dismiss notification"
+          "en": "Dismiss a notification"
         },
         "titleFormatted": {
           "en": "Dismiss notification"
@@ -534,7 +534,7 @@
       },
       {
         "title": {
-          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
+          "en": "Send a notification with an icon"
         },
         "titleFormatted": {
           "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
@@ -577,7 +577,7 @@
       },
       {
         "title": {
-          "en": "Send notification [[msg]] with [[options]]"
+          "en": "Send a notification with JSON options"
         },
         "titleFormatted": {
           "en": "Send notification [[msg]] with [[options]]"
@@ -614,7 +614,7 @@
       },
       {
         "title": {
-          "en": "Send raw notification [[options]]"
+          "en": "Send a raw notification"
         },
         "titleFormatted": {
           "en": "Send raw notification [[options]]"
@@ -641,7 +641,7 @@
       },
       {
         "title": {
-          "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color"
+          "en": "Send a sticky notification"
         },
         "titleFormatted": {
           "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color"
@@ -683,7 +683,7 @@
       },
       {
         "title": {
-          "en": "Play [[rtttl]] melody"
+          "en": "Play an RTTTL melody"
         },
         "titleFormatted": {
           "en": "Play [[rtttl]] melody"
@@ -709,7 +709,7 @@
       },
       {
         "title": {
-          "en": "Remove custom app [[name]]"
+          "en": "Remove a custom app"
         },
         "titleFormatted": {
           "en": "Remove custom app [[name]]"
@@ -736,7 +736,7 @@
       },
       {
         "title": {
-          "en": "Set weather overlay [[overlay]]"
+          "en": "Set the weather overlay"
         },
         "titleFormatted": {
           "en": "Set weather overlay [[overlay]]"

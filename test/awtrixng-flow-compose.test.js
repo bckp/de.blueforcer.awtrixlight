@@ -6,6 +6,27 @@ const test = require('node:test');
 const root = path.resolve(__dirname, '..');
 const actionsDir = path.join(root, '.homeycompose/flow/actions');
 const readJson = (fileName) => JSON.parse(fs.readFileSync(path.join(actionsDir, fileName), 'utf8'));
+const actionFiles = fs.readdirSync(actionsDir).filter((fileName) => fileName.endsWith('.json')).sort();
+
+const expectedActionTitles = {
+  'application.json': 'Create or update an application',
+  'applicationIcon.json': 'Create or update an application with an icon (experimental)',
+  'applicationRaw.json': 'Create or update a raw application',
+  'applicationRemove.json': 'Remove an application',
+  'customApp.json': 'Create a custom app',
+  'displaySet.json': 'Set display power',
+  'indicator.json': 'Show indicator with color and effect for a period of time',
+  'indicatorDismiss.json': 'Hide an indicator',
+  'notification.json': 'Send a notification',
+  'notificationDismiss.json': 'Dismiss a notification',
+  'notificationIcon.json': 'Send a notification with an icon',
+  'notificationJson.json': 'Send a notification with JSON options',
+  'notificationRaw.json': 'Send a raw notification',
+  'notificationSticky.json': 'Send a sticky notification',
+  'playRTTTL.json': 'Play an RTTTL melody',
+  'removeCustomApp.json': 'Remove a custom app',
+  'weatherOverlay.json': 'Set the weather overlay',
+};
 
 const awtrixNgFlowFiles = [
   'applicationRaw.json',
@@ -26,6 +47,34 @@ const sharedFlowFiles = [
 ];
 
 const getDeviceArg = (action) => action.args.find((arg) => arg.name === 'device' && arg.type === 'device');
+
+test('Flow action main titles follow the Homey review and contain no arguments', () => {
+  assert.deepEqual(actionFiles, Object.keys(expectedActionTitles).sort());
+
+  for (const fileName of actionFiles) {
+    const action = readJson(fileName);
+
+    assert.equal(action.title.en, expectedActionTitles[fileName], `${fileName} must use the reviewed main title`);
+
+    for (const [locale, title] of Object.entries(action.title)) {
+      assert.equal(title.includes('[['), false, `${fileName} title.${locale} must not contain an argument`);
+      assert.equal(title.includes(']]'), false, `${fileName} title.${locale} must not contain an argument`);
+    }
+  }
+});
+
+test('Flow action formatted titles reference every explicit non-device argument exactly once', () => {
+  for (const fileName of actionFiles) {
+    const action = readJson(fileName);
+    const argumentNames = action.args.filter((arg) => arg.name !== 'device').map((arg) => arg.name).sort();
+
+    for (const [locale, title] of Object.entries(action.titleFormatted)) {
+      const placeholders = [...title.matchAll(/\[\[([^\]]+)\]\]/g)].map((match) => match[1]).sort();
+
+      assert.deepEqual(placeholders, argumentNames, `${fileName} titleFormatted.${locale} must reference each argument exactly once`);
+    }
+  }
+});
 
 test('AWTRIX NG-specific flow action compose files are scoped to the AWTRIX NG driver only', () => {
   for (const fileName of awtrixNgFlowFiles) {
@@ -129,7 +178,7 @@ test('AWTRIX NG weather overlay flow exposes documented overlay values', () => {
   const action = readJson('weatherOverlay.json');
   const overlayArg = action.args.find((arg) => arg.name === 'overlay');
 
-  assert.equal(action.title.en, 'Set weather overlay [[overlay]]');
+  assert.equal(action.title.en, 'Set the weather overlay');
   assert.ok(overlayArg);
   assert.equal(overlayArg.type, 'dropdown');
   assert.deepEqual(overlayArg.values.map((value) => value.id), [

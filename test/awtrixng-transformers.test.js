@@ -80,6 +80,7 @@ test('AWTRIX NG notification transformer accepts NG page fields and text fragmen
       { text: 'B', color: '#00FF00' },
     ],
     textCase: 'asTyped',
+    font: 'large',
     textInFront: true,
     textOffsetX: 3,
     textCenter: false,
@@ -96,6 +97,7 @@ test('AWTRIX NG notification transformer accepts NG page fields and text fragmen
       entry: 'inline',
       whenFits: 'static',
       gap: 8,
+      holdMs: 1000,
     },
     effect: 'Matrix',
     effectSpeed: 2,
@@ -118,6 +120,8 @@ test('AWTRIX NG notification transformer accepts valid enum values', () => {
   assert.equal(toAwtrixNgNotificationPayload({ iconMode: 'fixed' }).iconMode, 'fixed');
   assert.equal(toAwtrixNgNotificationPayload({ iconMode: 'pushOnce' }).iconMode, 'pushOnce');
   assert.equal(toAwtrixNgNotificationPayload({ iconMode: 'push' }).iconMode, 'push');
+  assert.equal(toAwtrixNgNotificationPayload({ font: 'small' }).font, 'small');
+  assert.equal(toAwtrixNgNotificationPayload({ font: 'large' }).font, 'large');
   assert.deepEqual(toAwtrixNgNotificationPayload({ scroll: { mode: 'wrap' } }).scroll, { mode: 'wrap' });
 });
 
@@ -185,6 +189,65 @@ test('AWTRIX NG transformer accepts NG palette payloads unchanged', () => {
     textColor: 'palette',
     palette: 'Rainbow',
   });
+  assert.deepEqual(toAwtrixNgNotificationPayload({
+    textColor: 'palette',
+    palette: [
+      { color: '#FF0000', pos: 0 },
+      { color: ['HSV', 120, 100, 100], pos: 100 },
+    ],
+  }), {
+    textColor: 'palette',
+    palette: [
+      { color: '#FF0000', pos: 0 },
+      { color: ['HSV', 120, 100, 100], pos: 100 },
+    ],
+  });
+});
+
+test('AWTRIX NG transformer rejects malformed and mixed palette stops', () => {
+  assertUnsupportedField(() => toAwtrixNgNotificationPayload({
+    palette: [],
+  }), 'palette', 'notification', 'invalid-value');
+  assertUnsupportedField(() => toAwtrixNgNotificationPayload({
+    palette: ['#FF0000', { color: '#00FF00', pos: 100 }],
+  }), 'palette[1]', 'notification', 'invalid-value');
+  assertUnsupportedField(() => toAwtrixNgNotificationPayload({
+    palette: [{ color: '#FF0000', pos: 101 }],
+  }), 'palette[0]', 'notification', 'invalid-value');
+});
+
+test('AWTRIX NG transformer accepts native array draw commands unchanged', () => {
+  const input = {
+    draw: [
+      ['pixel', 0, 0, '#FF0000'],
+      ['pixels', null, 1, 1, 2, 2],
+      ['line', 0, 0, 31, 7],
+      ['rect', 0, 0, 10, 5, [0, 255, 0]],
+      ['rectFill', 1, 1, 8, 3],
+      ['circle', 4, 4, 2, 0x0000FF],
+      ['circleFill', 4, 4, 1],
+      ['text', 9, 1, 'Hi', '#FFFFFF'],
+      ['bitmap', 0, 0, 2, 1, ['#FF0000', '#00FF00']],
+      ['bitmap', 0, 0, 1, 1, '/wAA'],
+    ],
+  };
+
+  assert.deepEqual(toAwtrixNgNotificationPayload(input), input);
+});
+
+test('AWTRIX NG transformer rejects legacy object draw commands and malformed native commands', () => {
+  assertUnsupportedField(() => toAwtrixNgNotificationPayload({
+    draw: [{ dp: [0, 0, '#FF0000'] }],
+  }), 'draw[0]', 'notification', 'invalid-value');
+  assertUnsupportedField(() => toAwtrixNgNotificationPayload({
+    draw: [['unknown', 0, 0]],
+  }), 'draw[0]', 'notification', 'invalid-value');
+  assertUnsupportedField(() => toAwtrixNgNotificationPayload({
+    draw: [['line', 0, 0, 31]],
+  }), 'draw[0]', 'notification', 'invalid-value');
+  assertUnsupportedField(() => toAwtrixNgNotificationPayload({
+    draw: [['pixels', null, 0, 0, 1]],
+  }), 'draw[0]', 'notification', 'invalid-value');
 });
 
 test('AWTRIX NG transformer rejects AWTRIX 3 aliases instead of translating them', () => {
@@ -224,11 +287,26 @@ test('AWTRIX NG transformer rejects unsupported AWTRIX 3 fields explicitly', () 
   }), 'pos', 'pushedApp');
 });
 
-test('AWTRIX NG notification transformer rejects repeat because it is pushed-app only', () => {
-  assertUnsupportedField(() => toAwtrixNgNotificationPayload({
+test('AWTRIX NG notification transformer accepts repeat as a shared page field', () => {
+  const input = {
     text: 'Hello',
     repeat: 3,
-  }), 'repeat', 'notification');
+  };
+
+  assert.deepEqual(toAwtrixNgNotificationPayload(input), input);
+});
+
+test('AWTRIX NG notification transformer keeps pushed-app lifetime fields unsupported', () => {
+  assertUnsupportedField(
+    () => toAwtrixNgNotificationPayload({ lifetimeMs: 5000 }),
+    'lifetimeMs',
+    'notification',
+  );
+  assertUnsupportedField(
+    () => toAwtrixNgNotificationPayload({ lifetimeExpiry: 'remove' }),
+    'lifetimeExpiry',
+    'notification',
+  );
 });
 
 test('AWTRIX NG pushed app transformer rejects notification-only fields', () => {
@@ -263,6 +341,12 @@ test('AWTRIX NG transformer rejects invalid nested scroll fields and enum values
       delay: 10,
     },
   }), 'scroll.delay', 'notification', 'unknown-field');
+
+  assertUnsupportedField(() => toAwtrixNgNotificationPayload({
+    scroll: {
+      holdMs: -1,
+    },
+  }), 'scroll.holdMs', 'notification', 'invalid-value');
 });
 
 test('AWTRIX NG transformer rejects legacy text fragments', () => {
@@ -276,5 +360,6 @@ test('AWTRIX NG transformer rejects legacy text fragments', () => {
 test('AWTRIX NG transformer rejects invalid enum values', () => {
   assertUnsupportedField(() => toAwtrixNgNotificationPayload({ textCase: 2 }), 'textCase', 'notification', 'invalid-value');
   assertUnsupportedField(() => toAwtrixNgNotificationPayload({ iconMode: 'push-once' }), 'iconMode', 'notification', 'invalid-value');
+  assertUnsupportedField(() => toAwtrixNgNotificationPayload({ font: 'medium' }), 'font', 'notification', 'invalid-value');
   assertUnsupportedField(() => toAwtrixNgPushedAppPayload({ lifetimeExpiry: 1 }), 'lifetimeExpiry', 'pushedApp', 'invalid-value');
 });
