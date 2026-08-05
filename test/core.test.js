@@ -112,9 +112,12 @@ test('settings omit unknown keys', () => {
   assert.deepEqual(normalizer.settingOptions({ user: 'a', pass: 'b', TIM: true }), { TIM: true });
 });
 
-test('HTTP status mapping does not treat bad requests as success', () => {
+test('HTTP status mapping treats only 2xx responses as success', () => {
   assert.equal(statusFromHttpCode(200), Status.Ok);
-  assert.equal(statusFromHttpCode(399), Status.Ok);
+  assert.equal(statusFromHttpCode(299), Status.Ok);
+  assert.equal(statusFromHttpCode(300), Status.Error);
+  assert.equal(statusFromHttpCode(302), Status.Error);
+  assert.equal(statusFromHttpCode(399), Status.Error);
   assert.equal(statusFromHttpCode(400), Status.Error);
   assert.equal(statusFromHttpCode(401), Status.AuthRequired);
   assert.equal(statusFromHttpCode(403), Status.AuthFailed);

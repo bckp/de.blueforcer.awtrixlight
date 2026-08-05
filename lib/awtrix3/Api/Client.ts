@@ -3,9 +3,10 @@ import FormData from 'form-data';
 import { Response, Status } from './Response';
 
 const Timeout = 10000;
+const RedactedHeaderValue = '<redacted>';
 
 export const statusFromHttpCode = (code: number): Status => {
-  if (code >= 200 && code < 400) return Status.Ok;
+  if (code >= 200 && code < 300) return Status.Ok;
   if (code === 401) return Status.AuthRequired;
   if (code === 403) return Status.AuthFailed;
   if (code === 404) return Status.NotFound;
@@ -23,12 +24,12 @@ export interface RequestHeaders {
   [propName: string]: any;
 }
 
-function abortSignal(timeout: number): AbortSignal {
-  const controller = new AbortController();
-  setTimeout(() => controller.abort(), timeout);
-
-  return controller.signal;
-}
+const redactAuthorization = (headers: unknown): unknown => {
+  if (typeof headers !== 'object' || headers === null) return headers;
+  return Object.fromEntries(Object.entries(headers).map(([key, value]) => [
+    key, key.toLowerCase() === 'authorization' ? RedactedHeaderValue : value,
+  ]));
+};
 
 export default class Client {
 
@@ -37,8 +38,7 @@ export default class Client {
   user: string = '';
   pass: string = '';
 
-  // eslint-disable-next-line no-console
-  log = console.log;
+  log: (message?: any, ...optionalParams: any[]) => void;
 
   constructor(options: ClientOptions) {
     this.ip = options.ip;
@@ -81,11 +81,12 @@ export default class Client {
 
   async #getRequest(url: string): Promise<Response> {
     try {
-      this.#debugRequest('GET', url);
+      const headers = this.#getHeaders();
+      this.#debugRequest('GET', url, headers);
       const result = await axios.get(url, {
-        headers: this.#getHeaders(),
+        headers,
         timeout: Timeout,
-        signal: abortSignal(Timeout),
+        maxRedirects: 0,
       });
       this.#debugResponse('GET', url, result);
       return {
@@ -100,11 +101,12 @@ export default class Client {
   async post(cmd: string, data: any, headers?: RequestHeaders): Promise<Response> {
     const url: string = this.#getApiUrl(cmd);
     try {
-      this.#debugRequest('POST', url, this.#getHeaders(headers), data);
+      const requestHeaders = this.#getHeaders(headers);
+      this.#debugRequest('POST', url, requestHeaders, data);
       const result = await axios.post(url, data, {
-        headers: this.#getHeaders(headers),
+        headers: requestHeaders,
         timeout: Timeout,
-        signal: abortSignal(Timeout),
+        maxRedirects: 0,
       });
       this.#debugResponse('POST', url, result);
       return {
@@ -118,11 +120,12 @@ export default class Client {
   async upload(path: string, form: FormData): Promise<Response> {
     const url: string = this.#getUrl(path);
     try {
-      this.#debugRequest('POST(upload)', url);
+      const headers = this.#getHeaders(form.getHeaders());
+      this.#debugRequest('POST(upload)', url, headers);
       const result = await axios.post(url, form, {
-        headers: this.#getHeaders(form.getHeaders()),
+        headers,
         timeout: Timeout,
-        signal: abortSignal(Timeout),
+        maxRedirects: 0,
       });
       this.#debugResponse('POST(upload)', url, result);
       return {
@@ -133,7 +136,7 @@ export default class Client {
     }
   }
 
-  #getHeaders(headers: RequestHeaders = {}): object {
+  #getHeaders(headers: RequestHeaders = {}): RequestHeaders {
     headers['Content-Type'] = 'application/json';
     headers['User-Agent'] = 'Homey/1.0';
     headers.Accept = '*/*';
@@ -179,7 +182,7 @@ export default class Client {
     this.log({
       message,
       url,
-      headers,
+      headers: redactAuthorization(headers),
       data,
     });
   }
@@ -194,7 +197,7 @@ export default class Client {
       dump.status = response.status;
       dump.statusText = response.statusText;
       dump.data = response.data;
-      dump.headers = response.headers;
+      dump.headers = redactAuthorization(response.headers);
     }
     this.log({
       message,
