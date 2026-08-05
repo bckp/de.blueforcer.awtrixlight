@@ -748,7 +748,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | C5 | ✅ | appName lowercasuje před sanitizací; endpointy používají URL encoding; bez dual-delete a changelogu |
 | C6 | ✅ | R1: deprecated karta má kompatibilní runtime adaptér; no-op Apps skeleton odstraněn |
 | C7 | ✅ | AWTRIX 3 nepovoluje redirecty, uznává jen 2xx a rediguje Authorization v debug logu |
-| D1 | ⬜ | |
+| D1 | ✅ | polling startuje ve finally; init chyby zachovávají NG message, field, code i HTTP status |
 | D2 | ⬜ | |
 | D3 | ⬜ | R8: TTL 120 s AW3 / 5 s NG |
 | D4 | ⬜ | |

@@ -3,7 +3,11 @@ import { Device } from 'homey';
 import path from 'path';
 import AxiosAwtrixNgHttpTransport from '../../lib/awtrixng/Http/AxiosTransport';
 import AwtrixNgClient from '../../lib/awtrixng/Api/Client';
-import { AwtrixNgAvailabilityState, toAwtrixNgAvailabilityState } from '../../lib/awtrixng/Device/Availability';
+import {
+  AwtrixNgAvailabilityState,
+  formatAwtrixNgErrorDetails,
+  toAwtrixNgAvailabilityState,
+} from '../../lib/awtrixng/Device/Availability';
 import {
   runAwtrixNgMatrixPowerCapability,
   runAwtrixNgNextAppCapability,
@@ -82,15 +86,20 @@ class AwtrixNgDevice extends Device {
       await this.refreshDeviceState({ allowAddCapabilities: false });
     }, this.homey, PollIntervalMs);
 
-    const deviceStateResult = await this.refreshDeviceState({ allowAddCapabilities: true });
+    try {
+      const deviceStateResult = await this.refreshDeviceState({ allowAddCapabilities: true });
 
-    if (deviceStateResult?.status === 'detected') {
-      await this.refreshSettingsFromDevice();
-      await this.refreshDisplayFromDevice();
-      await this.refreshAppsFromDevice();
+      if (deviceStateResult?.status === 'detected') {
+        await this.refreshSettingsFromDevice();
+        await this.refreshDisplayFromDevice();
+        await this.refreshAppsFromDevice();
+      }
+    } catch (error: unknown) {
+      this.error(error);
+      await this.setUnavailable(`Initial device synchronization failed. ${formatAwtrixNgErrorDetails(error)}`);
+    } finally {
+      this.poll.start();
     }
-
-    this.poll.start();
   }
 
   async onAdded(): Promise<void> {
