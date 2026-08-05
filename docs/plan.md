@@ -8,7 +8,7 @@
 > Vztažný commit analýz: `f596dc9`. **Čísla řádků v analýzách driftují – hledej podle
 > symbolů, ne podle řádků.**
 >
-> **Stav plánu: FINÁLNÍ (2026-08-05).** Všechna lidská rozhodnutí R1–R6 jsou zodpovězená
+> **Stav plánu: FINÁLNÍ (2026-08-05).** Všechna lidská rozhodnutí R1–R12 jsou zodpovězená
 > v sekci 3, včetně hardware ověření na fyzickém AwtrixNG. Žádný balíček není blokovaný.
 
 ---
@@ -29,8 +29,8 @@ psané tak, aby stačily samy o sobě. Šetři kontext: nečti celé `lib/` ani 
 
 **Ekonomika tokenů:** balíčky jsou řazené tak, že fáze A je levná (drobné, mechanické) –
 pokud dochází rozpočet, fáze A má smysl i samostatně. Balíčky NIKDY neslučuj do jedné
-session, i kdyby se zdály triviální. Výjimka: A2+A3+A4+A5+A6 lze provést v jedné session
-jako jeden commit-per-balíček, protože se nedotýkají stejných souborů.
+session, i kdyby se zdály triviální. A2 a A3 se oba dotýkají `package.json` a
+`package-lock.json`; musí proto proběhnout sekvenčně v oddělených sessions.
 
 ---
 
@@ -42,7 +42,10 @@ jako jeden commit-per-balíček, protože se nedotýkají stejných souborů.
    `lib/awtrixng`) jsou dva oddělené drivery. Nesmí se nijak prolinat.** Stejný problém
    v obou vrstvách se řeší dvěma nezávislými implementacemi. Žádná sdílená třída,
    žádný společný transport, žádný import mezi `lib/awtrix3` a `lib/awtrixng`.
-2. Před začátkem ověř `git status` – čistý strom. Pracuj na větvi `fix/<id-balíčku>`.
+2. Před začátkem ověř `git status` – čistý strom. Jediná výjimka je A1: tři předem
+   připravené `xlarge.png` smějí být jeho přesně vyjmenovaný vstupní diff. Dokumentační
+   změny tohoto plánu musí být před implementací commitnuté odděleně. Pracuj na větvi
+   `fix/<id-balíčku>`.
 3. Jeden balíček = jeden commit (formát zprávy je u balíčku). Nic navíc.
 4. `app.json` NIKDY needituj ručně – je generovaný. Změny dělej v `.homeycompose/`
    a přegeneruj přes `homey app build` (pokud CLI není dostupné, změň jen
@@ -51,7 +54,9 @@ jako jeden commit-per-balíček, protože se nedotýkají stejných souborů.
    message a field (viz `AGENTS.md`).
 6. Když musíš změnit existující test, aby prošel, znamená to změnu chování. Ověř,
    že je to PŘESNĚ ta změna, kterou balíček předepisuje. Pokud ne → revert, stop, zeptej se.
-7. Po dokončení balíčku aktualizuj checklist v sekci 6 (✅ + hash commitu).
+7. Po dokončení balíčku aktualizuj checklist v sekci 6 ve stejném commitu (jen ✅ a
+   poznámka, **bez hashe**). Hash je dohledatelný v Git historii a nelze jej zapsat do
+   commitu, jehož je součástí.
 
 **NESMÍŠ:**
 
@@ -73,28 +78,37 @@ Spusť **před začátkem** (baseline) i **po dokončení** každého balíčku:
 ```bash
 npx tsc --noEmit          # musí: 0 chyb
 npm run build             # musí: projít
-node --test test/*.test.js  # musí: 0 failed (baseline: 206 pass)
+node --test test/*.test.js  # musí: 0 failed; zaznamenej aktuální počet pass
 npm run lint              # musí: 0 errors (pozn.: funguje jen na macOS stroji vlastníka)
 ```
 
-Pokud baseline neprochází už PŘED tvou změnou → stop, nahlas to, nezačínej.
+Pokud baseline neprochází už PŘED tvou změnou → stop, nahlas to, nezačínej. Počet
+úspěšných testů se mezi balíčky přirozeně zvyšuje; nesmí klesnout, pokud to konkrétní
+balíček výslovně nepředepisuje.
 
 ---
 
 ## 3. Rozhodnutí člověka – ZODPOVĚZENO 2026-08-05
 
-Všechna rozhodnutí padla; jediná zbývající neznámá je R6(1) – viz poznámka pod tabulkou.
+Všechna rozhodnutí jsou uzavřená. Technické důvody z této tabulky jsou závaznou
+součástí prováděcího plánu; implementace je nesmí reinterpretovat.
 
 | # | Otázka | Blokuje | Odpověď bckp |
 |---|---|---|---|
-| R1 | `applicationIcon` + `lib/awtrix3/List/Apps.ts` | C6 | **(a) Smazat obojí** – kartu i skeleton, + záznam do changelogu. |
-| R2 | Chybějící `xlarge.png` | A1 | **(b) Upscale z `large.png`** – vygenerovat 1000×1000 pro app-level, awtrixlight i náhradu NG fake souboru. |
-| R3 | Migrace jmen custom app (B5) | C5 | **(a) Přijmout + changelog** – žádný dual-delete; staré raw-jmenné aplikace si uživatel smaže na zařízení. |
-| R4 | Nenakonfigurované NG zařízení (F11) | D7 | **(a) Adresa/port do device settings** – umožnit rekonfiguraci přes `onSettings`. |
+| R1 | `applicationIcon` + `lib/awtrix3/List/Apps.ts` | C6 | Kartu ponechat `deprecated` a doplnit funkční kompatibilní adaptér; smazat pouze nepoužitý skeleton. |
+| R2 | Chybějící `xlarge.png` | A1 | Vytvořit nové high-resolution assety podle stávajícího vzhledu: app 1000×700, oba drivery 1000×1000. Připraveno a Homey publish validace prošla. |
+| R3 | Migrace jmen custom app (B5) | C5 | Opravit pořadí normalizace, žádný dual-delete ani changelog. Staré dočasné app zaniknou restartem zařízení. |
+| R4 | Nenakonfigurované NG zařízení (F11) | D6–D8 | `address`, `port` i credentials editovatelné; pairing je předvyplní. Každá změna i rediscovery se ověří dočasným klientem včetně UID a až potom commitne. |
 | R5 | Sémantika fail counteru (N2) | C1 | **Ano** – `failThreshold = 3` = 3 po sobě jdoucí selhání → unavailable; úspěch nuluje. |
 | R6-2 | 401 vs 403 při špatných credentials | D4 | **Ověřeno na zařízení: 401 v obou případech** (bez credentials i se špatnými). 403 správně zůstává v `offline` větvi. |
 | R6-3 | Verze Node na Homey | (F7) | **Node 22** – Homey od verze 12.9.0 (naše minimum). `@tsconfig/node22` i `engines >= 22` jsou správně; nález F7 je uzavřen bez akce. |
 | R6-1 | `txt.id` (mDNS) == `uid` (`/api/v1/device`)? | D6 | **Ověřeno na zařízení: SHODNÉ.** TXT: `"type=awtrixng" "name=awtrixng" "id=48e7291211d8"`, API `uid`: `48e7291211d8`. D6 odblokován. |
+| R7 | Více skupin NG settings | D9 | Vše nejprve lokálně validovat, potom odesílat sekvenčně fail-fast. Operaci nenazývat atomickou; původní strukturovanou chybu zachovat. |
+| R8 | TTL seznamu ikon | D3 | Zachovat AWTRIX 3 = 120 s (náročný HTML provider) a NG = 5 s (specializované API). Sdílet jen princip single-flight; po uploadu invalidovat cache. |
+| R9 | Selhání uploadu bundled ikon | C3, D13 | U obou driverů nekritické: zpracovat všechny soubory, chyby agregovat a diagnosticky vypsat; u NG zachovat status/code/message/field. Zařízení zůstane použitelné. |
+| R10 | Checklist a commity | globální pravidla | Jeden balíček = jeden commit; checklist bez hashů. |
+| R11 | Volitelná fáze F | `plan-after.md` | Odložit celou do samostatného následného backlogu `docs/plan-after.md`. |
+| R12 | Cílová release verze | REL1 | `2.1.0` (nová funkčnost bez úmyslného breaking change). |
 
 ### Záznam ověření R6-1 (provedeno 2026-08-05, fyzické AwtrixNG zařízení, macOS `dns-sd`)
 
@@ -112,8 +126,9 @@ předpokladů), aby přežil mimo tento plán.
 
 ## 4. Fáze a balíčky
 
-Pořadí fází: **A → B → C → D → E → F**. Uvnitř fáze jdi po pořadí.
-**Žádný balíček není blokovaný** – všechna rozhodnutí R1–R6 jsou zodpovězená v sekci 3.
+Pořadí fází: **A → B → C → D → E → REL1**. Uvnitř fáze jdi po pořadí.
+**Žádný balíček není blokovaný** – všechna rozhodnutí R1–R12 jsou zodpovězená v sekci 3.
+Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs/plan-after.md`.
 
 ---
 
@@ -121,19 +136,19 @@ Pořadí fází: **A → B → C → D → E → F**. Uvnitř fáze jdi po pořa
 
 *\*výjimky A7/A8 mění chování jen v jasně chybových situacích, viz jejich kroky.*
 
-#### A1 · Chybějící `xlarge.png` — nálezy B2, N3 · rozhodnuto R2(b)
+#### A1 · Chybějící `xlarge.png` — nálezy B2, N3 · rozhodnuto R2
 
 - **Soubory:** `assets/images/`, `drivers/awtrixlight/assets/images/`,
   `drivers/awtrixng/assets/images/`
-- **Kroky:** upscale `large.png` → 1000×1000 (např.
-  `sips -z 1000 1000 large.png --out xlarge.png` nebo ImageMagick s kvalitním filtrem).
-  Vytvoř: (1) `assets/images/xlarge.png` z app-level `large.png`,
-  (2) `drivers/awtrixlight/assets/images/xlarge.png` z driver `large.png`,
-  (3) NAHRAĎ `drivers/awtrixng/assets/images/xlarge.png` – současný soubor je jen
-  bitová kopie `large.png` (500×500), ne skutečný xlarge.
+- **Kroky:** použij již připravené high-resolution varianty odvozené ze stávajícího
+  vizuálu: (1) `assets/images/xlarge.png` 1000×700, (2)
+  `drivers/awtrixlight/assets/images/xlarge.png` 1000×1000 a (3) náhradu
+  `drivers/awtrixng/assets/images/xlarge.png` 1000×1000. Oba driverové obrázky jsou
+  záměrně bitově totožné stejně jako původní předlohy. Negeneruj je znovu a
+  nedeformuj app-level poměr stran.
 - **Ověření:** rituál + rozměry všech tří (`sips -g pixelWidth -g pixelHeight *.png`)
-  = 1000×1000.
-- **Commit:** `fix(assets): provide real 1000x1000 xlarge images (upscaled)`
+  = app 1000×700, drivery 1000×1000; `homey app validate --level publish` musí projít.
+- **Commit:** `fix(assets): provide high-resolution xlarge app and driver images`
 
 #### A2 · Sjednocení verzí — nálezy T2, N4
 
@@ -142,7 +157,9 @@ Pořadí fází: **A → B → C → D → E → F**. Uvnitř fáze jdi po pořa
   pro propsání do lockfile (root verze je dnes `1.0.2`); (3) nový test: verze v
   `package.json` === `.homeycompose/app.json` === `package-lock.json` root
   === `packages[""]`.
-- **Nesmíš:** měnit verze závislostí v lockfile.
+- **Nesmíš:** měnit verze závislostí v lockfile. Po `npm install --package-lock-only`
+  vždy zkontroluj diff; pokud se změnilo cokoli mimo root metadata verze, změnu
+  závislostí vrať a uprav pouze příslušná root version pole.
 - **Commit:** `chore: align version across package.json, lockfile and homey manifest`
 
 #### A3 · Odstranit nepoužité závislosti — nález N5
@@ -201,35 +218,38 @@ Pořadí fází: **A → B → C → D → E → F**. Uvnitř fáze jdi po pořa
   `List/Apps.ts` (🔒R1), `isExtended` (D4 – používá ho `core.test.js`),
   `toAwtrixNgRtttlPayload`, `fromAwtrixNgHomeyPushedAppName`, `getVersion`,
   `getCapabilities` (D10–D12 – dokumentovaný API kontrakt, viz `claude.md` sekce 9),
-  `refreshAvailability` (waypoint pro source-parsing test, řeší se ve F4).
-- **Ověření:** rituál; počet testů se nesmí změnit (206).
+  `refreshAvailability` (waypoint pro source-parsing test; následný backlog v
+  `docs/plan-after.md`).
+- **Ověření:** rituál; počet testů musí být stejný jako bezprostřední baseline A7.
 - **Commit:** `refactor: remove verified dead code (no behavior change)`
 
 #### A8 · Ochranné testy manifestu — nálezy N8 + assety
 
 - **Soubory:** nové `test/manifest.test.js`
-- **Kroky:** tři testy nad `app.json`:
+- **Kroky:** dva testy nad `app.json`:
   1. každá lokální cesta v `images`/`icon` polích existuje na disku,
   2. každé flow action ID má runtime registraci – registrovaná ID zjisti regexem
      `getActionCard\('([^']+)'\)` nad `app.ts` + `drivers/*/driver.ts`;
-     povolený seznam výjimek `manifestOnly = ['applicationIcon']` s komentářem
-     odkazujícím na R1,
-  3. verze test z A2 sem případně přesuň (jeden soubor pro manifest invarianty).
+     dočasný povolený seznam výjimek `manifestOnly = ['applicationIcon']` s komentářem,
+     že C6 doplní kompatibilní runtime registraci a výjimku odstraní.
+- **Neduplikuj:** version-consistency test z A2 ponech v jeho vlastním souboru.
 - **Pozn.:** test (1) MUSÍ po A1 procházet; pokud A1 ještě neproběhl, dej chybějící
   xlarge do dočasného allowlistu s TODO komentářem a po A1 allowlist odstraň.
 - **Commit:** `test: guard manifest assets, versions and flow card registrations`
 
 #### A9 · Drobné opravy z třetího průchodu — `claude-additional-risks.md` (drobné poznámky)
 
-- **Soubory:** `drivers/awtrixlight/driver.ts`, `lib/awtrix3/Normalizer.ts`
+- **Soubory:** `drivers/awtrixlight/driver.ts`, `lib/awtrix3/Normalizer.ts`,
+  `test/core.test.js`
 - **Kroky:**
   1. V `onPair` přesuň `getDiscoveryResults()` dovnitř `list_devices` handleru
      (dnes se snímkuje jednou při otevření session).
-  2. `indicatorNumber`: pokud `!isNumeric(id)`, vrať `1` (default) místo `NaN`
-     – přidej unit test do `core.test.js`.
+  2. `indicatorNumber`: nečíselné ID ani číslo mimo 1–3 nikdy nemapuj na skutečný
+     indikátor. Vyhoď `RangeError` ještě před HTTP requestem; přidej unit test do
+     `core.test.js` ověřující chybu a nulový počet requestů.
   3. V pairing datech změň `settings: { user: null, pass: null }` na `{ user: '', pass: '' }`
      (soulad s typem `text` v settings compose).
-- **Commit:** `fix(awtrix3): pairing discovery snapshot, indicator NaN guard, settings defaults`
+- **Commit:** `fix(awtrix3): pairing discovery snapshot, indicator validation, settings defaults`
 
 #### A10 · F2 – `settingOptions` propouští cizí klíče ⚠️ nejdůležitější balíček fáze A
 
@@ -270,18 +290,25 @@ Pořadí fází: **A → B → C → D → E → F**. Uvnitř fáze jdi po pořa
 
 ### FÁZE C – chybový a async kontrakt AWTRIX 3 ⚠️ mění pozorovatelné chování
 
-> Každý balíček této fáze = položka do release notes. Provádět až po B1.
+> Provádět až po B1. Jednotné release notes pro všechny dokončené změny zapíše až
+> REL1; jednotlivé balíčky neupravují již vydaný záznam `2.0.1`.
 
 #### C1 · Stavový automat availability — nález N2 · rozhodnuto R5 (3 po sobě jdoucí)
 
 - **Soubory:** `lib/awtrix3/Api/Api.ts`, `drivers/awtrixlight/device.ts`, testy z B1
 - **Kroky:**
-  1. V `processResponseCode` case `Status.Ok`: volej `failsReset()` VŽDY
+  1. Udělej `processResponseCode` i `processUnavailability` asynchronní a ve všech
+     `clientGet`/`clientGetDirect`/`clientPost`/`clientUpload`/`clientVerify` call-sites
+     je `await`uj. `setAvailable`/`setUnavailable` nesmí zůstat fire-and-forget.
+  2. V `processResponseCode` case `Status.Ok`: volej `failsReset()` VŽDY
      (i když je zařízení available); early-return až po něm.
-  2. V `processUnavailability`: nejdřív `failsAdd()`, pak `failsExceeded()` test.
-  3. `poll.extend()` + `setUnavailable` volej jen při PŘECHODU do unavailable
-     (ne opakovaně při každé další chybě – jinak se extended interval pořád restartuje).
-  4. Přepiš charakterizační test z B1 na cílovou sémantiku (R5): 3 po sobě jdoucí
+  3. V `processUnavailability`: nejdřív `failsAdd()`, pak `failsExceeded()` test.
+  4. `poll.extend()` + `await setUnavailable` volej jen při PŘECHODU do unavailable.
+     Použij `poll.isExtended()` jako synchronický guard: pokud je false, zavolej
+     `poll.extend()` ještě před prvním `await` a potom awaitni `setUnavailable`.
+     Neřiď přechod výsledkem neawaitovaného `getAvailable()`; souběžné chyby smějí
+     přechod spustit právě jednou.
+  5. Přepiš charakterizační test z B1 na cílovou sémantiku (R5): 3 po sobě jdoucí
      selhání → unavailable; úspěch kdykoli → reset; recovery → available + normální poll.
 - **Commit:** `fix(awtrix3): fail counter counts consecutive failures, threshold means 3`
 
@@ -309,12 +336,15 @@ Pořadí fází: **A → B → C → D → E → F**. Uvnitř fáze jdi po pořa
   1. `onInit`: `await this.initializeDevice()`.
   2. Poll callback: obal celé tělo `try { await … } catch (e) { this.error(e); }` –
      await `refreshCapabilities()` i `tryRediscover()`.
-  3. `refreshAll()`: udělej `async`, `await Promise.all([refreshCapabilities(),
-     refreshSettings(), refreshEffects()])`; v `initializeDevice` ji awaituj PŘED
-     `finally` blokem (fail-critical okno musí pokrýt celý refresh).
+  3. `refreshAll()`: udělej `async`; spusť `refreshCapabilities`, `refreshSettings` a
+     `refreshEffects` souběžně přes `Promise.allSettled`, počkej na VŠECHNY výsledky a
+     při chybě vyhoď `AggregateError` s původními příčinami. V `initializeDevice` ji
+     awaituj PŘED `finally` blokem, aby fail-critical okno pokrylo celý refresh.
   4. `refreshSettings()`: `await this.setSettings(…)`.
-  5. `onAdded`: přepiš na `fs.promises.readdir` + sekvenční `await uploadImage` s
-     `try/catch` per soubor a souhrnným `this.error` (paralelizace až ve F, ne teď).
+  5. `onAdded`: přepiš na `fs.promises.readdir` + sekvenční `await uploadImage`.
+     Selhání bundled ikony je podle R9 nekritické: pokračuj dalšími soubory, u každé
+     chyby uchovej název souboru a původní příčinu a na konci zavolej `this.error`
+     s jedním `AggregateError`. `onAdded` kvůli ikonám neodmítej.
   6. `onDiscoveryAddressChanged`: `await` u `setStoreValue` i `setCapabilityValue`.
 - **Nesmíš:** měnit pořadí `failsCritical(true/false)` vůči testu dostupnosti – jen
   rozšířit rozsah čekání.
@@ -329,36 +359,49 @@ Pořadí fází: **A → B → C → D → E → F**. Uvnitř fáze jdi po pořa
   2. Rozliš výsledek podle `Status` z `clientVerify`: `AuthRequired`/`AuthFailed`
      → `states.invalidCredentials`; `NotFound`/`Error` → nový klíč
      `states.deviceUnreachable` („Device is not reachable, try again later").
-  3. Rediscover button: v úspěšné větvi nahraď `clientVerify()` za `clientVerify(true)`
-     (procesuje response code → setAvailable + failsReset + poll restart).
+  3. Rediscover button: v úspěšné větvi použij `await clientVerify(true)`. Po C1 se tím
+     před návratem listeneru dokončí `setAvailable`, `failsReset` i restart pollu.
 - **Test:** změna `TIM` s offline zařízením → NEPADÁ na credentials; změna `user`
   s offline zařízením → padá na `deviceUnreachable`, ne `invalidCredentials`.
 - **Commit:** `fix(awtrix3): credential check only on credential change, rediscover restores availability`
 
-#### C5 · Sanitizace jmen custom app — nález B5 · rozhodnuto R3(a)
+#### C5 · Sanitizace jmen custom app — nález B5 · rozhodnuto R3
 
-- **Soubory:** `lib/awtrix3/Api/Api.ts`, `.homeychangelog.json`, testy
-- **Kroky:** v `customApp` a `removeCustomApp` použij existující `appName()`
-  z `Normalizer` + `encodeURIComponent`:
-  `custom?name=${encodeURIComponent(appName(name))}`.
-  ŽÁDNÝ dual-delete legacy jmen (rozhodnutí R3a) – místo toho přidej do
-  `.homeychangelog.json` poznámku, že aplikace vytvořené staršími verzemi pod
-  nenormalizovaným jménem je potřeba jednorázově smazat přímo na zařízení.
-- **Test:** jméno `My App & co` → URL obsahuje `homey%3Amyappco`.
+- **Soubory:** `lib/awtrix3/Normalizer.ts`, `lib/awtrix3/Api/Api.ts`, testy
+- **Kroky:**
+  1. Oprav `appName`: nejdřív `toLowerCase()`, potom odstraň znaky mimo `[a-z0-9]`.
+     Pokud po sanitizaci nezůstane nic, vyhoď explicitní `RangeError`; nikdy neposílej
+     samotné `homey:`.
+  2. V `customApp` a `removeCustomApp` použij opravené `appName()` +
+     `encodeURIComponent`: `custom?name=${encodeURIComponent(appName(name))}`.
+  3. ŽÁDNÝ dual-delete a podle R3 ani žádný záznam do `.homeychangelog.json` – staré
+     dočasné aplikace zaniknou restartem zařízení.
+- **Test:** `My App & co` → `homey%3Amyappco`; přidej uppercase, oddělovače a vstup,
+  který po sanitizaci zůstane prázdný; při chybě nesmí proběhnout HTTP request.
 - **Commit:** `fix(awtrix3): sanitize and URL-encode custom app names`
 
-#### C6 · Odstranit `applicationIcon` + `List/Apps.ts` — nálezy B1, D1, A5(audit) · rozhodnuto R1(a)
+#### C6 · Kompatibilita deprecated `applicationIcon` — nálezy B1, D1, A5(audit) · rozhodnuto R1
 
-- **Soubory:** `.homeycompose/flow/actions/applicationIcon.json`,
+- **Soubory:** `app.ts`, `.homeycompose/flow/actions/applicationIcon.json`,
   `lib/awtrix3/List/Apps.ts`, `test/manifest.test.js`,
-  `test/awtrixng-flow-compose.test.js`, `.homeychangelog.json`
+  `test/awtrixng-flow-compose.test.js`, testy shared flow akcí
 - **Kroky:**
-  1. Smaž `.homeycompose/flow/actions/applicationIcon.json`, přegeneruj `app.json`.
-  2. Smaž `lib/awtrix3/List/Apps.ts` (nikde neimportováno, jen no-op stuby).
-  3. Odeber `applicationIcon` z allowlistu `manifestOnly` v `test/manifest.test.js`
-     a z očekávaných titulků v `test/awtrixng-flow-compose.test.js`.
-  4. Zapiš do `.homeychangelog.json`: karta nikdy neměla implementaci a byla odstraněna.
-- **Commit:** `feat(awtrix3)!: remove never-functional applicationIcon card and Apps skeleton`
+  1. Kartu ani její ID NEMAŽ; ponech `deprecated: true` a AWTRIX 3 filter. Neměň typy
+     ani pořadí existujících argumentů, aby se nerozbily uložené Flows.
+  2. V `app.ts` zaregistruj run listener, který převede legacy `name` ze stringu nebo
+     autocomplete objektu (`id`/`name`) na neprázdný string a zavolá současný
+     `runSharedApplicationAction`. Neplatný tvar musí skončit explicitní chybou.
+  3. Pro `icon` použij existující `autocompleteSharedIconAction`. Pro legacy argument
+     `name` zaregistruj jednoduchý autocomplete vracející z neprázdného query položku
+     `{ id: query, name: query }`, aby deprecated karta zůstala technicky funkční i
+     při editaci; nejde o emulaci seznamu aplikací.
+  4. Smaž pouze `lib/awtrix3/List/Apps.ts` (nikde neimportované no-op stuby).
+  5. Odeber `applicationIcon` z `manifestOnly` allowlistu v `test/manifest.test.js`,
+     ale ponech kartu v compose i očekávaných titulcích.
+- **Test:** registrace karty; běh se stringovým i autocomplete názvem volá přesně
+  současnou AWTRIX 3 custom-app cestu; neplatný/blank název rejectne; manifest karta
+  zůstává deprecated a runtime registrovaná.
+- **Commit:** `fix(awtrix3): restore deprecated applicationIcon compatibility`
 
 #### C7 · Hardening HTTP – redirecty a debug log — nálezy F4(awtrix3), N11
 
@@ -368,9 +411,9 @@ Pořadí fází: **A → B → C → D → E → F**. Uvnitř fáze jdi po pořa
   2. `statusFromHttpCode`: `Ok` jen pro `code >= 200 && code < 300` (3xx přestane být úspěch).
   3. Redakce `Authorization` v `#debugRequest`/`#debugResponse` – vlastní ~5řádkový
      helper po vzoru NG (`<redacted>`), ale NEIMPORTUJ nic z `lib/awtrixng`.
-  4. Bonus (S16/S17, stejný soubor): odstraň duplicitní inicializaci `log`;
-    v `abortSignal` ulož timer a zrušit ho po dokončení requestu – nebo `abortSignal`
-    úplně odstraň a nech jen axios `timeout` (vyber jedno, okomentuj).
+  4. Odstraň duplicitní inicializaci `log`. Odstraň vlastní `abortSignal` i jeho timer
+     a ponech jediný timeout mechanismus axios `timeout: Timeout`; tím nevznikají
+     nezrušené timery po dokončených requestech.
 - **Test:** mock 302 → `Status.Error`; debug log obsahuje `<redacted>`, request skutečný token.
 - **Commit:** `fix(awtrix3): no redirects, 2xx-only success, redacted auth in debug logs`
 
@@ -384,23 +427,29 @@ Pořadí fází: **A → B → C → D → E → F**. Uvnitř fáze jdi po pořa
 
 #### D1 · `poll.start()` vždy — nález B3
 
-- **Soubory:** `drivers/awtrixng/device.ts`, testy
+- **Soubory:** `drivers/awtrixng/device.ts`, `lib/awtrixng/Device/Availability.ts`, testy
 - **Kroky:** v `onInit` obal blok `refreshDeviceState` + tři `refresh*FromDevice` do
-  `try/catch/finally`: catch → `this.error(e)` + `setUnavailable(<zpráva se zachovanými
-  NG detaily – použij formatery z Device/Availability.ts>)`; finally → `this.poll.start()`.
-  Úspěšná cesta se nesmí změnit.
+  `try/catch/finally`: catch → `this.error(e)` + `await setUnavailable(<zpráva se
+  zachovanými NG detaily>)`; finally → `this.poll.start()`. Z `Availability.ts` nejprve
+  exportuj malý formatter technických detailů pro `unknown`/`AwtrixNgApiError` a použij
+  jej zde i v existujícím availability mapování. Formatter musí zachovat message,
+  field, code a HTTP status. Úspěšná cesta se nesmí změnit.
 - **Test (harness B1 + fakeAwtrixNgTransport):** `getSettings` hodí `AwtrixNgApiError`
   → zařízení unavailable **a zároveň** `setInterval` byl zavolán.
 - **Commit:** `fix(awtrixng): always start polling even when initial sync fails`
 
 #### D2 · Single-flight poll + error handler — nálezy B4, N12
 
-- **Soubory:** `lib/awtrixng/Device/Poll.ts` a `lib/awtrix3/Poll.ts` – **dvě nezávislé
+- **Soubory:** `lib/awtrixng/Device/Poll.ts`, `lib/awtrix3/Poll.ts`,
+  `drivers/awtrixng/device.ts`, `drivers/awtrixlight/device.ts` – **dvě nezávislé
   úpravy stejného vzoru, žádné sdílení kódu**
 - **Kroky (v každém souboru zvlášť):** interval callback obal:
-  `if (running) return; running = true; Promise.resolve(cb()).catch(onError).finally(() => running = false)`.
-  `onError` přidej do konstruktoru (NG: povinný, musí logovat celou chybu;
-  awtrix3: default `console.log`-kompatibilní, device předá `this.error`).
+  `if (running) return; running = true; Promise.resolve().then(() => cb()).catch(onError).finally(() => running = false)`.
+  Pouhé `Promise.resolve(cb())` nepoužívej – nezachytí synchronní throw z `cb()`.
+  `onError` přidej do konstruktoru jako povinný callback a oba device call-sites mu
+  předají logger zachovávající celý error objekt (NG nesmí chybu převést jen na message).
+  Po zapojení `onError` odstraň z AWTRIX 3 poll callbacku vnější `try/catch` přidaný
+  v C3; jednotlivé operace dál awaituj, ale rejection zpracuje právě Poll.
   Zachovej existující API (`start/stop/isActive`, u awtrix3 i `extend/isExtended`).
 - **Test:** fake timer, callback trvající 2 ticky → druhý tick se přeskočí;
   rejected callback → `onError` zavolán, poll běží dál.
@@ -408,14 +457,21 @@ Pořadí fází: **A → B → C → D → E → F**. Uvnitř fáze jdi po pořa
 
 #### D3 · Icon cache: in-flight guard + TTL — nálezy N13, O8
 
-- **Soubory:** `lib/awtrixng/Services/Icons.ts`, `lib/awtrix3/List/Icons.ts` (odděleně!)
+- **Soubory:** `lib/awtrixng/Services/Icons.ts`, `lib/awtrix3/List/Icons.ts`,
+  `drivers/awtrixlight/device.ts` (implementace driverů zůstávají oddělené)
 - **Kroky:**
   1. NG `all()`: cachuj rozpracovanou Promise (`#inFlight ??= loadIcons().finally(…)`),
      rejection ji musí vyčistit a NESMÍ uložit prázdný seznam jako platný.
-  2. Stejný vzor zvlášť implementuj v awtrix3 `Icons.all()`.
-  3. TTL: sjednoť na 60 s v obou (NG `DefaultCacheTtlMs`, awtrix3 `Timeout`) +
-     komentář proč (autocomplete per-keystroke vs. čerstvost).
-- **Commit:** `fix(icons): in-flight request dedup and unified 60s cache TTL`
+  2. Stejný vzor zvlášť implementuj v awtrix3 `Icons.all()`. Současný `loadIcons()`
+     nesmí catchnout chybu a uložit `[]`; chybu propaguj do in-flight Promise a po
+     rejection umožni další pokus.
+  3. TTL ZÁMĚRNĚ NESJEDNOCUJ (R8): AWTRIX 3 ponech 120 s, protože parsuje náročný HTML
+     provider; NG ponech 5 s, protože má rychlé specializované API. Ke konstantám přidej
+     tento důvod.
+  4. Přidej explicitní `invalidate()` do obou icon services. NG `upload()` ji zavolá
+     po úspěchu; AWTRIX 3 `onAdded` z C3 ji zavolá po každém úspěšném `uploadImage`.
+     Neúspěšný upload nesmí zahodit předchozí validní cache.
+- **Commit:** `fix(icons): deduplicate in-flight loads and preserve driver-specific TTLs`
 
 #### D4 · Auth-required detekce — nález F5
 
@@ -432,43 +488,55 @@ Pořadí fází: **A → B → C → D → E → F**. Uvnitř fáze jdi po pořa
 #### D5 · Guardy tvarů odpovědí — nález F6
 
 - **Soubory:** `drivers/awtrixng/device.ts`, `lib/awtrixng/Services/Settings.ts`,
-  `lib/awtrixng/Services/Apps.ts`, testy
+  `lib/awtrixng/Services/Apps.ts`, nový
+  `lib/awtrixng/Api/InvalidResponseError.ts`, testy
 - **Kroky:**
   1. `refreshAppsFromDevice`/`applyAwtrixNgBuiltinAppSettingsChange` konzumace:
-     pokud `!Array.isArray(apps)` → throw popsané chyby (styl
-     `UnsupportedAwtrixNgPayloadFieldError` nebo nová malá error třída v NG vrstvě),
-     ne `TypeError` z `.find`.
+     pokud `!Array.isArray(apps)` → throw novou `AwtrixNgInvalidResponseError`, která
+     nese `endpoint`, očekávaný tvar a bezpečný popis skutečného typu; nečekej na
+     náhodný `TypeError` z `.find`.
   2. `toAwtrixNgHomeySettingsUpdate`: do `update` nikdy nedávej `undefined` hodnoty
      (filtruj `value !== undefined`).
-  3. `refreshSettingsFromDevice`: pokud odpověď není objekt → throw popsané chyby.
+  3. `refreshSettingsFromDevice`: pokud odpověď není plain objekt → throw stejnou
+     `AwtrixNgInvalidResponseError` s endpointem settings a očekávaným tvarem.
 - **Nesmíš:** zavádět plnou runtime validaci všech polí – jen tyhle minimální guardy.
 - **Commit:** `fix(awtrixng): guard response shapes before consuming settings/apps data`
 
 #### D6 · NG re-discovery po změně IP — nález F1 ⚠️ nejdůležitější balíček fáze D · odblokováno R6-1
 
-- **Soubory:** `drivers/awtrixng/device.ts`, `drivers/awtrixng/driver.compose.json`
-  (jen pokud přidáváš maintenance button), `docs/awtrix-ng/06-user-maintainer-guide.md`, testy
+- **Soubory:** `drivers/awtrixng/device.ts`,
+  `docs/awtrix-ng/06-user-maintainer-guide.md`, testy
 - **Předpoklad SPLNĚN:** R6-1 ověřeno na fyzickém zařízení – `txt.id === uid`
   (`48e7291211d8`, záznam v sekci 3). Párování přes `r.id === this.getData().id`
   je korektní. Součástí balíčku je propsat toto ověření do
   `06-user-maintainer-guide.md`.
 - **Kroky:**
   1. `onDiscoveryResult(r)` → `return r.id === this.getData().id;`
-  2. `onDiscoveryAddressChanged(r)` → nová `baseUrl` přes `toAwtrixNgBaseUrl`
-     (port z discovery výsledku validuj jako v driveru), `setStoreValue('baseUrl', …)`
-     + `address`/`port`, `this.configureClient(newBaseUrl, await this.getSettings())`,
-     `await this.refreshDeviceState({ allowAddCapabilities: false })`.
-  3. `onDiscoveryAvailable(r)` → pokud zařízení není available, proveď totéž co (2).
-  4. Vzor si vezmi z `drivers/awtrixlight/device.ts` (onDiscovery* metody), ale
+  2. Zaveď privátní NG-only helper pro **ověření kandidátního spojení před commitem**:
+     z address/port/auth vytvoří dočasný klient, provede `probeAwtrixNgDevice`, vyžaduje
+     stav `detected` a `result.device.uid === this.getData().id`. Pro `auth-required`
+     a `offline` vyhodí původní error objekt; pro `rejected` použije
+     `AwtrixNgInvalidResponseError` z D5 a pro jiné UID lokální
+     `AwtrixNgDeviceIdentityMismatchError` s `expectedUid` a `actualUid`. Aktivní
+     klient ani store při žádném neúspěchu nezmění.
+  3. `onDiscoveryAddressChanged(r)` → sestav kandidátní `baseUrl` přes
+     `toAwtrixNgBaseUrl` (port validuj jako v driveru), zavolej helper s aktuálními
+     credentials a **až po úspěšném probe** awaitni zápis `baseUrl`/`address`/`port`,
+     synchronizuj Homey settings a přepni klienta. Pak obnov stav zařízení.
+  4. `onDiscoveryAvailable(r)` → pokud zařízení není available, proveď stejnou
+     ověřovací a commit cestu jako (3); nekopíruj odlišnou variantu logiky.
+  5. Vzor lifecycle metod si vezmi z `drivers/awtrixlight/device.ts`, ale
      implementuj nezávisle nad NG klientem – žádný import z awtrix3 vrstvy.
-- **Test:** fake discovery result s novou adresou → store aktualizován, vytvořen nový
-  transport (ověř přes zaznamenanou baseUrl), proběhl probe.
+- **Test:** úspěšný fake discovery result → probe proběhne před zápisem a store/client
+  se přepnou; offline, auth chyba nebo jiné UID → store, settings i aktivní klient
+  zůstanou beze změny a chyba si zachová NG detaily.
 - **Commit:** `feat(awtrixng): re-discover device after IP address change`
 
-#### D7 · Adresa/port do NG device settings — nález F11 · rozhodnuto R4(a)
+#### D7 · Adresa/port do NG device settings — nález F11 · rozhodnuto R4
 
 - **Soubory:** `drivers/awtrixng/driver.settings.compose.json`,
-  `drivers/awtrixng/device.ts`, `lib/awtrixng/Services/Settings.ts`,
+  `drivers/awtrixng/driver.ts`, `drivers/awtrixng/device.ts`,
+  `lib/awtrixng/Services/Settings.ts`,
   `locales/en.json`, testy
 - **Kroky:**
   1. Do settings compose přidej skupinu „Connection" s poli `address` (text)
@@ -476,71 +544,94 @@ Pořadí fází: **A → B → C → D → E → F**. Uvnitř fáze jdi po pořa
   2. `address`/`port` přidej mezi **lokální** settings pole
      (`localSettingsFields` v `Services/Settings.ts` – nesmí se poslat zařízení
      jako device setting).
-  3. V `onSettings`: při změně `address`/`port` sestav novou baseUrl
-     (`toAwtrixNgBaseUrl`), proveď probe novým klientem; úspěch → zapiš store
-     (`baseUrl`, `address`, `port`) + `configureClient`; selhání → vyhoď se
-     zachovanými NG detaily a store neměň.
-  4. `onInit` větev „není nakonfigurováno": místo prostého `setUnavailable` + return
-     zaregistruj alespoň nic-nedělající stav tak, aby `onSettings` fungoval
-     (dnes hází „Device address is not configured yet." dřív, než se k rekonfiguraci
-     dostane – uprav pořadí kontrol).
-  5. Po D6: discovery změna adresy musí settings hodnoty synchronizovat
-     (`setSettings({address, port})`), aby UI nelhalo.
+  3. V každé pairing cestě v `driver.ts` zapiš nalezené/manual `address` a `port` do
+     `settings` vedle credentials; `baseUrl` dál zůstává jen odvozený store údaj.
+  4. V `onSettings` zpracuj změnu `address`/`port`/credentials jednou společnou cestou:
+     z CELÝCH `newSettings` sestav kandidátní spojení a použij dočasný probe helper z
+     D6 včetně kontroly UID. Až po úspěchu přepni store a aktivního klienta. Při chybě
+     nic necommituj a vyhoď původní NG chybu se všemi detaily.
+  5. Pokud stejný submit obsahuje také device settings, lokálně připrav všechny payloady,
+     ověř kandidátní spojení a remote zápisy proveď přes kandidátní klient; aktivní
+     spojení přepni až po jejich úspěchu. D9 určuje sekvenční fail-fast pořadí.
+  6. `onInit` bez adresy nastaví explicitní unavailable důvod, ale dokončí registraci
+     capability listenerů a dovolí `onSettings` opravu. Každá operace vyžadující klienta
+     musí do té doby vyhodit explicitní „connection not configured" chybu; žádný no-op.
+  7. Discovery změna z D6 synchronizuje settings `address`/`port`, aby UI nelhalo.
 - **Pozor:** source-parsing test `awtrixng-device-settings.test.js` – uprav vědomě.
 - **Commit:** `feat(awtrixng): allow fixing device address via settings`
 
-#### D8 · Drobné NG opravy — nálezy F10, F4(NG), F12, B7(část 1)
+#### D8 · Drobné NG opravy — nálezy F10, F4(NG), F12
 
-- **Soubory:** `drivers/awtrixng/flow-actions.ts`, `drivers/awtrixng/device.ts`,
+- **Soubory:** `drivers/awtrixng/flow-actions.ts`,
   `lib/awtrixng/Http/AxiosTransport.ts`, `drivers/awtrixng/driver.ts`
 - **Kroky:**
   1. F10: do `AwtrixNgFlowActionDevice` přidej `hasCapability(id: string): boolean`;
      ve `runAwtrixNgWeatherOverlayAction` zapiš capability jen když existuje.
   2. F4: `maxRedirects: 0` v `AxiosTransport` configu (redirect → `AwtrixNgHttpError`
      se zachovanými detaily).
-  3. F12: `isAwtrixNgMdnsCandidate` volání v driveru – předej skutečná data discovery
-     výsledku, pokud je Homey poskytuje; jinak funkci v Detection.ts zjednoduš na
-     kontrolu `txt.type` a smaž mrtvou name/protocol větev (uprav testy detection).
-  4. B7 část: v `onSettings` před `configureClient` s novými credentials proveď probe
-     s novým klientem; při selhání vyhoď (se zachovanými NG detaily) a klienta neměň.
-- **Commit:** `fix(awtrixng): capability guard, no redirects, honest mdns check, credential verification`
+  3. F12: Homey discovery strategy už podle compose filtruje mDNS name/protocol a
+     runtime výsledek je dál neposkytuje. Zjednoduš `isAwtrixNgMdnsCandidate` na
+     explicitní kontrolu `txt.type === 'awtrixng'`; odstraň mrtvá pole/konstanty
+     `serviceName`, `name`, `protocol` a jejich testy nahraď testy TXT typu.
+- **Neduplikuj:** ověření credentials je již jednotně vyřešené v D7; nevytvářej zde
+  druhou cestu.
+- **Commit:** `fix(awtrixng): capability guard, no redirects and honest mdns check`
 
-#### D9 · B7 část 2 – atomicita settings
+#### D9 · Validace před zápisem + sekvenční fail-fast settings — rozhodnuto R7
 
-- **Soubory:** `drivers/awtrixng/device.ts`, testy (pozor na source-parsing test!)
-- **Kroky:** obě apply operace (`applyAwtrixNgBuiltinAppSettingsChange`,
-  `applyAwtrixNgHomeySettingsChange`) spusť přes `Promise.allSettled`; pokud něco
-  selhalo, vyhoď souhrnnou chybu se VŠEMI detaily (join přes ` | `). Nikdy neignoruj
-  ani jednu z chyb.
-- **Commit:** `fix(awtrixng): apply all settings groups, aggregate failures`
+- **Soubory:** `drivers/awtrixng/device.ts`, `lib/awtrixng/Services/Settings.ts`,
+  `lib/awtrixng/Services/Apps.ts`, testy (pozor na source-parsing test!)
+- **Kroky:**
+  1. Odděl přípravu/validaci payloadů od write requestů. Nejprve validuj všechny
+     hodnoty, které lze ověřit lokálně (včetně obecného settings patch a typů builtin
+     přepínačů). Pokud se mění builtin apps, potom smí proběhnout read-only `getApps`,
+     guard tvaru z D5 a konstrukce order payloadu. **Žádný write request nesmí začít,
+     dokud nejsou obě skupiny připravené.**
+  2. Potom odešli write skupiny ve stávajícím pořadí sekvenčně. Při první API
+     chybě okamžitě skonči a vyhoď PŮVODNÍ error objekt; žádný `join`, nový plain
+     `Error` ani `allSettled`.
+  3. V komentáři a testech pojmenuj kontrakt přesně: endpointy neposkytují transakci,
+     takže při selhání druhého requestu může být první skupina už aplikovaná. Další
+     uložení stav dorovná; neimplementuj nespolehlivý rollback.
+- **Test:** lokálně neplatná druhá skupina → 0 requestů; chyba při `getApps` → 0 write
+  requestů; chyba prvního write endpointu → druhý se nevolá; chyba druhého → původní
+  strukturovaná chyba je identická a první write je jediný možný částečný zápis.
+- **Commit:** `fix(awtrixng): validate settings before sequential fail-fast writes`
 
-#### D10 · Paralelní discovery + sjednocení probe cest — nálezy O5, S7, B5(audit)
+#### D10 · Paralelní discovery + sjednocení konstrukce klienta — nálezy O5, S7, B5(audit)
 
 - **Soubory:** `drivers/awtrixng/driver.ts`, testy
 - **Kroky:**
-  1. Vytvoř privátní `#createProbeClient({ baseUrl, auth? })` (factory) a
-     `#mapProbeResult(result, ctx)` (mapper na pairing response) – použij je ve
+  1. Vytvoř privátní `#createProbeClient({ baseUrl, auth? })` factory a použij ji ve
      všech třech cestách (`probeManualPairingInput`, `probePendingAuthPairTarget`,
-     `probeDiscoveryResult`). Stavy `detected/auth-required/rejected/offline`
-     a serializace chyb se NESMÍ změnit.
+     `probeDiscoveryResult`). Mapování výsledků ponech v každém workflow explicitní,
+     protože mají odlišné výstupní tvary; nevynucuj společný `#mapProbeResult`.
+     Stavy `detected/auth-required/rejected/offline` a serializace chyb se NESMÍ změnit.
   2. `findDiscoveredDevices`: nejdřív synchronní filtr kandidátů, pak probe paralelně
      s limitem 4 souběžných (malý inline semafor, žádná nová závislost);
      výsledky seřaď deterministicky podle `name`.
 - **Nesmíš:** slučovat manual/credentials/discovery workflow do jednoho.
-- **Commit:** `refactor(awtrixng): shared probe factory/mapper, bounded parallel discovery`
+- **Commit:** `refactor(awtrixng): shared probe client factory and bounded parallel discovery`
 
 #### D11 · Validace číselných polí NG payloadů — nález B9
 
 - **Soubory:** `lib/awtrixng/Payload/Transformers.ts`, `test/awtrixng-transformers.test.js`
-- **Kroky:** doplň do `assertPagePayload` (a notification/pushedApp variant) kontroly
-  `assertNonNegativeIntegerField` pro `durationMs`, `repeat`, `textBlinkMs`, `textFadeMs`,
-  `textOffsetX`, `iconOffsetX`, `effectSpeed`, `paletteSpan`, `paletteSpeed`, `lifetimeMs`
-  a `assertBooleanField` pro `hold`, `stack`, `wakeup`, `soundLoop`, `textCenter`,
-  `textInFront`, `chartAutoscale`, `paletteBlend`. Rozsahy ber VÝHRADNĚ z
-  `docs/vendor/awtrixng-http-openapi.yaml`; pole bez doloženého rozsahu nech bez
-  validace s komentářem `// UNKNOWN: range not documented`.
-- **Pozor:** `progress` – OpenAPI pravděpodobně 0–100, ověř. `textOffsetX` může být
-  záporné – ověř v OpenAPI, případně jen `Number.isInteger`.
+- **Kroky:**
+  1. Pro číselná pole `durationMs`, `repeat`, `textBlinkMs`, `textFadeMs`,
+     `textOffsetX`, `iconOffsetX`, `effectSpeed`, `paletteSpan`, `paletteSpeed`,
+     `lifetimeMs` a `progress` ověř minimálně `typeof value === 'number'` a
+     `Number.isFinite(value)`.
+  2. Integer/range validaci přidej JEN tam, kde ji výslovně dokládá
+     `docs/vendor/awtrixng-http-openapi.yaml`. Současné OpenAPI deklaruje u flat
+     pushed-app polí pouze `textOffsetX: integer`; nedovozuj nezápornost offsetů,
+     celočíselnost `effectSpeed` ani rozsah `progress` z AWTRIX 3 či názvu pole.
+  3. `assertBooleanField` použij pro `hold`, `stack`, `wakeup`, `soundLoop`,
+     `textCenter`, `textInFront`, `chartAutoscale`, `paletteBlend`.
+  4. Ke každému poli bez doloženého rozsahu přidej `// UNKNOWN: range not documented`;
+     aplikace má hlídat bezpečný typ, firmware zůstává autoritou pro nezdokumentované
+     doménové rozsahy.
+- **Test:** `NaN`/`Infinity` reject; záporný offset a desetinný `effectSpeed` se nesmí
+  odmítnout bez dokumentovaného důvodu; non-boolean hodnoty boolean polí reject.
 - **Commit:** `feat(awtrixng): validate numeric and boolean payload fields per OpenAPI`
 
 #### D12 · Lokalizace NG uživatelských textů — nález F9
@@ -553,6 +644,18 @@ Pořadí fází: **A → B → C → D → E → F**. Uvnitř fáze jdi po pořa
   `'Add manually'` → `homey.__('pair.manual.title')`. `lib/awtrixng` se NEMĚNÍ
   (nesmí znát Homey i18n) – jen konzumace jeho strukturovaných stavů.
 - **Commit:** `fix(awtrixng): localize user-facing availability and pairing texts`
+
+#### D13 · Bundled NG ikony jsou nekritické — rozhodnuto R9
+
+- **Soubory:** `drivers/awtrixng/device.ts`, testy
+- **Kroky:** `uploadBundledIcons()` ponech sekvenční, ale zpracuj všechny soubory.
+  Každý neúspěch ulož jako `{ fileName, error }` s PŮVODNÍM error objektem. Po dokončení
+  pošli celý strukturovaný seznam do `this.error`; status, code, message a field nesmí
+  být zploštěné ani ztracené. Chyby nevyhazuj z `onAdded`, zařízení kvůli bundled ikonám
+  nenastavuj unavailable. Úspěšné uploady dál invalidují NG icon cache.
+- **Test:** jeden upload selže a další uspěje → oba byly zavolány, `onAdded` resolve,
+  diagnostika obsahuje fileName a identický `AwtrixNgApiError` včetně všech detailů.
+- **Commit:** `fix(awtrixng): report bundled icon failures without blocking pairing`
 
 ---
 
@@ -572,6 +675,8 @@ Pořadí fází: **A → B → C → D → E → F**. Uvnitř fáze jdi po pořa
 
 #### E2 · Seznamy klíčů objektů
 
+- **Soubory:** `lib/awtrixng/Api/Types.ts`, `lib/awtrixng/Payload/Transformers.ts`,
+  `lib/awtrixng/Services/Settings.ts`, testy
 - **Kroky:** pro `pageFields`, `notificationFields`, `pushedAppFields`, `indicatorFields`,
   `scrollFields`, `settingsFields`: vzor
   `const map: Record<keyof AwtrixNgApiPagePayload, true> = {…}` +
@@ -583,29 +688,26 @@ Pořadí fází: **A → B → C → D → E → F**. Uvnitř fáze jdi po pořa
 
 ---
 
-### FÁZE F – zbývající úklid (volitelné, nízká priorita)
+### ZÁVĚREČNÝ RELEASE BALÍČEK
 
-Stručně; detaily v `claude-remediation-plan.md` etapa 5:
+#### REL1 · Připravit release 2.1.0 — rozhodnuto R12
 
-- **F1p:** S1 `isRecord` → `lib/awtrixng/Support/Guards.ts` (`isRecord`, `isPlainObject`);
-  `drivers/shared-flow-actions.ts` si nechá vlastní kopii (nesmí importovat z lib/awtrixng).
-- **F2p:** S14 `clientGet`/`clientGetDirect` sjednotit uvnitř awtrix3 Api; S4/S5/S12
-  drobné duplicity dle plánu.
-- **F3p:** O1 `toText` + O2 `basicOptions` tabulkově – NEJDŘÍV napiš testy fixující
-  současné chování falsy hodnot (`blinkText: 0` se dnes zahazuje, `toColor` invalid → `'0'`),
-  každou odchylku řeš jako vědomé rozhodnutí, ne mlčky.
-- **F4p:** T4 – nahradit source-parsing testy behaviorálními (harness z B1);
-  potom teprve smazat `refreshAvailability` (D-kandidát z A7, odložený).
-- **F5p:** O12 – přesun `DeviceFailer`/`DevicePoll` do `lib/awtrix3/` (otočení směru
-  závislosti; NENÍ to slučování vrstev).
-- **F6p:** O11 `migrate()` deklarativně; O9 (`configureClient` nezahazovat icon cache);
-  O10 (`setCapabilityValues` → `allSettled` s logem); O3 (`BarLineValues` → `number[]`);
-  O4 (test statického `transitionEffect` seznamu proti `getCapabilities()` – zapojení,
-  ne mazání); O6 (bounded parallel upload ikon NG).
-- **F7p:** T1 – upgrade `eslint` + `@typescript-eslint` na verze podporující TS 5.9
-  (samostatná větev, vyplaví nové lint nálezy – řešit odděleně od všeho ostatního).
-- **F8p:** T6 – CI workflow: build, test, `homey app build` + `git diff --exit-code
-  app.json`, `homey app validate --level publish`, `npm audit --omit=dev`.
+- **Předpoklad:** A1–E2 včetně D13 jsou dokončené, checklist je zelený a worktree čistý.
+- **Soubory:** `.homeycompose/app.json`, `package.json`, `package-lock.json`,
+  `.homeychangelog.json`, generovaný `app.json`, version/manifest testy
+- **Kroky:**
+  1. Zvyš verzi v `.homeycompose/app.json`, `package.json` a root metadata
+     `package-lock.json` na `2.1.0`; závislosti ani jejich resolved verze se nesmí změnit.
+  2. Do `.homeychangelog.json` přidej jediný konsolidovaný anglický záznam `2.1.0`,
+     který shrne spolehlivost AWTRIX 3, bezpečně editovatelné NG připojení,
+     rediscovery a zachování API chyb. Podle R3 nezmiňuj změnu normalizace názvů app.
+  3. Přegeneruj `app.json` přes `homey app build`; ruční editace je zakázaná.
+  4. Spusť celý rituál, version-consistency test a
+     `homey app validate --level publish`. Zkontroluj, že Git diff neobsahuje
+     dependency update ani soubor z `docs/plan-after.md` backlogu.
+- **Nesmíš:** publikovat aplikaci, tagovat release ani pushovat bez samostatného
+  výslovného pokynu uživatele.
+- **Commit:** `chore(release): prepare 2.1.0`
 
 ---
 
@@ -617,44 +719,46 @@ Stručně; detaily v `claude-remediation-plan.md` etapa 5:
   `fromAwtrixNgHomeyPushedAppName` – dokumentovaný API kontrakt, nemazat.
 - Duplicitní driver assets (ikony, small/large) – Homey je vyžaduje per-driver.
 - Deprecated karty `customApp`, `notificationIcon`, `notificationJson`,
-  `removeCustomApp` – zůstávají funkční.
-- F7 (Node runtime vs. tsconfig) – **UZAVŘENO bez akce**: Homey 12.9.0+ (naše minimum)
+  `removeCustomApp` a `applicationIcon` – zůstávají funkční.
+- Nález F7 (Node runtime vs. tsconfig) – **UZAVŘENO bez akce**: Homey 12.9.0+ (naše minimum)
   běží na Node 22, `@tsconfig/node22` i `engines >= 22` jsou správně (ověřil bckp, R6-3).
+- Veškerý nízkoprioritní úklid z `docs/plan-after.md` – není součástí tohoto provedení.
 
 ## 6. Checklist průběhu
 
-| Balíček | Stav | Commit | Pozn. |
-|---|---|---|---|
-| A1 | ⬜ | | R2: upscale |
-| A2 | ⬜ | | |
-| A3 | ⬜ | | |
-| A4 | ⬜ | | |
-| A5 | ⬜ | | |
-| A6 | ⬜ | | |
-| A7 | ⬜ | | |
-| A8 | ⬜ | | |
-| A9 | ⬜ | | |
-| A10 | ⬜ | | |
-| B1 | ⬜ | | |
-| C1 | ⬜ | | R5: 3 consecutive |
-| C2 | ⬜ | | |
-| C3 | ⬜ | | |
-| C4 | ⬜ | | |
-| C5 | ⬜ | | R3a: bez dual-delete |
-| C6 | ⬜ | | R1a: smazat obojí |
-| C7 | ⬜ | | |
-| D1 | ⬜ | | |
-| D2 | ⬜ | | |
-| D3 | ⬜ | | |
-| D4 | ⬜ | | |
-| D5 | ⬜ | | |
-| D6 | ⬜ | | R6-1 ověřeno: txt.id == uid |
-| D7 | ⬜ | | R4a: settings |
-| D8 | ⬜ | | |
-| D9 | ⬜ | | |
-| D10 | ⬜ | | |
-| D11 | ⬜ | | |
-| D12 | ⬜ | | |
-| E1 | ⬜ | | |
-| E2 | ⬜ | | |
-| F1p–F8p | ⬜ | | volitelné |
+| Balíček | Stav | Pozn. |
+|---|---|---|
+| A1 | ⬜ | R2: assety jsou připravené, zbývá ověření a samostatný commit |
+| A2 | ⬜ | průběžné sjednocení na vydanou 2.0.1 |
+| A3 | ⬜ | |
+| A4 | ⬜ | |
+| A5 | ⬜ | |
+| A6 | ⬜ | |
+| A7 | ⬜ | |
+| A8 | ⬜ | dočasný allowlist `applicationIcon` odstraní C6 |
+| A9 | ⬜ | neplatný indikátor musí rejectnout |
+| A10 | ⬜ | |
+| B1 | ⬜ | |
+| C1 | ⬜ | R5: 3 consecutive, přechod právě jednou |
+| C2 | ⬜ | |
+| C3 | ⬜ | R9: AWTRIX 3 icon upload nekritický, chyby neztratit |
+| C4 | ⬜ | |
+| C5 | ⬜ | R3: bez dual-delete a bez changelogu |
+| C6 | ⬜ | R1: kartu zachovat a zprovoznit; smazat jen skeleton |
+| C7 | ⬜ | |
+| D1 | ⬜ | |
+| D2 | ⬜ | |
+| D3 | ⬜ | R8: TTL 120 s AW3 / 5 s NG |
+| D4 | ⬜ | |
+| D5 | ⬜ | |
+| D6 | ⬜ | R6-1: txt.id == uid; probe před commitem |
+| D7 | ⬜ | R4: address/port/auth, pairing + settings |
+| D8 | ⬜ | credential verification už řeší D7 |
+| D9 | ⬜ | R7: validate-all, potom sequential fail-fast |
+| D10 | ⬜ | sdílet factory, ne output mapper |
+| D11 | ⬜ | žádné nedokumentované rozsahy |
+| D12 | ⬜ | |
+| D13 | ⬜ | R9: NG icon upload nekritický, strukturovaná diagnostika |
+| E1 | ⬜ | |
+| E2 | ⬜ | |
+| REL1 | ⬜ | R12: 2.1.0, bez publikace |
