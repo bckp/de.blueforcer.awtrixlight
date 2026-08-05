@@ -753,7 +753,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | D3 | ✅ | R8: oddělené single-flight cache; TTL 120 s AW3 / 5 s NG; úspěšný upload invaliduje cache |
 | D4 | ✅ | každý HTTP 401 znamená auth-required bez závislosti na envelope; 403 zůstává offline dle R6-2 |
 | D5 | ✅ | guardy settings/apps tvarů, strukturovaná chyba a filtrování undefined hodnot |
-| D6 | ⬜ | R6-1: txt.id == uid; probe před commitem |
+| D6 | ✅ | R6-1 zdokumentováno; discovery probe a kontrola UID proběhnou před přepnutím spojení |
 | D7 | ⬜ | R4: address/port/auth, pairing + settings |
 | D8 | ⬜ | credential verification už řeší D7 |
 | D9 | ⬜ | R7: validate-all, potom sequential fail-fast |

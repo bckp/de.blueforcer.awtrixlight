@@ -33,6 +33,17 @@ Credentials se ukládají lokálně do device settings:
 
 Neposílají se do AWTRIX NG API jako device settings.
 
+### Ověřený vztah discovery ID a device UID
+
+Na fyzickém AWTRIX NG zařízení bylo 5. srpna 2026 ověřeno, že mDNS TXT hodnota
+`id` služby `_awtrixng._tcp` je shodná s `uid` vráceným z `GET /api/v1/device`.
+Konkrétní ověřená hodnota byla v obou odpovědích `48e7291211d8`.
+
+Driver proto přiřazuje Homey discovery výsledky k uloženému zařízení podle tohoto ID.
+Před přepnutím na nově objevenou adresu navíc vytvoří dočasného klienta, provede
+read-only probe a znovu vyžaduje shodu vráceného `uid`. Adresa, port ani aktivní klient
+se při neúspěšném probe, chybě autentizace nebo jiném UID nepřepnou.
+
 ## Podporované uživatelské funkce AWTRIX NG
 
 Aktuální NG driver podporuje samostatné NG flow karty pro:

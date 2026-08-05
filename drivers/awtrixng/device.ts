@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { Device } from 'homey';
+import { Device, DiscoveryResultMDNSSD } from 'homey';
 import path from 'path';
 import AxiosAwtrixNgHttpTransport from '../../lib/awtrixng/Http/AxiosTransport';
 import AwtrixNgClient from '../../lib/awtrixng/Api/Client';
@@ -50,6 +50,35 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
 
   return prototype === Object.prototype || prototype === null;
 };
+
+const toDiscoveryPort = (value: string | number): number => {
+  const port = Number(value);
+
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new RangeError('AWTRIX NG discovery result requires a valid TCP port.');
+  }
+
+  return port;
+};
+
+interface AwtrixNgDeviceIdentityMismatchError extends Error {
+  readonly protocol: 'awtrix-ng';
+  readonly expectedUid: string;
+  readonly actualUid: string;
+}
+
+const createAwtrixNgDeviceIdentityMismatchError = (
+  expectedUid: string,
+  actualUid: string,
+): AwtrixNgDeviceIdentityMismatchError => Object.assign(
+  new Error(`AWTRIX NG device identity mismatch: expected ${expectedUid}, received ${actualUid}.`),
+  {
+    name: 'AwtrixNgDeviceIdentityMismatchError',
+    protocol: 'awtrix-ng' as const,
+    expectedUid,
+    actualUid,
+  },
+);
 
 interface AwtrixNgDeviceStore {
   baseUrl?: string;
@@ -121,6 +150,22 @@ class AwtrixNgDevice extends Device {
   async onDeleted(): Promise<void> {
     this.log('AwtrixNgDevice has been deleted');
     this.poll?.stop();
+  }
+
+  onDiscoveryResult(discoveryResult: DiscoveryResultMDNSSD): boolean {
+    return discoveryResult.id === this.getData().id;
+  }
+
+  async onDiscoveryAddressChanged(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {
+    return this.commitDiscoveredConnection(discoveryResult);
+  }
+
+  async onDiscoveryAvailable(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {
+    if (this.getAvailable()) {
+      return false;
+    }
+
+    return this.commitDiscoveredConnection(discoveryResult);
   }
 
   async onSettings({ oldSettings, newSettings, changedKeys }: AwtrixNgDeviceSettingsChange): Promise<void> {
@@ -263,12 +308,20 @@ class AwtrixNgDevice extends Device {
   }
 
   private configureClient(baseUrl: string, settings: AwtrixNgDeviceSettings): void {
-    this.client = new AwtrixNgClient(new AxiosAwtrixNgHttpTransport({
+    this.activateClient(this.createClient(baseUrl, this.getAuthFromSettingsSnapshot(settings)));
+  }
+
+  private createClient(baseUrl: string, auth?: AwtrixNgBasicAuthOptions): AwtrixNgClient {
+    return new AwtrixNgClient(new AxiosAwtrixNgHttpTransport({
       baseUrl,
-      auth: this.getAuthFromSettingsSnapshot(settings),
+      auth,
       debug: process.env.DEBUG === '1',
       log: this.log.bind(this),
     }));
+  }
+
+  private activateClient(client: AwtrixNgClient): void {
+    this.client = client;
     this.icons = new AwtrixNgIcons(this.client, {
       emptyIcon: {
         name: this.homey.__('list.icons.empty.name'),
@@ -277,6 +330,60 @@ class AwtrixNgDevice extends Device {
       },
       timerHost: this.homey,
     });
+  }
+
+  private async verifyCandidateConnection(
+    baseUrl: string,
+    auth?: AwtrixNgBasicAuthOptions,
+  ): Promise<AwtrixNgClient> {
+    const client = this.createClient(baseUrl, auth);
+    const result = await probeAwtrixNgDevice(client);
+
+    if (result.status === 'auth-required' || result.status === 'offline') {
+      throw result.error;
+    }
+
+    if (result.status === 'rejected') {
+      throw new AwtrixNgInvalidResponseError({
+        endpoint: '/api/v1/device',
+        expectedShape: 'a valid AWTRIX NG device state object',
+        actualValue: result.rawResponse,
+      });
+    }
+
+    const expectedUid = this.getData().id as string;
+
+    if (result.device.uid !== expectedUid) {
+      throw createAwtrixNgDeviceIdentityMismatchError(expectedUid, result.device.uid);
+    }
+
+    return client;
+  }
+
+  private async commitDiscoveredConnection(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {
+    const port = toDiscoveryPort(discoveryResult.port);
+    const baseUrl = toAwtrixNgBaseUrl({
+      address: discoveryResult.address,
+      port,
+    });
+    const settings = await this.getSettings() as AwtrixNgDeviceSettings;
+    const client = await this.verifyCandidateConnection(
+      baseUrl,
+      this.getAuthFromSettingsSnapshot(settings),
+    );
+
+    await this.setStoreValue('baseUrl', baseUrl);
+    await this.setStoreValue('address', discoveryResult.address);
+    await this.setStoreValue('port', port);
+    await this.setSettings({
+      address: discoveryResult.address,
+      port,
+    });
+    this.activateClient(client);
+
+    const result = await this.refreshDeviceState({ allowAddCapabilities: false });
+
+    return result?.status === 'detected';
   }
 
   private async uploadBundledIcons(): Promise<void> {
