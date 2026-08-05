@@ -7,6 +7,10 @@ const Poll = require('../.homeybuild/lib/awtrix3/Poll').default;
 const Api = require('../.homeybuild/lib/awtrix3/Api/Api').default;
 const { statusFromHttpCode } = require('../.homeybuild/lib/awtrix3/Api/Client');
 const { Status } = require('../.homeybuild/lib/awtrix3/Api/Response');
+const {
+  createFakeAwtrix3Device,
+  fakeAwtrix3Client,
+} = require('./helpers/fake-homey');
 
 test('isNumeric accepts complete finite values only', () => {
   for (const value of [0, -3, 1.5, '0', '-3', '1.5']) {
@@ -73,6 +77,31 @@ test('AWTRIX 3 indicator rejects invalid ids before HTTP', async () => {
   }
 
   assert.equal(requestCount, 0);
+});
+
+test('AWTRIX 3 app names lowercase before removing separators and reject empty results', () => {
+  assert.equal(normalizer.appName('My App & co'), 'homey:myappco');
+  assert.equal(normalizer.appName('UPPER_case'), 'homey:uppercase');
+  assert.equal(normalizer.appName('a-b_c.d'), 'homey:abcd');
+  assert.throws(() => normalizer.appName('--- ___ ...'), RangeError);
+});
+
+test('AWTRIX 3 custom app API uses encoded normalized names and rejects before HTTP', async () => {
+  const client = fakeAwtrix3Client();
+  const api = new Api(client, createFakeAwtrix3Device());
+
+  await api.customApp('My App & co', { text: 'hello' });
+  await api.removeCustomApp('My App & co');
+
+  assert.deepEqual(client.calls.map((call) => call.endpoint), [
+    'custom?name=homey%3Amyappco',
+    'custom?name=homey%3Amyappco',
+  ]);
+
+  const requestCount = client.calls.length;
+  await assert.rejects(() => api.customApp('---', {}), RangeError);
+  await assert.rejects(() => api.removeCustomApp('___'), RangeError);
+  assert.equal(client.calls.length, requestCount);
 });
 
 test('settings retain transition effect zero', () => {

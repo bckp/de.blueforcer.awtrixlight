@@ -7,6 +7,7 @@ import {
   notifyOptions,
   powerOptions,
   settingOptions,
+  appName,
   appOptions,
 } from '../Normalizer';
 import { Status } from './Response';
@@ -75,11 +76,11 @@ export default class Api {
   }
 
   async customApp(name: string, options: any): Promise<void> {
-    await this.#requireOk(this.clientPost(`custom?name=homey:${name}`, appOptions(options, this.device.getStoreValue('effects') || [])));
+    await this.#requireOk(this.clientPost(`custom?name=${encodeURIComponent(appName(name))}`, appOptions(options, this.device.getStoreValue('effects') || [])));
   }
 
   async removeCustomApp(name: string): Promise<void> {
-    await this.#requireOk(this.clientPost(`custom?name=homey:${name}`, {}));
+    await this.#requireOk(this.clientPost(`custom?name=${encodeURIComponent(appName(name))}`, {}));
   }
 
   async setSettings(options: any): Promise<void> {

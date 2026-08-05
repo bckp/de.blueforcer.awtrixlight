@@ -130,7 +130,12 @@ export const indicatorNumber = (id: number | string): number => {
 };
 
 export const appName = (id: string): string => {
-  return `${appPrefix}${id.replace(/[^a-z0-9]+/g, '').toLowerCase()}`;
+  const normalized = id.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  if (normalized.length === 0) {
+    throw new RangeError('App name must contain at least one alphanumeric character');
+  }
+
+  return `${appPrefix}${normalized}`;
 };
 
 export const powerOptions = (options: Record<'power', any>): PowerOptions => {
