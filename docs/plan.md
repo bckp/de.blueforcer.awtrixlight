@@ -751,7 +751,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | D1 | ✅ | polling startuje ve finally; init chyby zachovávají NG message, field, code i HTTP status |
 | D2 | ✅ | oba Poll objekty jsou single-flight; rejection se loguje jako původní error a další tick pokračuje |
 | D3 | ✅ | R8: oddělené single-flight cache; TTL 120 s AW3 / 5 s NG; úspěšný upload invaliduje cache |
-| D4 | ⬜ | |
+| D4 | ✅ | každý HTTP 401 znamená auth-required bez závislosti na envelope; 403 zůstává offline dle R6-2 |
 | D5 | ⬜ | |
 | D6 | ⬜ | R6-1: txt.id == uid; probe před commitem |
 | D7 | ⬜ | R4: address/port/auth, pairing + settings |

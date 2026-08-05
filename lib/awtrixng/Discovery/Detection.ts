@@ -91,7 +91,9 @@ const hasValidOptionalSensorFields = (value: Record<string, unknown>): boolean =
   && hasOptionalNumberField(value, 'pressureHpa')
 );
 
-const isUnauthorizedError = (error: AwtrixNgApiError): boolean => error.httpStatus === 401 && error.code === 'unauthorized';
+// R6-2: physical-device verification returned 401 for both missing and invalid credentials.
+// HTTP 403 is not an authentication signal and remains classified as offline.
+const isUnauthorizedError = (error: AwtrixNgApiError): boolean => error.httpStatus === 401;
 
 const normalizeAddressForUrl = (address: string): string => {
   if (address.includes(':') && !address.startsWith('[') && !address.endsWith(']')) {
