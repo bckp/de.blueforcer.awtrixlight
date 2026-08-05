@@ -107,7 +107,7 @@ export default class Api {
   async clientGet<T>(endpoint: string): Promise<T|null> {
     try {
       const response = await this.client.get(endpoint);
-      this.processResponseCode(response.status, response.message);
+      await this.processResponseCode(response.status, response.message);
 
       return response.data ?? null;
     } catch (error: any) {
@@ -119,7 +119,7 @@ export default class Api {
   async clientGetDirect(endpoint: string): Promise<any> {
     try {
       const response = await this.client.getDirect(endpoint);
-      this.processResponseCode(response.status, response.message);
+      await this.processResponseCode(response.status, response.message);
 
       return response.data ?? null;
     } catch (error: any) {
@@ -130,14 +130,14 @@ export default class Api {
 
   async clientPost(endpoint: string, options?: any, headers?: RequestHeaders): Promise<boolean> {
     const response = await this.client.post(endpoint, options, headers);
-    this.processResponseCode(response.status, response.message);
+    await this.processResponseCode(response.status, response.message);
 
     return response?.status === Status.Ok;
   }
 
   async clientUpload(endpoint: string, data: FormData): Promise<boolean> {
     const response = await this.client.upload(endpoint, data);
-    this.processResponseCode(response.status, response.message);
+    await this.processResponseCode(response.status, response.message);
 
     return response?.status === Status.Ok;
   }
@@ -149,44 +149,45 @@ export default class Api {
     const response = await this.client.get('stats');
 
     if (verify) {
-      this.processResponseCode(response.status, response.message);
+      await this.processResponseCode(response.status, response.message);
     }
 
     return response.status;
   }
 
-  processResponseCode(status: Status, message?: string): void {
+  async processResponseCode(status: Status, message?: string): Promise<void> {
     switch (status) {
       case Status.Ok:
+        this.device.failsReset();
         if (this.device.getAvailable()) {
           return;
         }
 
-        this.device.setAvailable().catch((error: any) => this.device.log(error.message ?? error));
-        this.device.failsReset();
+        await this.device.setAvailable();
         this.device.poll.start();
         return;
 
       case Status.AuthRequired:
-        this.processUnavailability(this.device.homey.__('api.error.loginRequired'));
+        await this.processUnavailability(this.device.homey.__('api.error.loginRequired'));
         return;
 
       case Status.AuthFailed:
-        this.processUnavailability(this.device.homey.__('api.error.loginFailed'));
+        await this.processUnavailability(this.device.homey.__('api.error.loginFailed'));
         return;
 
       default:
-        this.processUnavailability(message ?? this.device.homey.__('api.error.unknownError'));
+        await this.processUnavailability(message ?? this.device.homey.__('api.error.unknownError'));
     }
   }
 
-  processUnavailability(message: string): void {
-    if (this.device.failsExceeded()) {
-      this.device.setUnavailable(message).catch((error: any) => this.device.log(error));
-      this.device.poll.extend();
-    } else {
-      this.device.failsAdd();
+  async processUnavailability(message: string): Promise<void> {
+    this.device.failsAdd();
+    if (!this.device.failsExceeded() || this.device.poll.isExtended()) {
+      return;
     }
+
+    this.device.poll.extend();
+    await this.device.setUnavailable(message);
   }
 
 }
