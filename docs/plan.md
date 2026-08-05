@@ -737,7 +737,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | A5 | ✅ | README popisuje sdílené karty a NG-only `applicationRaw`/`weatherOverlay` |
 | A6 | ✅ | `.homeyignore` vylučuje dokumentaci, testy a projektové meta soubory; `.homeycompose/` zůstává dostupná buildu |
 | A7 | ✅ | odstraněno osm ověřených mrtvých bloků; pairing test aktualizován dle schváleného rozsahu |
-| A8 | ⬜ | dočasný allowlist `applicationIcon` odstraní C6 |
+| A8 | ✅ | manifest assety i runtime registrace kryté testy; dočasný allowlist `applicationIcon` zůstává do C6 |
 | A9 | ⬜ | neplatný indikátor musí rejectnout |
 | A10 | ⬜ | |
 | B1 | ⬜ | |
