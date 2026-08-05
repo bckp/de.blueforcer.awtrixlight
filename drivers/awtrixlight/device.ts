@@ -88,7 +88,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     this.api.setDebug(process.env.DEBUG === '1');
 
     // Test device if possible
-    if (!await this.testDevice()) {
+    if (await this.testDevice() !== Status.Ok) {
       this.log('Device not available, trying to rediscover');
       this.setUnavailable(this.homey.__('states.unavailable')).catch(this.error);
       this.tryRediscover();
@@ -117,7 +117,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       this.log('Rediscover button pressed');
       try {
         // Device is OK, no need to rediscover
-        if (await this.api.clientVerify() === Status.Ok) {
+        if (await this.api.clientVerify(true) === Status.Ok) {
           return;
         }
 
@@ -177,13 +177,19 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     this.log('AwtrixLightDevice settings where changed', oldSettings, newSettings, changedKeys);
 
     // If user or pass changed, update credentials
-    if (typeof newSettings.user === 'string' && typeof newSettings.pass === 'string') {
-      if (!await this.testDevice(newSettings.user, newSettings.pass)) {
+    const credentialsChanged = changedKeys.includes('user') || changedKeys.includes('pass');
+    if (credentialsChanged && typeof newSettings.user === 'string' && typeof newSettings.pass === 'string') {
+      const status = await this.testDevice(newSettings.user, newSettings.pass);
+      if (status !== Status.Ok) {
         this.api.setCredentials(
           typeof oldSettings.user === 'string' ? oldSettings.user : '',
           typeof oldSettings.pass === 'string' ? oldSettings.pass : '',
         );
-        throw new Error(this.homey.__('states.invalidCredentials'));
+
+        const messageKey = status === Status.AuthRequired || status === Status.AuthFailed
+          ? 'states.invalidCredentials'
+          : 'states.deviceUnreachable';
+        throw new Error(this.homey.__(messageKey));
       }
 
       // Enable pooling if not
@@ -229,7 +235,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
 
     // Verify
     try {
-      return await this.testDevice();
+      return await this.testDevice() === Status.Ok;
     } catch (error) {
       this.error(error);
     }
@@ -342,13 +348,13 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     this.registerCapabilityListener('button_prev', async () => this.cmdAppPrev());
   }
 
-  async testDevice(user?: string, pass?: string) {
-    const status = await this.api.clientVerify(true, user, pass).catch(this.error);
-    if (status === Status.Ok) {
-      return true;
+  async testDevice(user?: string, pass?: string): Promise<Status> {
+    try {
+      return await this.api.clientVerify(true, user, pass);
+    } catch (error) {
+      this.error(error);
+      return Status.Error;
     }
-
-    return false;
   }
 
   async migrate() {

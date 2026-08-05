@@ -744,7 +744,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | C1 | ✅ | R5: 3 consecutive; úspěch resetuje; unavailable/recovery jsou awaitované a přechod nastane právě jednou |
 | C2 | ✅ | AWTRIX 3 write metody odmítají neúspěch; flow chyby propagují a onSettings awaituje setSettings |
 | C3 | ✅ | lifecycle operace jsou awaitované; refresh chyby agregované; upload ikon sekvenční a nekritický |
-| C4 | ⬜ | |
+| C4 | ✅ | credentials se ověřují jen při změně; auth a offline chyby jsou rozlišené; rediscover dokončí recovery |
 | C5 | ⬜ | R3: bez dual-delete a bez changelogu |
 | C6 | ⬜ | R1: kartu zachovat a zprovoznit; smazat jen skeleton |
 | C7 | ⬜ | |

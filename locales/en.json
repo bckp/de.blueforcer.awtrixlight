@@ -3,6 +3,7 @@
     "loading": "initializing...",
     "unavailable": "no response from device",
     "invalidCredentials": "Username or password is not valid",
+    "deviceUnreachable": "Device is not reachable, try again later",
     "unknownError": "Unknown error"
   },
   "list": {

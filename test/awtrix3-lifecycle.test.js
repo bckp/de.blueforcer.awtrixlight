@@ -226,7 +226,7 @@ test('AWTRIX 3 initialization keeps fail-critical mode until refreshAll settles'
       return {};
     },
     async testDevice() {
-      return true;
+      return Status.Ok;
     },
     setAvailable: asyncNoop,
     poll: {
@@ -298,6 +298,165 @@ test('AWTRIX 3 refreshSettings waits for Homey settings persistence', async () =
   assert.equal(settled, true);
 });
 
+test('AWTRIX 3 non-credential settings do not probe credentials while offline', async () => {
+  const calls = {
+    verify: 0,
+    settings: [],
+    reboot: 0,
+  };
+  const context = {
+    homey: createFakeHomey(),
+    log() {},
+    async testDevice() {
+      calls.verify += 1;
+      return Status.Error;
+    },
+    api: {
+      async setSettings(settings) {
+        calls.settings.push(settings);
+      },
+      async reboot() {
+        calls.reboot += 1;
+      },
+    },
+    poll: {
+      isActive() {
+        return false;
+      },
+      start() {},
+    },
+    error(error) {
+      throw error;
+    },
+  };
+  const newSettings = {
+    user: 'admin',
+    pass: 'secret',
+    TIM: true,
+  };
+
+  await AwtrixLightDevice.prototype.onSettings.call(context, {
+    oldSettings: { ...newSettings, TIM: false },
+    newSettings,
+    changedKeys: ['TIM'],
+  });
+
+  assert.equal(calls.verify, 0);
+  assert.deepEqual(calls.settings, [newSettings]);
+  assert.equal(calls.reboot, 1);
+});
+
+test('AWTRIX 3 credential settings distinguish unreachable device from invalid credentials', async () => {
+  const oldSettings = { user: 'old-user', pass: 'old-pass' };
+  const newSettings = { user: 'new-user', pass: 'new-pass' };
+
+  for (const { status, messageKey } of [
+    { status: Status.Error, messageKey: 'states.deviceUnreachable' },
+    { status: Status.NotFound, messageKey: 'states.deviceUnreachable' },
+    { status: Status.AuthRequired, messageKey: 'states.invalidCredentials' },
+    { status: Status.AuthFailed, messageKey: 'states.invalidCredentials' },
+  ]) {
+    const credentialRestores = [];
+    let settingsWrites = 0;
+    const context = {
+      homey: createFakeHomey(),
+      log() {},
+      async testDevice(user, pass) {
+        assert.equal(user, newSettings.user);
+        assert.equal(pass, newSettings.pass);
+        return status;
+      },
+      api: {
+        setCredentials(user, pass) {
+          credentialRestores.push({ user, pass });
+        },
+        async setSettings() {
+          settingsWrites += 1;
+        },
+      },
+      poll: {
+        isActive() {
+          return false;
+        },
+        start() {},
+      },
+    };
+
+    await assert.rejects(
+      () => AwtrixLightDevice.prototype.onSettings.call(context, {
+        oldSettings,
+        newSettings,
+        changedKeys: ['user'],
+      }),
+      { message: messageKey },
+    );
+    assert.deepEqual(credentialRestores, [oldSettings]);
+    assert.equal(settingsWrites, 0);
+  }
+});
+
+test('AWTRIX 3 rediscover button awaits verified availability recovery', async () => {
+  const recovery = deferred();
+  const device = createFakeAwtrix3Device({ available: false });
+  device.failCount = 2;
+  device.poll.extend();
+  device.setAvailable = async () => {
+    device.calls.setAvailable.push(undefined);
+    await recovery.promise;
+    device.available = true;
+  };
+  const client = fakeAwtrix3Client({ status: Status.Ok });
+  const api = new Api(client, device);
+  let rediscoverListener;
+  const context = {
+    api,
+    async getSettings() {
+      return {};
+    },
+    async testDevice() {
+      return Status.Ok;
+    },
+    setAvailable: asyncNoop,
+    poll: {
+      stop() {},
+      start() {},
+    },
+    failsReset() {},
+    failsCritical() {},
+    getAvailable() {
+      return false;
+    },
+    log() {},
+    connected() {},
+    registerCapabilityListener(capabilityId, listener) {
+      if (capabilityId === 'button.rediscover') {
+        rediscoverListener = listener;
+      }
+    },
+  };
+
+  await AwtrixLightDevice.prototype.initializeDevice.call(context);
+  assert.equal(typeof rediscoverListener, 'function');
+
+  let settled = false;
+  const operation = rediscoverListener();
+  operation.then(() => {
+    settled = true;
+  });
+  await flushTasks();
+
+  assert.equal(settled, false);
+  assert.equal(device.calls.setAvailable.length, 1);
+  assert.equal(device.calls.pollStart.length, 0);
+
+  recovery.resolve();
+  await operation;
+  assert.equal(device.failCount, 0);
+  assert.equal(device.getAvailable(), true);
+  assert.equal(device.calls.pollStart.length, 1);
+  assert.equal(device.poll.isExtended(), false);
+});
+
 test('AWTRIX 3 onAdded uploads all bundled icons sequentially and contains failures', async () => {
   const iconDirectory = path.join(__dirname, '../.homeybuild/drivers/awtrixlight/assets/images/icons');
   const expectedFiles = await fs.readdir(iconDirectory);
@@ -366,7 +525,7 @@ test('AWTRIX 3 discovery address change persists state before verification', asy
     },
     async testDevice() {
       events.push('verify');
-      return true;
+      return Status.Ok;
     },
     error(error) {
       throw error;
