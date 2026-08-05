@@ -35,49 +35,55 @@ export default class Api {
     this.client.setDebug(debug);
   }
 
+  async #requireOk(promise: Promise<boolean>): Promise<void> {
+    if (!await promise) {
+      throw new Error(this.device.homey.__('api.error.commandFailed'));
+    }
+  }
+
   /** bckp ******* Commands ******* */
-  async dismiss() {
-    return this.clientPost('notify/dismiss');
+  async dismiss(): Promise<void> {
+    await this.#requireOk(this.clientPost('notify/dismiss'));
   }
 
-  async rtttl(melody: string): Promise<boolean> {
-    return this.clientPost('rtttl', melody, { 'Content-Type': 'text/plain' });
+  async rtttl(melody: string): Promise<void> {
+    await this.#requireOk(this.clientPost('rtttl', melody, { 'Content-Type': 'text/plain' }));
   }
 
-  async power(power: boolean): Promise<boolean> {
-    return this.clientPost('power', powerOptions({ power }));
+  async power(power: boolean): Promise<void> {
+    await this.#requireOk(this.clientPost('power', powerOptions({ power })));
   }
 
-  async indicator(id: number | string, options: any): Promise<boolean> {
-    return this.clientPost(`indicator${indicatorNumber(id)}`, indicatorOptions(options));
+  async indicator(id: number | string, options: any): Promise<void> {
+    await this.#requireOk(this.clientPost(`indicator${indicatorNumber(id)}`, indicatorOptions(options)));
   }
 
-  async appNext(): Promise<boolean> {
-    return this.clientPost('nextapp');
+  async appNext(): Promise<void> {
+    await this.#requireOk(this.clientPost('nextapp'));
   }
 
-  async appPrev(): Promise<boolean> {
-    return this.clientPost('previousapp');
+  async appPrev(): Promise<void> {
+    await this.#requireOk(this.clientPost('previousapp'));
   }
 
-  async reboot(): Promise<boolean> {
-    return this.clientPost('reboot');
+  async reboot(): Promise<void> {
+    await this.#requireOk(this.clientPost('reboot'));
   }
 
-  async notify(msg: string, options: any): Promise<boolean> {
-    return this.clientPost('notify', notifyOptions({ text: msg, ...options }, this.device.getStoreValue('effects') || []));
+  async notify(msg: string, options: any): Promise<void> {
+    await this.#requireOk(this.clientPost('notify', notifyOptions({ text: msg, ...options }, this.device.getStoreValue('effects') || [])));
   }
 
-  async customApp(name: string, options: any): Promise<boolean> {
-    return this.clientPost(`custom?name=homey:${name}`, appOptions(options, this.device.getStoreValue('effects') || []));
+  async customApp(name: string, options: any): Promise<void> {
+    await this.#requireOk(this.clientPost(`custom?name=homey:${name}`, appOptions(options, this.device.getStoreValue('effects') || [])));
   }
 
-  async removeCustomApp(name: string): Promise<boolean> {
-    return this.clientPost(`custom?name=homey:${name}`, {});
+  async removeCustomApp(name: string): Promise<void> {
+    await this.#requireOk(this.clientPost(`custom?name=homey:${name}`, {}));
   }
 
-  async setSettings(options: any): Promise<boolean> {
-    return this.clientPost('settings', settingOptions(options));
+  async setSettings(options: any): Promise<void> {
+    await this.#requireOk(this.clientPost('settings', settingOptions(options)));
   }
 
   async getSettings(): Promise<SettingOptions|null> {
@@ -92,11 +98,11 @@ export default class Api {
     return this.clientGet('effects');
   }
 
-  async uploadImage(data: any, name: string): Promise<boolean> {
+  async uploadImage(data: any, name: string): Promise<void> {
     const form = new FormData();
     form.append('image', data, { filepath: `/ICONS/${name}` });
 
-    return this.clientUpload('edit', form);
+    await this.#requireOk(this.clientUpload('edit', form));
   }
 
   async getImages(): Promise<AwtrixImage[]> {

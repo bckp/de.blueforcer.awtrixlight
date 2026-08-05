@@ -1,6 +1,8 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
+const Api = require('../.homeybuild/lib/awtrix3/Api/Api').default;
+const { Status } = require('../.homeybuild/lib/awtrix3/Api/Response');
 const {
   runSharedDismissNotificationAction,
   runSharedDisplaySetAction,
@@ -16,6 +18,10 @@ const {
   runSharedStickyNotificationAction,
   runSharedWeatherOverlayAction,
 } = require('../.homeybuild/drivers/shared-flow-actions');
+const {
+  createFakeAwtrix3Device,
+  fakeAwtrix3Client,
+} = require('./helpers/fake-homey');
 
 const ok = { ok: true };
 
@@ -254,6 +260,29 @@ test('shared display flow dispatches to AWTRIX 3 and AWTRIX NG implementations',
 
   assert.deepEqual(awtrix3.calls, [{ method: 'cmdPower', power: true }]);
   assert.deepEqual(awtrixNg.calls, [{ method: 'patchDisplay', patch: { power: false } }]);
+});
+
+test('shared AWTRIX 3 flow propagates failed writes and resolves successful writes', async () => {
+  const client = fakeAwtrix3Client({ status: Status.Error });
+  const api = new Api(client, createFakeAwtrix3Device());
+  const device = {
+    getAwtrixDeviceType() {
+      return 'awtrix3';
+    },
+    async cmdPower(power) {
+      await api.power(power);
+    },
+  };
+
+  await assert.rejects(
+    () => runSharedDisplaySetAction({ device, power: '1' }),
+    /api\.error\.commandFailed/,
+  );
+
+  client.response = { status: Status.Ok };
+  await assert.doesNotReject(
+    () => runSharedDisplaySetAction({ device, power: '0' }),
+  );
 });
 
 test('shared RTTTL flow dispatches to AWTRIX 3 and AWTRIX NG implementations', async () => {

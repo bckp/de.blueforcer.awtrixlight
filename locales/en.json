@@ -17,6 +17,7 @@
     "error": {
       "loginRequired": "Authentication required!",
       "loginFailed": "Authentication failed!",
+      "commandFailed": "Device command failed!",
       "unknownError": "Device did not respond!"
     }
   },

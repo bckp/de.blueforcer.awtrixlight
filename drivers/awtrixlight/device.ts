@@ -174,7 +174,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       }
     }
 
-    this.api.setSettings(newSettings).catch(this.error);
+    await this.api.setSettings(newSettings);
     if (RebootFields.some((key: string) => changedKeys.includes(key))) {
       this.log('rebooting device');
       await this.api.reboot().catch(this.error);
