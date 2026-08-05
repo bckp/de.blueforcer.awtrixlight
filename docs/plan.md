@@ -740,7 +740,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | A8 | ✅ | manifest assety i runtime registrace kryté testy; dočasný allowlist `applicationIcon` zůstává do C6 |
 | A9 | ✅ | discovery načítáno při `list_devices`; indikátory validovány před requestem; credentials používají prázdné stringy |
 | A10 | ✅ | `settingOptions` iteruje jen podporované klíče; `user`/`pass` se neposílají do device settings |
-| B1 | ⬜ | |
+| B1 | ✅ | fake Homey má řízené timery a oddělené AWTRIX 3/NG klienty; fail counter charakterizován pro pre-C1 stav |
 | C1 | ⬜ | R5: 3 consecutive, přechod právě jednou |
 | C2 | ⬜ | |
 | C3 | ⬜ | R9: AWTRIX 3 icon upload nekritický, chyby neztratit |
