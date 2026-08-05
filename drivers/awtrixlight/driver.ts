@@ -73,7 +73,6 @@ export default class UlanziAwtrix extends Driver {
     this.homey.flow.getActionCard('removeCustomApp').registerRunListener(async (args: ListenerArgsRemoveCustomApp) => {
       await args.device.cmdRemoveCustomApp(args.name);
     });
-
   }
 
   async onPair(session: PairSession) {

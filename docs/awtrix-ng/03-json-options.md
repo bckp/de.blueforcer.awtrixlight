@@ -27,6 +27,7 @@ This table lists the JSON properties accepted by the Homey app for AWTRIX NG not
 |---|---|---|---|
 | `text` | `string` or `TextFragment[]` | X | X |
 | `textCase` | `"inherit" \| "upper" \| "asTyped"` | X | X |
+| `font` | `"small" \| "large"` | X | X |
 | `textColor` | `ColorInput \| "palette"` | X | X |
 | `textBlinkMs` | `number` | X | X |
 | `textFadeMs` | `number` | X | X |
@@ -48,7 +49,7 @@ This table lists the JSON properties accepted by the Homey app for AWTRIX NG not
 | `progressTrackColor` | `ColorInput` | X | X |
 | `effect` | `string` | X | X |
 | `effectSpeed` | `number` | X | X |
-| `palette` | `string \| string[] \| null` | X | X |
+| `palette` | `string \| ColorInput[] \| PaletteStop[] \| null` | X | X |
 | `paletteBlend` | `boolean` | X | X |
 | `paletteSpan` | `number` | X | X |
 | `paletteSpeed` | `number` | X | X |
@@ -61,9 +62,9 @@ This table lists the JSON properties accepted by the Homey app for AWTRIX NG not
 | `sound` | `string \| number` | X |  |
 | `soundRtttl` | `string` | X |  |
 | `soundLoop` | `boolean` | X |  |
+| `repeat` | `number` | X | X |
 | `lifetimeMs` | `number` |  | X |
 | `lifetimeExpiry` | `"remove" \| "mark"` |  | X |
-| `repeat` | `number` |  | X |
 
 Nested object summaries:
 
@@ -77,14 +78,9 @@ Nested object summaries:
 | `ScrollObject` | `whenFits` | `"static" \| "scroll"` |
 | `ScrollObject` | `speed` | `number` |
 | `ScrollObject` | `gap` | `number` |
-| `DrawCommand` | `dp` | `[x, y, color]` |
-| `DrawCommand` | `dl` | `[x1, y1, x2, y2, color]` |
-| `DrawCommand` | `dr` | `[x, y, w, h, color]` |
-| `DrawCommand` | `df` | `[x, y, w, h, color]` |
-| `DrawCommand` | `dc` | `[x, y, r, color]` |
-| `DrawCommand` | `dfc` | `[x, y, r, color]` |
-| `DrawCommand` | `dt` | `[x, y, text, color]` |
-| `DrawCommand` | `db` | `[x, y, w, h, bitmap]` |
+| `ScrollObject` | `holdMs` | `number` |
+| `PaletteStop` | `color` | `ColorInput` |
+| `PaletteStop` | `pos` | `number` in range 0–100 |
 
 ## Common page options
 
@@ -94,6 +90,7 @@ These fields are accepted by both notification/message JSON payloads and pushed 
 |---|---|---|
 | `text` | `string` or `TextFragment[]` | Main text. Text fragments must use `{ "text": string, "color"?: ColorInput }`. Legacy `{ "t", "c" }` fragments are rejected. |
 | `textCase` | `"inherit" \| "upper" \| "asTyped"` | Text casing mode. |
+| `font` | `"small" \| "large"` | Panel font. `large` is seven rows high. |
 | `textColor` | `ColorInput \| "palette"` | Text color. Use `"palette"` together with `palette` for palette-based rendering. |
 | `textBlinkMs` | `number` | Text blink interval in milliseconds. |
 | `textFadeMs` | `number` | Text fade duration in milliseconds. |
@@ -115,7 +112,7 @@ These fields are accepted by both notification/message JSON payloads and pushed 
 | `progressTrackColor` | `ColorInput` | Progress track/background color. |
 | `effect` | `string` | AWTRIX NG effect name. Invalid effects are rejected by the device API. |
 | `effectSpeed` | `number` | AWTRIX NG effect speed. |
-| `palette` | `string \| string[] \| null` | Palette name, palette color array, or `null`. |
+| `palette` | `string \| ColorInput[] \| PaletteStop[] \| null` | Palette name, 1–16 evenly spaced colors, 1–16 structured `{ color, pos }` stops, or `null`. Structured and plain stops cannot be mixed. |
 | `paletteBlend` | `boolean` | Enable palette blending. |
 | `paletteSpan` | `number` | Palette span. |
 | `paletteSpeed` | `number` | Palette animation speed. |
@@ -152,6 +149,7 @@ Allowed text fragment fields:
 | `whenFits` | `"static" \| "scroll"` | Behavior when content fits. |
 | `speed` | `number` | Scroll speed. |
 | `gap` | `number` | Gap between repeated content. |
+| `holdMs` | `number` | Non-negative pause before movement and at bounce turning points, in milliseconds. |
 
 Example:
 
@@ -164,34 +162,40 @@ Example:
     "entry": "inline",
     "whenFits": "static",
     "speed": 80,
-    "gap": 8
+    "gap": 8,
+    "holdMs": 1000
   }
 }
 ```
 
 ### Draw commands
 
-`draw` is an array of AWTRIX NG draw command objects. Each command object must contain one supported command key.
+`draw` is an array of AWTRIX NG command arrays. The command name is always the first element.
+The legacy AWTRIX 3 object form such as `{ "dp": [...] }` is rejected.
 
 | Command | Payload | Meaning |
 |---|---|---|
-| `dp` | `[x, y, color]` | Draw pixel. |
-| `dl` | `[x1, y1, x2, y2, color]` | Draw line. |
-| `dr` | `[x, y, w, h, color]` | Draw rectangle. |
-| `df` | `[x, y, w, h, color]` | Draw filled rectangle. |
-| `dc` | `[x, y, r, color]` | Draw circle. |
-| `dfc` | `[x, y, r, color]` | Draw filled circle. |
-| `dt` | `[x, y, text, color]` | Draw text. |
-| `db` | `[x, y, w, h, bitmap]` | Draw bitmap. `bitmap` is a number array. |
+| `pixel` | `["pixel", x, y, color?]` | Draw one pixel. |
+| `pixels` | `["pixels", colorOrNull, x1, y1, ...]` | Draw one or more pixels with one color. |
+| `line` | `["line", x1, y1, x2, y2, color?]` | Draw a line including both endpoints. |
+| `rect` | `["rect", x, y, w, h, color?]` | Draw a rectangle outline. |
+| `rectFill` | `["rectFill", x, y, w, h, color?]` | Draw a filled rectangle. |
+| `circle` | `["circle", cx, cy, radius, color?]` | Draw a circle outline. |
+| `circleFill` | `["circleFill", cx, cy, radius, color?]` | Draw a filled circle. |
+| `text` | `["text", x, y, text, color?]` | Draw text. |
+| `bitmap` | `["bitmap", x, y, w, h, data]` | Draw a bitmap from a color array or base64 RGB888 string. |
+
+When an optional color is omitted, the command inherits the page text color. Coordinates and sizes
+must be integers. Off-canvas pixels are clipped by AWTRIX NG.
 
 Example:
 
 ```json
 {
   "draw": [
-    { "dp": [0, 0, "#FF0000"] },
-    { "dl": [0, 7, 31, 7, "#00FF00"] },
-    { "dt": [1, 1, "Hi", "#FFFFFF"] }
+    ["pixel", 0, 0, "#FF0000"],
+    ["line", 0, 7, 31, 7, "#00FF00"],
+    ["text", 1, 1, "Hi", "#FFFFFF"]
   ]
 }
 ```
@@ -248,11 +252,12 @@ They accept all common page options plus the notification-only fields below.
 | `soundRtttl` | `string` | RTTTL sound embedded in the notification payload. |
 | `soundLoop` | `boolean` | Loop notification sound. |
 
+The common page field `repeat` sets the number of completed scrolling-text passes. If the text does not scroll, it has no effect.
+
 Notification JSON does not support pushed-app-only fields:
 
 - `lifetimeMs`,
-- `lifetimeExpiry`,
-- `repeat`.
+- `lifetimeExpiry`.
 
 Example:
 
@@ -302,7 +307,8 @@ Pushed app JSON accepts all common page options plus the app-only fields below.
 |---|---|---|
 | `lifetimeMs` | `number` | Pushed app lifetime in milliseconds. |
 | `lifetimeExpiry` | `"remove" \| "mark"` | What AWTRIX NG should do when lifetime expires. |
-| `repeat` | `number` | Repeat count for pushed apps. This is app-only; notification JSON rejects it. |
+
+`repeat` is a common page field supported by both pushed apps and notifications.
 
 Pushed app JSON does not support notification-only fields:
 

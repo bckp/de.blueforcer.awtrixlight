@@ -1,4 +1,9 @@
-import { AwtrixNgApiAppInventoryItem, AwtrixNgApiAppsResponse, AwtrixNgApiOkResponse } from '../Api/Types';
+import {
+  AwtrixNgApiAppInventoryItem,
+  AwtrixNgApiAppsOrderPayload,
+  AwtrixNgApiAppsResponse,
+  AwtrixNgApiOkResponse,
+} from '../Api/Types';
 
 export const AwtrixNgBuiltinAppNamesBySetting = {
   showBuiltinTime: 'Time',
@@ -16,11 +21,12 @@ export type AwtrixNgBuiltinAppSettings = Partial<Record<AwtrixNgBuiltinAppSettin
 
 export interface AwtrixNgAppsClient {
   getApps(): Promise<AwtrixNgApiAppsResponse>;
-  putAppsOrder(order: readonly string[]): Promise<AwtrixNgApiOkResponse>;
+  putAppsOrder(payload: AwtrixNgApiAppsOrderPayload): Promise<AwtrixNgApiOkResponse>;
 }
 
 export interface AwtrixNgBuiltinAppSettingsApplyResult {
   order?: string[];
+  disabled?: string[];
 }
 
 export const AwtrixNgBuiltinAppSettingIds = Object.keys(AwtrixNgBuiltinAppNamesBySetting) as AwtrixNgBuiltinAppSetting[];
@@ -51,7 +57,7 @@ export const hasAwtrixNgBuiltinAppSettingsChange = (changedKeys: readonly string
 );
 
 const isAvailableBuiltinApp = (app: AwtrixNgApiAppInventoryItem, appName: AwtrixNgBuiltinAppName): boolean => (
-  app.origin === 'builtin' && app.name === appName
+  app.origin === 'builtin' && app.present !== false && app.name === appName
 );
 
 const findAvailableBuiltinApp = (
@@ -60,28 +66,21 @@ const findAvailableBuiltinApp = (
 ): AwtrixNgApiAppInventoryItem | undefined => apps.find((app) => isAvailableBuiltinApp(app, appName));
 
 const isBuiltinAppInLoop = (apps: AwtrixNgApiAppsResponse, appName: AwtrixNgBuiltinAppName): boolean => (
-  apps.some((app) => isAvailableBuiltinApp(app, appName) && app.inLoop)
+  apps.some((app) => isAvailableBuiltinApp(app, appName) && app.enabled === true)
 );
 
 const getCurrentLoopAppNames = (apps: AwtrixNgApiAppsResponse): string[] => apps
   .map((app, index) => ({ app, index }))
-  .filter(({ app }) => app.inLoop)
+  .filter(({ app }) => app.slot !== undefined && app.slot !== null)
   .sort((left, right) => {
-    if (left.app.position !== null && right.app.position !== null) {
-      return left.app.position - right.app.position;
-    }
-
-    if (left.app.position !== null) {
-      return -1;
-    }
-
-    if (right.app.position !== null) {
-      return 1;
-    }
-
-    return left.index - right.index;
+    const slotDifference = (left.app.slot as number) - (right.app.slot as number);
+    return slotDifference === 0 ? left.index - right.index : slotDifference;
   })
   .map(({ app }) => app.name);
+
+const getCurrentDisabledAppNames = (apps: AwtrixNgApiAppsResponse): string[] => Array.from(new Set(
+  apps.filter((app) => app.enabled === false).map((app) => app.name),
+));
 
 const getDesiredBuiltinAppVisibility = (
   apps: AwtrixNgApiAppsResponse,
@@ -129,10 +128,10 @@ export const toAwtrixNgBuiltinAppSettingsUpdate = (
   return update;
 };
 
-export const createAwtrixNgAppsOrderFromBuiltinSettings = (
+export const createAwtrixNgAppsOrderPayloadFromBuiltinSettings = (
   apps: AwtrixNgApiAppsResponse,
   newSettings: Record<string, unknown>,
-): string[] => {
+): AwtrixNgApiAppsOrderPayload => {
   const disabledBuiltinApps = new Set<string>();
   const enabledBuiltinApps: AwtrixNgBuiltinAppName[] = [];
 
@@ -154,6 +153,8 @@ export const createAwtrixNgAppsOrderFromBuiltinSettings = (
 
   const nextOrder = getCurrentLoopAppNames(apps)
     .filter((appName) => !disabledBuiltinApps.has(appName));
+  const nextDisabled = getCurrentDisabledAppNames(apps)
+    .filter((appName) => !enabledBuiltinApps.includes(appName as AwtrixNgBuiltinAppName));
 
   for (const appName of enabledBuiltinApps) {
     if (!nextOrder.includes(appName)) {
@@ -161,19 +162,28 @@ export const createAwtrixNgAppsOrderFromBuiltinSettings = (
     }
   }
 
-  return nextOrder;
+  for (const appName of disabledBuiltinApps) {
+    if (!nextDisabled.includes(appName)) {
+      nextDisabled.push(appName);
+    }
+  }
+
+  return {
+    order: nextOrder,
+    disabled: nextDisabled,
+  };
 };
 
-export const createAwtrixNgAppsOrderFromBuiltinSettingsChange = (
+export const createAwtrixNgAppsOrderPayloadFromBuiltinSettingsChange = (
   apps: AwtrixNgApiAppsResponse,
   newSettings: Record<string, unknown>,
   changedKeys: readonly string[],
-): string[] | undefined => {
+): AwtrixNgApiAppsOrderPayload | undefined => {
   if (!hasAwtrixNgBuiltinAppSettingsChange(changedKeys)) {
     return undefined;
   }
 
-  return createAwtrixNgAppsOrderFromBuiltinSettings(apps, newSettings);
+  return createAwtrixNgAppsOrderPayloadFromBuiltinSettings(apps, newSettings);
 };
 
 export const applyAwtrixNgBuiltinAppSettingsChange = async (
@@ -186,9 +196,9 @@ export const applyAwtrixNgBuiltinAppSettingsChange = async (
   }
 
   const apps = await client.getApps();
-  const order = createAwtrixNgAppsOrderFromBuiltinSettings(apps, newSettings);
+  const payload = createAwtrixNgAppsOrderPayloadFromBuiltinSettings(apps, newSettings);
 
-  await client.putAppsOrder(order);
+  await client.putAppsOrder(payload);
 
-  return { order };
+  return payload;
 };

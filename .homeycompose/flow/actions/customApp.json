@@ -1,7 +1,7 @@
 {
   "deprecated": true,
   "title": {
-    "en": "Create custom app [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]]"
+    "en": "Create a custom app"
   },
   "titleFormatted": {
     "en": "Create custom app [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]]"

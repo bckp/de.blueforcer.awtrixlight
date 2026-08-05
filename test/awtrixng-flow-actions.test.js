@@ -191,7 +191,7 @@ test('AWTRIX NG raw notification flow sends supported NG payload unchanged', asy
 
   await runAwtrixNgNotificationRawAction({
     device: { client: fake.client },
-    options: '{"text":"Doorbell","textColor":"#ff0000","durationMs":5000,"scroll":{"mode":"static"},"soundRtttl":"beep:d=4,o=5,b=120:c"}',
+    options: '{"text":"Doorbell","textColor":"#ff0000","durationMs":5000,"repeat":2,"scroll":{"mode":"loop"},"soundRtttl":"beep:d=4,o=5,b=120:c"}',
   });
 
   assert.deepEqual(fake.calls, [{
@@ -200,8 +200,9 @@ test('AWTRIX NG raw notification flow sends supported NG payload unchanged', asy
       text: 'Doorbell',
       textColor: '#ff0000',
       durationMs: 5000,
+      repeat: 2,
       scroll: {
-        mode: 'static',
+        mode: 'loop',
       },
       soundRtttl: 'beep:d=4,o=5,b=120:c',
     },

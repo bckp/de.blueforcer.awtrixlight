@@ -13,16 +13,18 @@ const { AwtrixNgHttpError } = require('../.homeybuild/lib/awtrixng/Http/Transpor
 
 const ngDeviceResponse = {
   uid: 'aabbccddeeff',
-  version: '1.0.4-dev',
-  boardType: 'Ulanzi TC001',
+  version: '1.0.14',
+  boardType: 'awtrixng',
   soc: 'esp32',
   ipAddress: '192.168.1.44',
+  hostname: 'awtrixng-ddeeff',
   wifiRssi: -62,
   uptimeSeconds: 1234,
   resetReason: 'poweron',
   freeHeapBytes: 100000,
   minFreeHeapBytes: 90000,
   largestFreeBlockBytes: 80000,
+  scriptingRunning: true,
   scriptHeapPool: 'internal',
   scriptHeapBudgetBytes: 4096,
   fps: 30,
@@ -38,6 +40,29 @@ const ngDeviceResponse = {
     fadeMs: 0,
   }],
   messageCount: 0,
+  wifi: {
+    enabled: true,
+    state: 'connected',
+    host: 'Home',
+    endpoint: '192.168.1.44',
+    attempts: 0,
+    retryInMs: 0,
+    connects: 1,
+    error: null,
+    lastError: null,
+  },
+  mqtt: {
+    enabled: false,
+    state: 'disabled',
+    host: '',
+    endpoint: '',
+    attempts: 0,
+    retryInMs: 0,
+    connects: 0,
+    error: null,
+    lastError: null,
+  },
+  batteryPinMillivolts: 2300,
   lowBattery: false,
   temperature: 22.5,
   humidity: 45,
@@ -148,6 +173,13 @@ test('AWTRIX NG probe detects documented /api/v1/device shape using read-only GE
     method: 'GET',
     path: '/api/v1/device',
   }]);
+});
+
+test('AWTRIX NG device shape rejects an invalid batteryPinMillivolts value', () => {
+  assert.equal(isAwtrixNgDeviceStateResponse({
+    ...ngDeviceResponse,
+    batteryPinMillivolts: '2300',
+  }), false);
 });
 
 test('AWTRIX NG probe reports auth-required for 401 unauthorized envelope', async () => {

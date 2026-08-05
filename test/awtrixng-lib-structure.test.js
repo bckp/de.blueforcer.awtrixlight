@@ -9,7 +9,6 @@ const expectedModuleDirectories = [
   'Api',
   'Device',
   'Discovery',
-  'Errors',
   'Http',
   'Payload',
   'Services',

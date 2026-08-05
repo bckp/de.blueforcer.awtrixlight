@@ -89,6 +89,7 @@ const pageFields = [
   'durationMs',
   'effect',
   'effectSpeed',
+  'font',
   'icon',
   'iconMode',
   'iconOffsetX',
@@ -101,6 +102,7 @@ const pageFields = [
   'progress',
   'progressColor',
   'progressTrackColor',
+  'repeat',
   'scroll',
   'text',
   'textBlinkMs',
@@ -127,7 +129,6 @@ const pushedAppFields = new Set<string>([
   ...pageFields,
   'lifetimeExpiry',
   'lifetimeMs',
-  'repeat',
 ]);
 
 const indicatorFields = new Set<string>([
@@ -191,13 +192,13 @@ const notificationOnlyFields = new Set<string>([
 const pushedAppOnlyFields = new Set<string>([
   'lifetimeExpiry',
   'lifetimeMs',
-  'repeat',
 ]);
 
 const scrollFields = new Set<string>([
   'direction',
   'entry',
   'gap',
+  'holdMs',
   'mode',
   'speed',
   'whenFits',
@@ -212,6 +213,8 @@ const scrollEntries = ['inline', 'offscreen'] as const;
 const scrollWhenFits = ['static', 'scroll'] as const;
 
 const textCases = ['inherit', 'upper', 'asTyped'] as const;
+
+const fonts = ['small', 'large'] as const;
 
 const iconModes = ['fixed', 'pushOnce', 'push'] as const;
 
@@ -427,12 +430,159 @@ const assertScrollValue = (input: Record<string, unknown>, target: AwtrixNgTrans
       details: `Expected one of: ${scrollWhenFits.join(', ')}.`,
     });
   }
+
+  for (const field of ['speed', 'gap', 'holdMs'] as const) {
+    const count = value[field];
+
+    if (count !== undefined && (!Number.isInteger(count) || (count as number) < 0)) {
+      throw new UnsupportedAwtrixNgPayloadFieldError({
+        field: `scroll.${field}`,
+        target,
+        reason: 'invalid-value',
+        details: 'Expected a non-negative integer.',
+      });
+    }
+  }
+};
+
+const drawCommandSpecs: Record<string, { minLength: number; maxLength: number; numericIndexes: number[] }> = {
+  pixel: { minLength: 3, maxLength: 4, numericIndexes: [1, 2] },
+  line: { minLength: 5, maxLength: 6, numericIndexes: [1, 2, 3, 4] },
+  rect: { minLength: 5, maxLength: 6, numericIndexes: [1, 2, 3, 4] },
+  rectFill: { minLength: 5, maxLength: 6, numericIndexes: [1, 2, 3, 4] },
+  circle: { minLength: 4, maxLength: 5, numericIndexes: [1, 2, 3] },
+  circleFill: { minLength: 4, maxLength: 5, numericIndexes: [1, 2, 3] },
+  text: { minLength: 4, maxLength: 5, numericIndexes: [1, 2] },
+  bitmap: { minLength: 6, maxLength: 6, numericIndexes: [1, 2, 3, 4] },
+};
+
+const invalidDrawValue = (field: string, target: AwtrixNgTransformTarget, details: string): never => {
+  throw new UnsupportedAwtrixNgPayloadFieldError({
+    field,
+    target,
+    reason: 'invalid-value',
+    details,
+  });
+};
+
+const assertDrawValue = (input: Record<string, unknown>, target: AwtrixNgTransformTarget): void => {
+  const value = input.draw;
+
+  if (value === undefined) {
+    return;
+  }
+
+  const commands = Array.isArray(value)
+    ? value
+    : invalidDrawValue('draw', target, 'Draw must be an array of AWTRIX NG command arrays.');
+
+  for (const [index, commandValue] of commands.entries()) {
+    const field = `draw[${index}]`;
+    const command = Array.isArray(commandValue)
+      ? commandValue
+      : invalidDrawValue(field, target, 'Each draw command must be an array with the command name first.');
+
+    const name = command[0];
+
+    if (name === 'pixels') {
+      if (command.length < 4 || (command.length - 2) % 2 !== 0) {
+        invalidDrawValue(field, target, 'The pixels command needs a color and one or more x, y pairs.');
+      }
+
+      for (let coordinateIndex = 2; coordinateIndex < command.length; coordinateIndex += 1) {
+        if (!Number.isInteger(command[coordinateIndex])) {
+          invalidDrawValue(field, target, 'Draw command coordinates must be integers.');
+        }
+      }
+
+      continue;
+    }
+
+    if (typeof name !== 'string') {
+      invalidDrawValue(field, target, 'Unknown AWTRIX NG draw command.');
+    }
+
+    const spec = drawCommandSpecs[name];
+
+    if (spec === undefined) {
+      invalidDrawValue(field, target, 'Unknown AWTRIX NG draw command.');
+    }
+
+    if (command.length < spec.minLength || command.length > spec.maxLength) {
+      invalidDrawValue(field, target, `Draw command "${name}" has the wrong number of arguments.`);
+    }
+
+    for (const coordinateIndex of spec.numericIndexes) {
+      if (!Number.isInteger(command[coordinateIndex])) {
+        invalidDrawValue(field, target, 'Draw command coordinates and sizes must be integers.');
+      }
+    }
+
+    if (name === 'text' && typeof command[3] !== 'string') {
+      invalidDrawValue(field, target, 'The text draw command requires a string argument.');
+    }
+
+    if (name === 'bitmap' && typeof command[5] !== 'string' && !Array.isArray(command[5])) {
+      invalidDrawValue(field, target, 'Bitmap data must be a base64 string or an array of colors.');
+    }
+  }
+};
+
+const assertPaletteValue = (input: Record<string, unknown>, target: AwtrixNgTransformTarget): void => {
+  const value = input.palette;
+
+  if (value === undefined || value === null || typeof value === 'string') {
+    return;
+  }
+
+  if (!Array.isArray(value) || value.length === 0 || value.length > 16) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'palette',
+      target,
+      reason: 'invalid-value',
+      details: 'Palette arrays must contain between 1 and 16 color or structured stop entries.',
+    });
+  }
+
+  const structured = typeof value[0] === 'object' && value[0] !== null && !Array.isArray(value[0]);
+
+  value.forEach((stop, index) => {
+    const isStructuredStop = typeof stop === 'object' && stop !== null && !Array.isArray(stop);
+
+    if (isStructuredStop !== structured) {
+      throw new UnsupportedAwtrixNgPayloadFieldError({
+        field: `palette[${index}]`,
+        target,
+        reason: 'invalid-value',
+        details: 'Structured and unstructured palette stops cannot be mixed.',
+      });
+    }
+
+    if (structured) {
+      const stopRecord = stop as Record<string, unknown>;
+      const keys = Object.keys(stopRecord);
+
+      if (keys.length !== 2 || !keys.includes('color') || !keys.includes('pos')
+        || stopRecord.color === undefined || !Number.isInteger(stopRecord.pos)
+        || (stopRecord.pos as number) < 0 || (stopRecord.pos as number) > 100) {
+        throw new UnsupportedAwtrixNgPayloadFieldError({
+          field: `palette[${index}]`,
+          target,
+          reason: 'invalid-value',
+          details: 'Structured palette stops require exactly color and pos, with pos in the range 0..100.',
+        });
+      }
+    }
+  });
 };
 
 const assertPagePayload = (input: Record<string, unknown>, target: 'notification' | 'pushedApp'): void => {
   assertTextValue(input, target);
   assertScrollValue(input, target);
+  assertDrawValue(input, target);
+  assertPaletteValue(input, target);
   assertStringEnumField(input, 'textCase', textCases, target);
+  assertStringEnumField(input, 'font', fonts, target);
   assertStringEnumField(input, 'iconMode', iconModes, target);
 };
 

@@ -131,12 +131,13 @@ export default class AwtrixNgClient {
     });
   }
 
-  putAppsOrder(order: readonly string[]): Promise<AwtrixNgApiOkResponse> {
+  putAppsOrder(payload: AwtrixNgApiAppsOrderPayload): Promise<AwtrixNgApiOkResponse> {
     return this.#request<AwtrixNgApiOkResponse, AwtrixNgApiAppsOrderPayload>({
       method: 'PUT',
       path: '/api/v1/apps/order',
       body: {
-        order: [...order],
+        ...(payload.order === undefined ? {} : { order: [...payload.order] }),
+        disabled: [...payload.disabled],
       },
     });
   }

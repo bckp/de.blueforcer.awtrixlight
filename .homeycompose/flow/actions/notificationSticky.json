@@ -1,6 +1,6 @@
 {
   "title": {
-    "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color"
+    "en": "Send a sticky notification"
   },
   "titleFormatted": {
     "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color"

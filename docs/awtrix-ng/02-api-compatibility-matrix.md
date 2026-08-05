@@ -100,6 +100,7 @@ Tato tabulka popisuje technické rozdíly mezi AWTRIX 3 payloadem používaným 
 | `text` string | `text` string | beze změny | ano | ano | Kompatibilní po transformaci endpointu | Číslo v AWTRIX 3 normalizeru převede na string; NG podle payload docs číslo/bool jako `text` ignoruje. Před NG requestem převést na string. |
 | `text` fragments `[{t,c}]` | `text` fragments `[{text,color}]` | `{ t }` → `{ text }`, `{ c }` → `{ color }` | ano | ano | Kompatibilní po transformaci | NG fragment bez color defaultuje white; AWTRIX 3 normalizer vyžaduje validní `c`. |
 | `textCase` `0/1/2` | `textCase` `inherit/upper/asTyped` | `0→inherit`, `1→upper`, `2→asTyped` | ano | ano | Kompatibilní po transformaci | NG nemá lowercase mode; AWTRIX 3 také používá jen tyto tři režimy. |
+| žádný přímý ekvivalent | `font` `small/large` | veřejný NG payload používá NG enum beze změny | ano | ano | NG-specific | Pole je podporované přímo, bez AWTRIX 3 emulace. |
 | `topText` | `textInFront` | boolean → boolean | ano | ano | UNKNOWN / částečně kompatibilní | AWTRIX 3 docs: „Draw the text on top.“ NG: z-order text vs decorations. Název a popis naznačují ekvivalent, ale přesné vykreslení vyžaduje ověření. |
 | `textOffset` | `textOffsetX` | number → number | ano | ano | Kompatibilní po transformaci | NG offset je X-only. |
 | `center` | `textCenter` | boolean → boolean | ano | ano | Kompatibilní po transformaci | NG centering platí jen když text neanimuje / fits static. |
@@ -111,7 +112,7 @@ Tato tabulka popisuje technické rozdíly mezi AWTRIX 3 payloadem používaným 
 | `background` | `backgroundColor` | color → color | ano | ano | Kompatibilní po transformaci | NG ignoruje backgroundColor, pokud je aktivní effect. |
 | `icon` | `icon` | beze změny pro ID; inline base64 vyžaduje ověření | ano | ano | Částečně kompatibilní | AWTRIX 3 kód propouští ID kratší než 32 nebo `data:image/jpeg;base64,`. NG rozlišuje ID vs inline base64 podle délky >64 a podporuje JPEG/GIF sniffing. Prefix `data:image/jpeg;base64,` může být UNKNOWN. |
 | `pushIcon` `0/1/2` | `iconMode` `fixed/pushOnce/push` | `0→fixed`, `1→pushOnce`, `2→push` | ano | ano | Kompatibilní po transformaci | Doložený ekvivalent. |
-| `repeat` | `repeat` | number → number | ne | ano | Částečně kompatibilní | Produktové rozhodnutí: NG notification UI/JSON `repeat` nepodporuje, protože je ignorované; `repeat` je povolené jen pro pushed apps. |
+| `repeat` | `repeat` | number → number | ano | ano | Kompatibilní po transformaci endpointu | NG používá `repeat` pro počet dokončených průchodů scrollujícího textu stejně u notifications i pushed apps. Pokud text nescrolluje, `repeat` nemá efekt. |
 | `duration` | `durationMs` | AWTRIX 3 seconds → NG ms pouze jako analytické srovnání; veřejný NG vstup přijímá jen `durationMs` | ano | ano | Kompatibilní po transformaci pro interní srovnání; AWTRIX 3 `duration` v NG JSON nepodporovat | Homey i NG pracují s ms; žádný automatický převod `duration` sekund v NG JSON flow. |
 | `bar` | `barChart` | array → array | ano | ano | Kompatibilní po transformaci | NG extras silently dropped after 16; AWTRIX 3 kód validuje max 16 bez ikony / 11 s ikonou. |
 | `line` | `lineChart` | array → array | ano | ano | Kompatibilní po transformaci | NG lineChart potřebuje min. 2 body, jinak nic nekreslí. |
@@ -122,6 +123,8 @@ Tato tabulka popisuje technické rozdíly mezi AWTRIX 3 payloadem používaným 
 | `progressBC` | `progressTrackColor` | color → color | ano | ano | Kompatibilní po transformaci | Jen název. |
 | `noScroll` | `scroll` objekt | AWTRIX 3 boolean nepoužívat jako veřejný NG model; NG přijímá `scroll: { mode: "static"|"wrap"|"loop"|"bounce", ... }` | ano | ano | AWTRIX 3 field v NG nepodporovat; NG má vlastní model | Produktové rozhodnutí: nepoužívat `noScroll` ani alias `scrollMode`. Pokud `scroll` není uveden, neposílat jej. |
 | `scrollSpeed` | `scroll.speed` | number → `{ scroll: { speed } }` | ano | ano | Kompatibilní po transformaci | NG speed je percent of 21 px/s; AWTRIX 3 docs také percent of original speed. Přesná vizuální rychlost UNKNOWN. |
+| žádný přímý ekvivalent | `scroll.holdMs` | veřejný NG payload používá nezáporné milisekundy | ano | ano | NG-specific | Pauza před pohybem a v bodech obratu `bounce`. |
+| `draw` objektové příkazy (`dp`, `dl`, ...) | `draw` array příkazy (`pixel`, `line`, ...) | automaticky nepřevádět; NG flow vyžaduje nativní array formát | ano | ano | Nekompatibilní veřejný formát | Objektový AWTRIX 3 formát je explicitně odmítnut, protože NG parser vyžaduje command name jako první prvek pole. |
 | `effect` | `effect` | string, validovat proti `capabilities.effects` | ano | ano | Kompatibilní po transformaci | NG names case-insensitive; unknown effect je 422 a nic se neuloží. |
 | `effectSettings.speed` | `effectSpeed` | number → number | ano | ano | Částečně kompatibilní | NG effectSpeed range 0.1–10 clamped; AWTRIX 3 effectSettings obsahuje `{speed,palette,blend}` jako object. |
 | `effectSettings.palette` | `palette` | string/array → `palette` | ano | ano | Částečně kompatibilní | NG palette má vlastní pravidla, files mohou shadowovat built-ins. |

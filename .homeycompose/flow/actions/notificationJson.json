@@ -1,6 +1,6 @@
 {
   "title": {
-    "en": "Send notification [[msg]] with [[options]]"
+    "en": "Send a notification with JSON options"
   },
   "titleFormatted": {
     "en": "Send notification [[msg]] with [[options]]"

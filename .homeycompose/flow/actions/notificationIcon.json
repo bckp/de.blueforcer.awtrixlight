@@ -1,6 +1,6 @@
 {
   "title": {
-    "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
+    "en": "Send a notification with an icon"
   },
   "titleFormatted": {
     "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"

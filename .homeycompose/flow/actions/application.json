@@ -1,6 +1,6 @@
 {
   "title": {
-    "en": "Create/update application [[name]] [[msg]] [[icon]] [[color]] [[options]]"
+    "en": "Create or update an application"
   },
   "titleFormatted": {
     "en": "Create/update application [[name]] [[msg]] [[icon]] [[color]] [[options]]"
