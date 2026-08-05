@@ -731,7 +731,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | Balíček | Stav | Pozn. |
 |---|---|---|
 | A1 | ✅ | R2: rozměry i publish validace ověřeny; NG používá schválený samostatný vizuál |
-| A2 | ⬜ | průběžné sjednocení na vydanou 2.0.1 |
+| A2 | ✅ | package, lockfile a Homey compose sjednoceny na 2.0.1; přidán consistency test |
 | A3 | ⬜ | |
 | A4 | ⬜ | |
 | A5 | ⬜ | |
