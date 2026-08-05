@@ -70,7 +70,7 @@ test('every local manifest image and icon path exists', () => {
   }
 });
 
-test('every manifest flow action has a runtime registration or a temporary allowlist entry', () => {
+test('every manifest flow action has a runtime registration', () => {
   const manifest = readJson('app.json');
   const driverSources = fs.readdirSync(path.join(root, 'drivers'), { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -85,12 +85,10 @@ test('every manifest flow action has a runtime registration or a temporary allow
     }
   }
 
-  // Temporary exception: C6 will add the compatible runtime registration and remove this allowlist entry.
-  const manifestOnly = ['applicationIcon'];
   const unregisteredActionIds = manifest.flow.actions
     .map((action) => action.id)
     .filter((actionId) => !registeredActionIds.has(actionId))
     .sort();
 
-  assert.deepEqual(unregisteredActionIds, [...manifestOnly].sort());
+  assert.deepEqual(unregisteredActionIds, []);
 });

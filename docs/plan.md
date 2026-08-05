@@ -746,7 +746,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | C3 | ✅ | lifecycle operace jsou awaitované; refresh chyby agregované; upload ikon sekvenční a nekritický |
 | C4 | ✅ | credentials se ověřují jen při změně; auth a offline chyby jsou rozlišené; rediscover dokončí recovery |
 | C5 | ✅ | appName lowercasuje před sanitizací; endpointy používají URL encoding; bez dual-delete a changelogu |
-| C6 | ⬜ | R1: kartu zachovat a zprovoznit; smazat jen skeleton |
+| C6 | ✅ | R1: deprecated karta má kompatibilní runtime adaptér; no-op Apps skeleton odstraněn |
 | C7 | ⬜ | |
 | D1 | ⬜ | |
 | D2 | ⬜ | |

@@ -15,6 +15,54 @@ import {
   runSharedWeatherOverlayAction,
 } from './drivers/shared-flow-actions';
 
+type SharedApplicationActionArgs = Parameters<typeof runSharedApplicationAction>[0];
+
+type LegacyApplicationIconActionArgs = Omit<SharedApplicationActionArgs, 'name'> & {
+  name: unknown;
+};
+
+type LegacyApplicationNameAutocompleteItem = {
+  id: string;
+  name: string;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
+
+const normalizeLegacyApplicationName = (value: unknown): string => {
+  const candidates: unknown[] = [];
+
+  if (typeof value === 'string') {
+    candidates.push(value);
+  } else if (isRecord(value)) {
+    candidates.push(value.id, value.name);
+  }
+
+  const name = candidates.find((candidate): candidate is string => (
+    typeof candidate === 'string' && candidate.trim().length > 0
+  ));
+
+  if (name === undefined) {
+    throw new TypeError('Legacy application name must be a non-empty string or autocomplete selection.');
+  }
+
+  return name;
+};
+
+const runLegacyApplicationIconAction = async (args: LegacyApplicationIconActionArgs): Promise<void> => {
+  await runSharedApplicationAction({
+    ...args,
+    name: normalizeLegacyApplicationName(args.name),
+  });
+};
+
+const autocompleteLegacyApplicationNameAction = async (query: string): Promise<LegacyApplicationNameAutocompleteItem[]> => {
+  if (query.trim().length === 0) {
+    return [];
+  }
+
+  return [{ id: query, name: query }];
+};
+
 module.exports = class AwtrixApp extends Homey.App {
 
   async onInit() {
@@ -55,6 +103,13 @@ module.exports = class AwtrixApp extends Homey.App {
       .registerRunListener(runSharedApplicationAction)
       .getArgument('icon')
       .registerAutocompleteListener(autocompleteSharedIconAction);
+
+    const legacyApplicationIconCard = this.homey.flow.getActionCard('applicationIcon')
+      .registerRunListener(runLegacyApplicationIconAction);
+    legacyApplicationIconCard.getArgument('icon')
+      .registerAutocompleteListener(autocompleteSharedIconAction);
+    legacyApplicationIconCard.getArgument('name')
+      .registerAutocompleteListener(autocompleteLegacyApplicationNameAction);
 
     this.homey.flow.getActionCard('applicationRaw')
       .registerRunListener(runSharedApplicationRawAction);

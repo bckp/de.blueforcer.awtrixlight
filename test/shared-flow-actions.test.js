@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const Module = require('node:module');
 const test = require('node:test');
 
 const Api = require('../.homeybuild/lib/awtrix3/Api/Api').default;
@@ -24,6 +25,69 @@ const {
 } = require('./helpers/fake-homey');
 
 const ok = { ok: true };
+
+const loadAwtrixApp = () => {
+  const originalLoad = Module._load;
+
+  class FakeHomeyApp {}
+
+  Module._load = function load(request, parent, isMain) {
+    if (request === 'homey') {
+      return { App: FakeHomeyApp };
+    }
+    return originalLoad.call(this, request, parent, isMain);
+  };
+
+  try {
+    const modulePath = require.resolve('../.homeybuild/app');
+    delete require.cache[modulePath];
+    // eslint-disable-next-line global-require
+    return require('../.homeybuild/app');
+  } finally {
+    Module._load = originalLoad;
+  }
+};
+
+const createAppFlowHarness = () => {
+  const actionCards = new Map();
+  const homey = {
+    flow: {
+      getActionCard(id) {
+        if (!actionCards.has(id)) {
+          const flowArguments = new Map();
+          const card = {
+            flowArguments,
+            runListener: undefined,
+            registerRunListener(listener) {
+              this.runListener = listener;
+              return this;
+            },
+            getArgument(name) {
+              if (!flowArguments.has(name)) {
+                flowArguments.set(name, {
+                  autocompleteListener: undefined,
+                  registerAutocompleteListener(listener) {
+                    this.autocompleteListener = listener;
+                    return this;
+                  },
+                });
+              }
+              return flowArguments.get(name);
+            },
+          };
+          actionCards.set(id, card);
+        }
+        return actionCards.get(id);
+      },
+    },
+  };
+  const AwtrixApp = loadAwtrixApp();
+  const app = new AwtrixApp();
+  app.homey = homey;
+  app.log = () => undefined;
+
+  return { actionCards, app };
+};
 
 const createAwtrix3Device = () => {
   const calls = [];
@@ -130,6 +194,89 @@ test('shared icon autocomplete dispatches to selected device icon service', asyn
 
   assert.deepEqual(awtrix3.calls, [{ method: 'findIcon', query: 'home' }]);
   assert.deepEqual(awtrixNg.calls, [{ method: 'findIcon', query: 'ng' }]);
+});
+
+test('deprecated applicationIcon registers a compatible AWTRIX 3 runtime adapter', async () => {
+  const awtrix3 = createAwtrix3Device();
+  const { actionCards, app } = createAppFlowHarness();
+
+  await app.onInit();
+
+  const card = actionCards.get('applicationIcon');
+  assert.ok(card);
+  assert.equal(typeof card.runListener, 'function');
+
+  await card.runListener({
+    device: awtrix3.device,
+    name: 'weather',
+    msg: '21C',
+    icon: { id: 'homey', name: 'homey' },
+    options: '{"effect":"Rainbow"}',
+  });
+  await card.runListener({
+    device: awtrix3.device,
+    name: { id: 'forecast', name: 'Forecast label' },
+    msg: '22C',
+    icon: { id: '-', name: 'None' },
+    options: '',
+  });
+  await card.runListener({
+    device: awtrix3.device,
+    name: { name: 'fallback' },
+    msg: '23C',
+    icon: { id: '-', name: 'None' },
+    options: '',
+  });
+
+  assert.deepEqual(awtrix3.calls, [
+    {
+      method: 'cmdCustomApp',
+      name: 'weather',
+      params: { effect: 'Rainbow', text: '21C', icon: 'homey' },
+    },
+    {
+      method: 'cmdCustomApp',
+      name: 'forecast',
+      params: { text: '22C' },
+    },
+    {
+      method: 'cmdCustomApp',
+      name: 'fallback',
+      params: { text: '23C' },
+    },
+  ]);
+
+  const iconAutocomplete = card.flowArguments.get('icon').autocompleteListener;
+  assert.deepEqual(await iconAutocomplete('hom', { device: awtrix3.device }), [{ id: 'homey', name: 'homey' }]);
+  assert.deepEqual(awtrix3.calls.at(-1), { method: 'findIcon', query: 'hom' });
+
+  const nameAutocomplete = card.flowArguments.get('name').autocompleteListener;
+  assert.deepEqual(await nameAutocomplete('my app'), [{ id: 'my app', name: 'my app' }]);
+  assert.deepEqual(await nameAutocomplete('   '), []);
+});
+
+test('deprecated applicationIcon rejects blank and invalid legacy names before AWTRIX 3 dispatch', async () => {
+  const awtrix3 = createAwtrix3Device();
+  const { actionCards, app } = createAppFlowHarness();
+
+  await app.onInit();
+  const { runListener } = actionCards.get('applicationIcon');
+  const invalidNames = ['', '   ', {}, { id: ' ', name: '' }, 42, null, []];
+
+  for (const name of invalidNames) {
+    await assert.rejects(
+      () => runListener({
+        device: awtrix3.device,
+        name,
+        msg: 'ignored',
+        icon: { id: '-', name: 'None' },
+        options: '',
+      }),
+      /Legacy application name must be a non-empty string or autocomplete selection\./,
+    );
+  }
+
+  assert.deepEqual(awtrix3.calls, []);
 });
 
 test('shared notification flow dispatches to AWTRIX 3 and AWTRIX NG implementations', async () => {

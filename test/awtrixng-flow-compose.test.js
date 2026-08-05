@@ -140,14 +140,16 @@ test('shared notification flow uses Homey-native duration and icon autocomplete'
   assert.equal(iconArg.required, false);
 });
 
-test('deprecated AWTRIX 3 notification and application flows remain AWTRIX 3-only', () => {
+test('deprecated AWTRIX 3 notification and application flows remain compatible and AWTRIX 3-only', () => {
   const notificationIcon = readJson('notificationIcon.json');
   const notificationJson = readJson('notificationJson.json');
   const customApp = readJson('customApp.json');
+  const applicationIcon = readJson('applicationIcon.json');
   const removeCustomApp = readJson('removeCustomApp.json');
   const notificationIconDeviceArg = getDeviceArg(notificationIcon);
   const notificationJsonDeviceArg = getDeviceArg(notificationJson);
   const customAppDeviceArg = getDeviceArg(customApp);
+  const applicationIconDeviceArg = getDeviceArg(applicationIcon);
   const removeCustomAppDeviceArg = getDeviceArg(removeCustomApp);
   const iconArg = notificationIcon.args.find((arg) => arg.name === 'icon');
 
@@ -161,6 +163,15 @@ test('deprecated AWTRIX 3 notification and application flows remain AWTRIX 3-onl
   assert.ok(notificationJson.args.find((arg) => arg.name === 'msg'));
   assert.equal(customApp.deprecated, true);
   assert.equal(customAppDeviceArg.filter, 'driver_id=awtrixlight');
+  assert.equal(applicationIcon.deprecated, true);
+  assert.equal(applicationIconDeviceArg.filter, 'driver_id=awtrixlight');
+  assert.deepEqual(applicationIcon.args.map(({ name, type }) => ({ name, type })), [
+    { name: 'device', type: 'device' },
+    { name: 'msg', type: 'text' },
+    { name: 'name', type: 'autocomplete' },
+    { name: 'icon', type: 'autocomplete' },
+    { name: 'options', type: 'text' },
+  ]);
   assert.equal(removeCustomApp.deprecated, true);
   assert.equal(removeCustomAppDeviceArg.filter, 'driver_id=awtrixlight');
 });
