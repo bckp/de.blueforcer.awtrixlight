@@ -4,6 +4,7 @@ import { AwtrixNgFileDirectory, AwtrixNgFileUploadRequest } from '../Api/Client'
 import { AwtrixNgApiFilesResponse, AwtrixNgApiOkResponse } from '../Api/Types';
 
 const IconsDirectory: AwtrixNgFileDirectory = '/ICONS';
+// AWTRIX NG exposes a fast, specialized files API, so a short cache keeps results fresh.
 const DefaultCacheTtlMs = 5000;
 
 export interface AwtrixNgIconAutocompleteItem {
@@ -76,6 +77,8 @@ export default class AwtrixNgIcons {
 
   #list: AwtrixNgIconAutocompleteItem[] = [];
 
+  #inFlight?: Promise<void>;
+
   #timer?: ReturnType<typeof setTimeout>;
 
   constructor(client: AwtrixNgIconClient, options: AwtrixNgIconsOptions) {
@@ -93,7 +96,10 @@ export default class AwtrixNgIcons {
 
   async all(): Promise<AwtrixNgIconAutocompleteItem[]> {
     if (this.#list.length === 0) {
-      await this.loadIcons();
+      this.#inFlight ??= this.loadIcons().finally(() => {
+        this.#inFlight = undefined;
+      });
+      await this.#inFlight;
     }
 
     this.#resetTimer();
@@ -114,8 +120,17 @@ export default class AwtrixNgIcons {
       body: createAwtrixNgIconUploadForm(source),
     });
 
-    this.#list = [];
+    this.invalidate();
     return response;
+  }
+
+  invalidate(): void {
+    this.#list = [];
+
+    if (this.#timerHost !== undefined && this.#timer !== undefined) {
+      this.#timerHost.clearTimeout(this.#timer);
+      this.#timer = undefined;
+    }
   }
 
   #resetTimer(): void {
@@ -129,6 +144,7 @@ export default class AwtrixNgIcons {
 
     this.#timer = this.#timerHost.setTimeout(() => {
       this.#list = [];
+      this.#timer = undefined;
     }, this.#cacheTtlMs);
   }
 

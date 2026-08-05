@@ -156,6 +156,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     for (const file of files) {
       try {
         await this.api.uploadImage(fs.readFileSync(`${directory}/${file}`), file);
+        this.icons.invalidate();
       } catch (cause) {
         uploadErrors.push(new Error(`Failed to upload bundled icon: ${file}`, { cause }));
       }

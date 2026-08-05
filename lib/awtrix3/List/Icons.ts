@@ -3,7 +3,8 @@ import path from 'path';
 import Api from '../Api/Api';
 import { AwtrixImage, HomeyAwtrixIcon } from '../Types';
 
-const Timeout = 120000; // 2 minutes
+// AWTRIX 3 parses an expensive HTML icon provider, so retain the longer cache duration.
+const CacheTtlMs = 120000;
 
 export default class Icons {
 
@@ -12,6 +13,7 @@ export default class Icons {
   empty: HomeyAwtrixIcon;
 
   list: HomeyAwtrixIcon[] = [];
+  private inFlight?: Promise<void>;
   timer?: ReturnType<typeof setTimeout>;
 
   constructor(api: Api, device: Device) {
@@ -32,7 +34,10 @@ export default class Icons {
 
   async all(): Promise<HomeyAwtrixIcon[]> {
     if (this.list.length === 0) {
-      await this.loadIcons();
+      this.inFlight ??= this.loadIcons().finally(() => {
+        this.inFlight = undefined;
+      });
+      await this.inFlight;
     }
 
     this.resetTimer();
@@ -40,16 +45,26 @@ export default class Icons {
   }
 
   resetTimer(): void {
-    if (this.timer) {
+    if (this.timer !== undefined) {
       this.device.homey.clearTimeout(this.timer);
     }
     this.timer = this.device.homey.setTimeout(() => {
       this.list = [];
-    }, Timeout);
+      this.timer = undefined;
+    }, CacheTtlMs);
+  }
+
+  invalidate(): void {
+    this.list = [];
+
+    if (this.timer !== undefined) {
+      this.device.homey.clearTimeout(this.timer);
+      this.timer = undefined;
+    }
   }
 
   async loadIcons(): Promise<void> {
-    const icons = await this.api.getImages().catch(this.device.error) || [];
+    const icons = await this.api.getImages();
     this.list = [
       this.empty,
       ...icons.map((icon: AwtrixImage): HomeyAwtrixIcon => {

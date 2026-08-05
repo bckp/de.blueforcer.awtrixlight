@@ -465,6 +465,7 @@ test('AWTRIX 3 onAdded uploads all bundled icons sequentially and contains failu
   const diagnostics = [];
   let activeUploads = 0;
   let maxActiveUploads = 0;
+  let cacheInvalidations = 0;
   const context = {
     log() {},
     connected() {},
@@ -485,6 +486,11 @@ test('AWTRIX 3 onAdded uploads all bundled icons sequentially and contains failu
         }
       },
     },
+    icons: {
+      invalidate() {
+        cacheInvalidations += 1;
+      },
+    },
     error(error) {
       diagnostics.push(error);
     },
@@ -496,6 +502,7 @@ test('AWTRIX 3 onAdded uploads all bundled icons sequentially and contains failu
 
   assert.deepEqual(uploads, expectedFiles);
   assert.equal(maxActiveUploads, 1);
+  assert.equal(cacheInvalidations, expectedFiles.length - 1, 'only successful uploads invalidate the icon cache');
   assert.equal(diagnostics.length, 1);
   assert.equal(diagnostics[0] instanceof AggregateError, true);
   assert.equal(diagnostics[0].errors.length, 1);

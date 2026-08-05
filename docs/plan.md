@@ -750,7 +750,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | C7 | ✅ | AWTRIX 3 nepovoluje redirecty, uznává jen 2xx a rediguje Authorization v debug logu |
 | D1 | ✅ | polling startuje ve finally; init chyby zachovávají NG message, field, code i HTTP status |
 | D2 | ✅ | oba Poll objekty jsou single-flight; rejection se loguje jako původní error a další tick pokračuje |
-| D3 | ⬜ | R8: TTL 120 s AW3 / 5 s NG |
+| D3 | ✅ | R8: oddělené single-flight cache; TTL 120 s AW3 / 5 s NG; úspěšný upload invaliduje cache |
 | D4 | ⬜ | |
 | D5 | ⬜ | |
 | D6 | ⬜ | R6-1: txt.id == uid; probe před commitem |
