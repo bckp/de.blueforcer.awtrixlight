@@ -79,6 +79,10 @@ test('settings retain transition effect zero', () => {
   assert.deepEqual(normalizer.settingOptions({ TEFF: 0 }), { TEFF: 0 });
 });
 
+test('settings omit unknown keys', () => {
+  assert.deepEqual(normalizer.settingOptions({ user: 'a', pass: 'b', TIM: true }), { TIM: true });
+});
+
 test('HTTP status mapping does not treat bad requests as success', () => {
   assert.equal(statusFromHttpCode(200), Status.Ok);
   assert.equal(statusFromHttpCode(399), Status.Ok);

@@ -299,14 +299,13 @@ export const appOptions = (options: any, effects: string[]): AppOptions => {
   return opt;
 };
 
-const defaultSettingsOptions: SettingOptions = {
+const defaultSettingsOptions: Omit<SettingOptions, 'TEFF'> = {
   ABRI: false,
   ATRANS: false,
   BAT: false,
   BLOCKN: false,
   DAT: false,
   HUM: false,
-  TEFF: undefined,
   TEMP: false,
   TIM: false,
   UPPERCASE: false,
@@ -316,12 +315,11 @@ type OptionalSettingOptions = keyof Omit<SettingOptions, 'TEFF'>
 
 export const settingOptions = (options: Record<string, any>): SettingOptions => {
   const opt: SettingOptions = {};
-  const { TEFF, ...optionalOptions } = { ...defaultSettingsOptions, ...options };
-  if (isNumeric(TEFF)) {
-    opt.TEFF = toTransitionEffect(TEFF);
+  if (isNumeric(options.TEFF)) {
+    opt.TEFF = toTransitionEffect(options.TEFF);
   }
 
-  Object.keys(optionalOptions).forEach((key) => {
+  Object.keys(defaultSettingsOptions).forEach((key) => {
     if (key in options) {
       opt[key as OptionalSettingOptions] = !!options[key];
     }

@@ -739,7 +739,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | A7 | ✅ | odstraněno osm ověřených mrtvých bloků; pairing test aktualizován dle schváleného rozsahu |
 | A8 | ✅ | manifest assety i runtime registrace kryté testy; dočasný allowlist `applicationIcon` zůstává do C6 |
 | A9 | ✅ | discovery načítáno při `list_devices`; indikátory validovány před requestem; credentials používají prázdné stringy |
-| A10 | ⬜ | |
+| A10 | ✅ | `settingOptions` iteruje jen podporované klíče; `user`/`pass` se neposílají do device settings |
 | B1 | ⬜ | |
 | C1 | ⬜ | R5: 3 consecutive, přechod právě jednou |
 | C2 | ⬜ | |
