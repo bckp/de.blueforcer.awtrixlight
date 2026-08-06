@@ -109,6 +109,15 @@ interface AwtrixNgConnectionCandidate {
   auth?: AwtrixNgBasicAuthOptions;
 }
 
+interface AwtrixNgSettingsConnectionCandidate {
+  connection: AwtrixNgConnectionCandidate;
+  /**
+   * True when the Homey settings carried no address and it had to be restored from the pairing
+   * store. Devices paired before 2.1.0 keep the connection values only in the store.
+   */
+  restoredFromStore: boolean;
+}
+
 interface AwtrixNgLocallyPreparedSettingsChanges {
   settingsPatch?: AwtrixNgApiSettingsPatch;
 }
@@ -124,6 +133,9 @@ class AwtrixNgDevice extends Device {
   icons?: AwtrixNgIcons;
 
   poll?: AwtrixNgPoll;
+
+  /** Resolves once the deferred Homey settings sync scheduled by onSettings() has finished. */
+  pendingSettingsSync?: Promise<void>;
 
   getAwtrixDeviceType(): AwtrixDeviceType {
     return 'awtrixng';
@@ -387,23 +399,51 @@ class AwtrixNgDevice extends Device {
     return client;
   }
 
-  private getConnectionCandidateFromSettings(settings: AwtrixNgDeviceSettings): AwtrixNgConnectionCandidate {
-    const address = typeof settings.address === 'string' ? settings.address.trim() : '';
+  private getConnectionCandidateFromSettings(
+    settings: AwtrixNgDeviceSettings,
+  ): AwtrixNgSettingsConnectionCandidate {
+    const settingsAddress = typeof settings.address === 'string' ? settings.address.trim() : '';
 
-    if (address === '') {
+    if (settingsAddress !== '') {
+      return {
+        connection: this.toConnectionCandidate(settingsAddress, settings.port, settings),
+        restoredFromStore: false,
+      };
+    }
+
+    // Devices paired before 2.1.0 carry the connection only in the store, so changing a local
+    // setting (typically the credentials) must not fail with "connection not configured".
+    const store = this.getStoreSnapshot();
+    const storeAddress = store.address === undefined ? '' : store.address.trim();
+
+    if (storeAddress === '' || store.port === undefined) {
       throw new Error(this.getConnectionNotConfiguredMessage());
     }
 
+    return {
+      connection: this.toConnectionCandidate(storeAddress, store.port, settings),
+      restoredFromStore: true,
+    };
+  }
+
+  private toConnectionCandidate(
+    address: string,
+    port: unknown,
+    settings: AwtrixNgDeviceSettings,
+  ): AwtrixNgConnectionCandidate {
     if (address.includes('://') || address.includes('/')) {
       throw new Error('Device address must be a hostname or IP address without protocol or path.');
     }
 
-    const port = toConnectionPort(settings.port);
+    const connectionPort = toConnectionPort(port);
 
     return {
       address,
-      port,
-      baseUrl: toAwtrixNgBaseUrl({ address, port }),
+      port: connectionPort,
+      baseUrl: toAwtrixNgBaseUrl({
+        address,
+        port: connectionPort,
+      }),
       auth: this.getAuthFromSettingsSnapshot(settings),
     };
   }
@@ -413,7 +453,7 @@ class AwtrixNgDevice extends Device {
     changedKeys: readonly string[],
     locallyPreparedChanges: AwtrixNgLocallyPreparedSettingsChanges,
   ): Promise<void> {
-    const connection = this.getConnectionCandidateFromSettings(newSettings);
+    const { connection, restoredFromStore } = this.getConnectionCandidateFromSettings(newSettings);
     const client = await this.verifyCandidateConnection(connection.baseUrl, connection.auth);
     const preparedChanges = await this.prepareSettingsChanges(
       client,
@@ -425,8 +465,35 @@ class AwtrixNgDevice extends Device {
     await this.writePreparedSettingsChanges(client, preparedChanges);
 
     await this.commitConnection(connection, client, false);
+
+    if (restoredFromStore) {
+      this.scheduleRestoredConnectionSettingsSync(connection);
+    }
+
     this.ensurePollingStarted();
     await this.refreshDeviceState({ allowAddCapabilities: false });
+  }
+
+  /**
+   * Writes a connection restored from the store back into the Homey settings so the fallback in
+   * getConnectionCandidateFromSettings() stays a one-off migration.
+   *
+   * The write is deferred: Homey keeps the submitted settings pending for the whole onSettings()
+   * call, so setSettings() must not run inside the handler (docs/awtrix-ng/06-user-maintainer-guide.md).
+   * It is best effort - the store remains the authoritative source and a failed sync only means the
+   * next local settings change falls back to the store again.
+   */
+  private scheduleRestoredConnectionSettingsSync(connection: AwtrixNgConnectionCandidate): void {
+    this.pendingSettingsSync = new Promise<void>((resolve) => {
+      setImmediate(resolve);
+    })
+      .then(() => this.setSettings({
+        address: connection.address,
+        port: connection.port,
+      }))
+      .catch((error: unknown) => {
+        this.error(error);
+      });
   }
 
   private prepareLocalSettingsChanges(
