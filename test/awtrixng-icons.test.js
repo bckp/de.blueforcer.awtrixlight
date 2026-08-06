@@ -413,3 +413,51 @@ for (const scenario of [{
     assert.deepEqual(client.calls.map((call) => call.method), ['listFiles', 'listFiles']);
   });
 }
+
+for (const scenario of [{
+  name: 'an entry that is not an object',
+  files: ['homey.gif'],
+}, {
+  name: 'an entry without a name',
+  files: [{}],
+}, {
+  name: 'an entry with a null name',
+  files: [{ name: null, size: 1 }],
+}, {
+  name: 'an entry with a non-string name',
+  files: [{ name: 42, size: 1 }],
+}, {
+  name: 'an entry with an empty name',
+  files: [{ name: '', size: 1 }],
+}, {
+  name: 'one invalid entry among valid ones',
+  files: [{ name: 'homey.gif', size: 1 }, {}],
+}]) {
+  test(`AWTRIX NG icon list rejects ${scenario.name} without caching or a bare TypeError`, async () => {
+    const client = new FakeIconClient();
+    client.listResponses = [{
+      files: scenario.files,
+      usedBytes: 1,
+      totalBytes: 1048576,
+    }, {
+      files: [{ name: 'homey.gif', size: 123 }],
+      usedBytes: 123,
+      totalBytes: 1048576,
+    }];
+    const icons = createIcons(client);
+
+    await assert.rejects(
+      () => icons.all(),
+      (error) => {
+        assert.equal(error instanceof TypeError, false, 'must not surface a bare TypeError');
+        assert.equal(error instanceof AwtrixNgInvalidResponseError, true);
+        assert.equal(error.endpoint, '/api/v1/files');
+        assert.equal(error.expectedShape, 'an object with a files array of entries with a non-empty name string');
+        return true;
+      },
+    );
+
+    // The rejected response must not be cached: the next call reloads and succeeds.
+    assert.deepEqual((await icons.all()).map((item) => item.id), ['-', 'homey']);
+  });
+}

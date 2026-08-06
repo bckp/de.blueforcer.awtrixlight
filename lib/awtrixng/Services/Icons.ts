@@ -42,6 +42,10 @@ export interface AwtrixNgIconsOptions {
   cacheTtlMs?: number;
 }
 
+const isAwtrixNgFileEntry = (value: unknown): boolean => (
+  isPlainObject(value) && typeof value.name === 'string' && value.name.length > 0
+);
+
 export const toAwtrixNgIconAutocompleteItems = (
   response: AwtrixNgApiFilesResponse,
   labels: AwtrixNgIconListLabels,
@@ -116,6 +120,16 @@ export default class AwtrixNgIcons {
       throw new AwtrixNgInvalidResponseError({
         endpoint: FilesEndpoint,
         expectedShape: 'an object with a files array',
+        actualValue: response,
+      });
+    }
+
+    // Each entry is validated before mapping: path.parse() throws a bare TypeError on a
+    // missing or non-string name, which would lose the endpoint and the expected shape.
+    if (!response.files.every(isAwtrixNgFileEntry)) {
+      throw new AwtrixNgInvalidResponseError({
+        endpoint: FilesEndpoint,
+        expectedShape: 'an object with a files array of entries with a non-empty name string',
         actualValue: response,
       });
     }
