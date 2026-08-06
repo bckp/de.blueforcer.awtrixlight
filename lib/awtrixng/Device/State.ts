@@ -9,7 +9,8 @@ export type AwtrixNgHomeyBaseCapabilityId = 'button_prev'
   | 'awtrix_matrix'
   | typeof AwtrixNgWeatherOverlayCapabilityId
   | 'rssi'
-  | 'ip';
+  | 'ip'
+  | 'button.rediscover';
 
 export type AwtrixNgHomeyOptionalCapabilityId = 'alarm_battery' | 'measure_temperature' | 'measure_humidity';
 
@@ -41,6 +42,9 @@ export const AwtrixNgBaseCapabilityIds: readonly AwtrixNgHomeyBaseCapabilityId[]
   AwtrixNgWeatherOverlayCapabilityId,
   'rssi',
   'ip',
+  // Maintenance action, no value is ever set for it. Listed here so devices paired before
+  // it existed get it added by the capability update plan on the next init.
+  'button.rediscover',
 ];
 
 const optionalCapabilityFields = [{

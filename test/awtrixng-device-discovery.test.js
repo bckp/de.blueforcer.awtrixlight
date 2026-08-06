@@ -424,6 +424,7 @@ test('AWTRIX NG onInit without a stored address registers controls and allows se
     'button_next',
     'button_prev',
     'awtrixng_weather_overlay',
+    'button.rediscover',
   ]);
   assert.equal(device.poll.isActive(), false);
   await assert.rejects(

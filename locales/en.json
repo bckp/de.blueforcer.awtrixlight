@@ -10,7 +10,8 @@
       "initialSynchronizationFailed": "Initial device synchronization failed",
       "authenticationRequired": "Authentication is required",
       "invalidResponse": "The device did not return a valid response.",
-      "offline": "Device is offline"
+      "offline": "Device is offline",
+      "rediscoveryFailed": "Could not discover a new address for this device."
     }
   },
   "list": {

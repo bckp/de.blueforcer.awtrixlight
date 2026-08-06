@@ -21,6 +21,8 @@ const createDeviceState = () => ({
   }],
 });
 
+function FakeDiscoveryResultMDNSSD() {}
+
 const loadAwtrixNgDevice = (transport, clientCreations) => {
   const originalLoad = Module._load;
 
@@ -33,7 +35,10 @@ const loadAwtrixNgDevice = (transport, clientCreations) => {
 
   Module._load = function load(request, parent, isMain) {
     if (request === 'homey') {
-      return { Device: FakeHomeyDevice };
+      return {
+        Device: FakeHomeyDevice,
+        DiscoveryResultMDNSSD: FakeDiscoveryResultMDNSSD,
+      };
     }
     if (request === '../../lib/awtrixng/Http/AxiosTransport') {
       return FakeAxiosTransport;
@@ -89,7 +94,17 @@ const createDefaultResponses = () => ({
   'PUT /api/v1/apps/order': () => jsonResponse({ ok: true }),
 });
 
-const createSettingsHarness = ({ storeEntries, settings: initialSettings, responses: responseOverrides = {} }) => {
+const discoveryResult = (address, port) => Object.assign(
+  Object.create(FakeDiscoveryResultMDNSSD.prototype),
+  { address, port },
+);
+
+const createSettingsHarness = ({
+  storeEntries,
+  settings: initialSettings,
+  responses: responseOverrides = {},
+  discovered,
+}) => {
   const events = [];
   const clientCreations = [];
   const store = new Map(storeEntries);
@@ -169,6 +184,15 @@ const createSettingsHarness = ({ storeEntries, settings: initialSettings, respon
     },
     registerCapabilityListener(capabilityId, listener) {
       capabilityListeners.push({ capabilityId, listener });
+    },
+    driver: {
+      getDiscoveryStrategy() {
+        return {
+          getDiscoveryResult() {
+            return discovered;
+          },
+        };
+      },
     },
   });
 
@@ -390,6 +414,7 @@ test('AWTRIX NG onInit registers capability listeners and polls even without a s
     'button_next',
     'button_prev',
     'awtrixng_weather_overlay',
+    'button.rediscover',
   ], 'listeners are registered before the connection is checked');
   assert.equal(harness.device.poll !== undefined, true);
   assert.deepEqual(harness.transport.calls, [], 'no request is made without a connection');
@@ -543,4 +568,158 @@ test('AWTRIX NG local settings change verifies the candidate before writing and 
   assert.notEqual(harness.device.client, clientAfterInit, 'the verified candidate becomes the active client');
   assert.deepEqual(harness.setSettingsCalls, [], 'onSettings never calls setSettings');
   assert.equal(harness.device.pendingSettingsSync, undefined);
+});
+
+test('AWTRIX NG clearing the address adopts the discovered one instead of the stored one', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'],
+      ['address', '192.0.2.10'],
+      ['port', 80],
+    ],
+    settings: { address: '192.0.2.10', port: 80 },
+    discovered: discoveryResult('192.0.2.55', 80),
+  });
+
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+  harness.setSettingsCalls.length = 0;
+
+  await harness.device.onSettings({
+    oldSettings: { address: '192.0.2.10', port: 80 },
+    newSettings: { address: '', port: 80 },
+    changedKeys: ['address'],
+  });
+
+  assert.equal(harness.store.get('address'), '192.0.2.55', 'the stored address is not reused');
+  assert.equal(harness.store.get('baseUrl'), 'http://192.0.2.55:80');
+
+  await harness.device.pendingSettingsSync;
+
+  assert.deepEqual(harness.setSettingsCalls, [{
+    address: '192.0.2.55',
+    port: 80,
+  }], 'the discovered address is written back into the settings');
+  assert.deepEqual(harness.errors, []);
+});
+
+test('AWTRIX NG clearing the address without a discovery result leaves the device unconfigured', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'],
+      ['address', '192.0.2.10'],
+      ['port', 80],
+    ],
+    settings: { address: '192.0.2.10', port: 80 },
+    discovered: undefined,
+  });
+
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+
+  await assert.rejects(
+    () => harness.device.onSettings({
+      oldSettings: { address: '192.0.2.10', port: 80 },
+      newSettings: { address: '', port: 80 },
+      changedKeys: ['address'],
+    }),
+    /states\.awtrixNg\.connectionNotConfigured/,
+    'the stored address must not silently come back',
+  );
+
+  assert.equal(harness.store.get('address'), '192.0.2.10', 'the store is left untouched');
+  assert.deepEqual(harness.transport.calls, []);
+  assert.equal(harness.device.pendingSettingsSync, undefined);
+});
+
+test('AWTRIX NG migration fallback still applies when the address was not the changed key', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'],
+      ['address', '192.0.2.10'],
+      ['port', 80],
+    ],
+    settings: {
+      address: '', port: 80, authUser: 'homey', authPass: 'secret',
+    },
+    discovered: discoveryResult('192.0.2.55', 80),
+  });
+
+  await harness.device.onSettings({
+    oldSettings: {
+      address: '', port: 80, authUser: 'homey', authPass: 'old',
+    },
+    newSettings: {
+      address: '', port: 80, authUser: 'homey', authPass: 'secret',
+    },
+    changedKeys: ['authPass'],
+  });
+
+  assert.equal(harness.store.get('address'), '192.0.2.10', 'a credentials change keeps using the store');
+  await harness.device.pendingSettingsSync;
+  assert.deepEqual(harness.setSettingsCalls, [{ address: '192.0.2.10', port: 80 }]);
+});
+
+test('AWTRIX NG rediscover button commits the discovered connection', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'],
+      ['address', '192.0.2.10'],
+      ['port', 80],
+    ],
+    settings: { address: '192.0.2.10', port: 80 },
+    discovered: discoveryResult('192.0.2.55', 80),
+  });
+
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+  harness.setSettingsCalls.length = 0;
+
+  const rediscover = harness.capabilityListeners
+    .find(({ capabilityId }) => capabilityId === 'button.rediscover');
+
+  assert.ok(rediscover, 'the maintenance action is registered');
+
+  await rediscover.listener();
+
+  assert.equal(harness.store.get('address'), '192.0.2.55');
+  assert.equal(harness.store.get('baseUrl'), 'http://192.0.2.55:80');
+  assert.deepEqual(harness.setSettingsCalls, [{ address: '192.0.2.55', port: 80 }]);
+  assert.deepEqual(harness.errors, []);
+});
+
+test('AWTRIX NG rediscover button reports failure when nothing is discovered', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80 },
+    discovered: undefined,
+  });
+
+  await harness.device.onInit();
+
+  const rediscover = harness.capabilityListeners
+    .find(({ capabilityId }) => capabilityId === 'button.rediscover');
+
+  await assert.rejects(() => rediscover.listener(), /states\.awtrixNg\.rediscoveryFailed/);
+});
+
+test('AWTRIX NG rediscover button contains a failing commit instead of leaking it', async () => {
+  const probeFailure = new Error('candidate offline');
+  const harness = createSettingsHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80 },
+    discovered: discoveryResult('192.0.2.55', 80),
+  });
+
+  await harness.device.onInit();
+  harness.errors.length = 0;
+  harness.transport.request = async () => {
+    throw probeFailure;
+  };
+
+  const rediscover = harness.capabilityListeners
+    .find(({ capabilityId }) => capabilityId === 'button.rediscover');
+
+  await assert.rejects(() => rediscover.listener(), /states\.awtrixNg\.rediscoveryFailed/);
+  assert.equal(harness.errors.length, 1, 'the underlying failure is logged');
 });

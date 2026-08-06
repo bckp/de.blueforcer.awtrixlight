@@ -52,6 +52,7 @@ test('AWTRIX NG driver compose declares base control capabilities', () => {
     'awtrixng_weather_overlay',
     'rssi',
     'ip',
+    'button.rediscover',
   ]);
 });
 

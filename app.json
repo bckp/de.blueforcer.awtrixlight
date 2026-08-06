@@ -1101,7 +1101,8 @@
         "awtrix_matrix",
         "awtrixng_weather_overlay",
         "rssi",
-        "ip"
+        "ip",
+        "button.rediscover"
       ],
       "platforms": [
         "local"
@@ -1126,6 +1127,15 @@
           "preventInsights": true,
           "title": {
             "en": "Indicator bottom"
+          }
+        },
+        "button.rediscover": {
+          "maintenanceAction": true,
+          "title": {
+            "en": "Try to discover"
+          },
+          "desc": {
+            "en": "Start discovery process for new IP of device."
           }
         }
       },

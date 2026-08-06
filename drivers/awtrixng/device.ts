@@ -105,10 +105,10 @@ interface AwtrixNgConnectionCandidate {
 interface AwtrixNgSettingsConnectionCandidate {
   connection: AwtrixNgConnectionCandidate;
   /**
-   * True when the Homey settings carried no address and it had to be restored from the pairing
-   * store. Devices paired before 2.1.0 keep the connection values only in the store.
+   * True when the address did not come from the Homey settings and has to be written back
+   * into them after the change was committed.
    */
-  restoredFromStore: boolean;
+  syncAddressIntoSettings: boolean;
 }
 
 interface AwtrixNgLocallyPreparedSettingsChanges {
@@ -256,6 +256,49 @@ class AwtrixNgDevice extends Device {
     this.registerCapabilityListener(AwtrixNgWeatherOverlayCapabilityId, async (value: unknown): Promise<void> => {
       await runAwtrixNgWeatherOverlayCapability(this.getClient(), value);
     });
+
+    this.registerCapabilityListener('button.rediscover', async (): Promise<void> => {
+      this.log('Rediscover button pressed');
+
+      if (!await this.tryRediscover()) {
+        throw new Error(this.homey.__('states.awtrixNg.rediscoveryFailed'));
+      }
+    });
+  }
+
+  /**
+   * Manual counterpart to the automatic mDNS hooks: looks up the current discovery result
+   * and commits it. This is the supported way to point the device at a new address, which
+   * is why clearing the address setting does not need to double as a rediscovery trigger.
+   */
+  private async tryRediscover(): Promise<boolean> {
+    const discoveryResult = this.getDiscoveryResultForDevice();
+
+    if (discoveryResult === undefined) {
+      this.log('No discovery result available for this device');
+      return false;
+    }
+
+    try {
+      return await this.commitDiscoveredConnection(discoveryResult);
+    } catch (error: unknown) {
+      this.error(error);
+      return false;
+    }
+  }
+
+  private getDiscoveryResultForDevice(): DiscoveryResultMDNSSD | undefined {
+    try {
+      const result = this.driver.getDiscoveryStrategy().getDiscoveryResult(this.getData().id as string);
+
+      if (result instanceof DiscoveryResultMDNSSD && typeof result.address === 'string' && result.address.length > 0) {
+        return result;
+      }
+    } catch (error: unknown) {
+      this.error(error);
+    }
+
+    return undefined;
   }
 
   private initializePoll(): AwtrixNgPoll {
@@ -414,13 +457,30 @@ class AwtrixNgDevice extends Device {
 
   private getConnectionCandidateFromSettings(
     settings: AwtrixNgDeviceSettings,
+    changedKeys: readonly string[],
   ): AwtrixNgSettingsConnectionCandidate {
     const settingsAddress = typeof settings.address === 'string' ? settings.address.trim() : '';
 
     if (settingsAddress !== '') {
       return {
         connection: this.toConnectionCandidate(settingsAddress, settings.port, settings),
-        restoredFromStore: false,
+        syncAddressIntoSettings: false,
+      };
+    }
+
+    // The user just cleared the address on purpose. Falling back to the store would silently
+    // undo that, so the address is taken from discovery instead - the same source the manual
+    // rediscover button uses. Without a discovery result the device stays unconfigured.
+    if (changedKeys.includes('address')) {
+      const discoveryResult = this.getDiscoveryResultForDevice();
+
+      if (discoveryResult === undefined) {
+        throw new Error(this.getConnectionNotConfiguredMessage());
+      }
+
+      return {
+        connection: this.toConnectionCandidate(discoveryResult.address, discoveryResult.port, settings),
+        syncAddressIntoSettings: true,
       };
     }
 
@@ -435,7 +495,7 @@ class AwtrixNgDevice extends Device {
 
     return {
       connection: this.toConnectionCandidate(storeAddress, store.port, settings),
-      restoredFromStore: true,
+      syncAddressIntoSettings: true,
     };
   }
 
@@ -466,7 +526,7 @@ class AwtrixNgDevice extends Device {
     changedKeys: readonly string[],
     locallyPreparedChanges: AwtrixNgLocallyPreparedSettingsChanges,
   ): Promise<void> {
-    const { connection, restoredFromStore } = this.getConnectionCandidateFromSettings(newSettings);
+    const { connection, syncAddressIntoSettings } = this.getConnectionCandidateFromSettings(newSettings, changedKeys);
     const client = await this.verifyCandidateConnection(connection.baseUrl, connection.auth);
     const preparedChanges = await this.prepareSettingsChanges(
       client,
@@ -479,7 +539,7 @@ class AwtrixNgDevice extends Device {
 
     await this.commitConnection(connection, client, false);
 
-    if (restoredFromStore) {
+    if (syncAddressIntoSettings) {
       this.scheduleRestoredConnectionSettingsSync(connection);
     }
 
