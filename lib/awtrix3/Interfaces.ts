@@ -1,4 +1,4 @@
-import Poll from '../../lib/awtrix3/Poll';
+import Poll from './Poll';
 
 export interface DeviceFailer {
   failsReset(): void;

@@ -12,7 +12,7 @@ import {
 } from '../Normalizer';
 import { Response, Status } from './Response';
 import { AwtrixImage, AwtrixStats, SettingOptions } from '../Types';
-import { DeviceFailer, DevicePoll } from '../../../drivers/awtrixlight/interfaces';
+import { DeviceFailer, DevicePoll } from '../Interfaces';
 
 export default class Api {
 

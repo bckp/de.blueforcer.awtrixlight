@@ -4,7 +4,7 @@ import ApiClient from '../../lib/awtrix3/Api/Client';
 import { Status } from '../../lib/awtrix3/Api/Response';
 import Api from '../../lib/awtrix3/Api/Api';
 import { AwtrixStats, SettingOptions } from '../../lib/awtrix3/Types';
-import { DeviceFailer, DevicePoll } from './interfaces';
+import { DeviceFailer, DevicePoll } from '../../lib/awtrix3/Interfaces';
 import Icons from '../../lib/awtrix3/List/Icons';
 import Poll from '../../lib/awtrix3/Poll';
 import { AwtrixDeviceType } from '../awtrix-device-type';
