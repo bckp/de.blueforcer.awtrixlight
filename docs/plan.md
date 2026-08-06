@@ -759,7 +759,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | D9 | ✅ | R7: obě skupiny se připraví před zápisem; zápisy jsou sekvenční fail-fast a neatomické |
 | D10 | ✅ | sdílená probe factory bez output mapperu; discovery filtruje předem, používá limit 4 a řadí podle názvu |
 | D11 | ✅ | konečná čísla a boolean typy validovány; integer jen pushed-app textOffsetX, bez nedokumentovaných rozsahů |
-| D12 | ⬜ | |
+| D12 | ✅ | availability a pairing texty lokalizovány na Homey hranici; NG technické detaily zůstávají zachované |
 | D13 | ⬜ | R9: NG icon upload nekritický, strukturovaná diagnostika |
 | E1 | ⬜ | |
 | E2 | ⬜ | |

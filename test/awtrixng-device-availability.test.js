@@ -171,6 +171,49 @@ test('AWTRIX NG error detail formatter handles non-API errors explicitly', () =>
   assert.equal(formatAwtrixNgErrorDetails(null), 'Unknown error.');
 });
 
+test('AWTRIX NG device localizes availability headers and preserves technical error details', async () => {
+  const scenarios = [{
+    name: 'authentication required',
+    getDevice: async () => {
+      throw new AwtrixNgApiError({
+        method: 'GET',
+        url: 'http://awtrix-ng.local/api/v1/device',
+        message: 'authentication required',
+        code: 'unauthorized',
+        field: 'authorization',
+        httpStatus: 401,
+      });
+    },
+    expectedMessage: 'states.awtrixNg.authenticationRequired: authentication required | field: authorization | code: unauthorized | HTTP status: 401',
+  }, {
+    name: 'invalid response',
+    getDevice: async () => ({ version: 'not-enough' }),
+    expectedMessage: 'states.awtrixNg.invalidResponse',
+  }, {
+    name: 'offline',
+    getDevice: async () => {
+      throw new AwtrixNgApiError({
+        method: 'GET',
+        url: 'http://awtrix-ng.local/api/v1/device',
+        message: 'service busy',
+        code: 'serviceBusy',
+        field: 'device',
+        httpStatus: 503,
+      });
+    },
+    expectedMessage: 'states.awtrixNg.offline: service busy | field: device | code: serviceBusy | HTTP status: 503',
+  }];
+
+  for (const scenario of scenarios) {
+    const { awtrixNgDevice, calls } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
+    awtrixNgDevice.client = { getDevice: scenario.getDevice };
+
+    await awtrixNgDevice.refreshAvailability();
+
+    assert.deepEqual(calls.setUnavailable, [scenario.expectedMessage], scenario.name);
+  }
+});
+
 test('AWTRIX NG settings refresh rejects a response that is not a plain object', async () => {
   const { awtrixNgDevice } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
 
@@ -262,7 +305,7 @@ test('AWTRIX NG starts polling and preserves API error details when initial sett
   assert.equal(calls.error[0].code, 'validationFailed');
   assert.equal(calls.error[0].httpStatus, 422);
   assert.deepEqual(calls.setUnavailable, [
-    'Initial device synchronization failed. invalid brightness | field: brightness | code: validationFailed | HTTP status: 422',
+    'states.awtrixNg.initialSynchronizationFailed: invalid brightness | field: brightness | code: validationFailed | HTTP status: 422',
   ]);
   assert.equal(homey.setIntervalCalls.length, 1);
   assert.equal(homey.setIntervalCalls[0].intervalMs, 60000);

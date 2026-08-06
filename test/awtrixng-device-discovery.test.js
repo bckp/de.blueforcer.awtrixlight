@@ -404,6 +404,7 @@ test('AWTRIX NG onInit without a stored address registers controls and allows se
   await device.onInit();
 
   assert.equal(device.available, false);
+  assert.equal(events[0].message, 'states.awtrixNg.connectionNotConfigured');
   assert.deepEqual([...capabilityListeners.keys()], [
     'awtrix_matrix',
     'button_next',
@@ -413,7 +414,7 @@ test('AWTRIX NG onInit without a stored address registers controls and allows se
   assert.equal(device.poll.isActive(), false);
   await assert.rejects(
     () => capabilityListeners.get('button_next')(),
-    /Device address is not configured yet/,
+    /states\.awtrixNg\.connectionNotConfigured/,
   );
 
   await device.onSettings({

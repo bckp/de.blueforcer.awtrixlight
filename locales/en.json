@@ -4,7 +4,14 @@
     "unavailable": "no response from device",
     "invalidCredentials": "Username or password is not valid",
     "deviceUnreachable": "Device is not reachable, try again later",
-    "unknownError": "Unknown error"
+    "unknownError": "Unknown error",
+    "awtrixNg": {
+      "connectionNotConfigured": "Device address is not configured yet.",
+      "initialSynchronizationFailed": "Initial device synchronization failed",
+      "authenticationRequired": "Authentication is required",
+      "invalidResponse": "The device did not return a valid response.",
+      "offline": "Device is offline"
+    }
   },
   "list": {
     "icons": {

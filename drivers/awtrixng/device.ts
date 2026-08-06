@@ -4,11 +4,7 @@ import path from 'path';
 import AxiosAwtrixNgHttpTransport from '../../lib/awtrixng/Http/AxiosTransport';
 import AwtrixNgClient from '../../lib/awtrixng/Api/Client';
 import { AwtrixNgInvalidResponseError } from '../../lib/awtrixng/Api/InvalidResponseError';
-import {
-  AwtrixNgAvailabilityState,
-  formatAwtrixNgErrorDetails,
-  toAwtrixNgAvailabilityState,
-} from '../../lib/awtrixng/Device/Availability';
+import { formatAwtrixNgErrorDetails } from '../../lib/awtrixng/Device/Availability';
 import {
   runAwtrixNgMatrixPowerCapability,
   runAwtrixNgNextAppCapability,
@@ -47,7 +43,6 @@ import { AwtrixDeviceType } from '../awtrix-device-type';
 
 const PollIntervalMs = 60000;
 const BundledIconsDirectory = path.join(__dirname, 'assets/images/icons');
-const ConnectionNotConfiguredMessage = 'Device address is not configured yet.';
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -142,7 +137,7 @@ class AwtrixNgDevice extends Device {
     const baseUrl = this.getBaseUrlFromStore();
 
     if (baseUrl === undefined) {
-      await this.setUnavailable(ConnectionNotConfiguredMessage);
+      await this.setUnavailable(this.getConnectionNotConfiguredMessage());
       return;
     }
 
@@ -158,7 +153,9 @@ class AwtrixNgDevice extends Device {
       }
     } catch (error: unknown) {
       this.error(error);
-      await this.setUnavailable(`Initial device synchronization failed. ${formatAwtrixNgErrorDetails(error)}`);
+      await this.setUnavailable(
+        `${this.homey.__('states.awtrixNg.initialSynchronizationFailed')}: ${formatAwtrixNgErrorDetails(error)}`,
+      );
     } finally {
       poll.start();
     }
@@ -248,7 +245,7 @@ class AwtrixNgDevice extends Device {
 
   private getClient(): AwtrixNgClient {
     if (this.client === undefined) {
-      throw new Error(ConnectionNotConfiguredMessage);
+      throw new Error(this.getConnectionNotConfiguredMessage());
     }
 
     return this.client;
@@ -256,7 +253,7 @@ class AwtrixNgDevice extends Device {
 
   async refreshDeviceState(options: { allowAddCapabilities: boolean }): Promise<AwtrixNgDeviceProbeResult | undefined> {
     if (this.client === undefined) {
-      throw new Error(ConnectionNotConfiguredMessage);
+      throw new Error(this.getConnectionNotConfiguredMessage());
     }
 
     const result = await probeAwtrixNgDevice(this.client);
@@ -267,9 +264,7 @@ class AwtrixNgDevice extends Device {
       return result;
     }
 
-    const availability = toAwtrixNgAvailabilityState(result) as Extract<AwtrixNgAvailabilityState, { available: false }>;
-
-    await this.setUnavailable(availability.message);
+    await this.setUnavailable(this.getUnavailableMessage(result));
 
     return result;
   }
@@ -396,7 +391,7 @@ class AwtrixNgDevice extends Device {
     const address = typeof settings.address === 'string' ? settings.address.trim() : '';
 
     if (address === '') {
-      throw new Error(ConnectionNotConfiguredMessage);
+      throw new Error(this.getConnectionNotConfiguredMessage());
     }
 
     if (address.includes('://') || address.includes('/')) {
@@ -528,7 +523,7 @@ class AwtrixNgDevice extends Device {
 
   private async uploadBundledIcons(): Promise<void> {
     if (this.icons === undefined) {
-      throw new Error(ConnectionNotConfiguredMessage);
+      throw new Error(this.getConnectionNotConfiguredMessage());
     }
 
     const iconFiles = fs.readdirSync(BundledIconsDirectory)
@@ -581,6 +576,24 @@ class AwtrixNgDevice extends Device {
     }
 
     return undefined;
+  }
+
+  private getConnectionNotConfiguredMessage(): string {
+    return this.homey.__('states.awtrixNg.connectionNotConfigured');
+  }
+
+  private getUnavailableMessage(
+    result: Exclude<AwtrixNgDeviceProbeResult, { status: 'detected' }>,
+  ): string {
+    if (result.status === 'auth-required') {
+      return `${this.homey.__('states.awtrixNg.authenticationRequired')}: ${formatAwtrixNgErrorDetails(result.error)}`;
+    }
+
+    if (result.status === 'rejected') {
+      return this.homey.__('states.awtrixNg.invalidResponse');
+    }
+
+    return `${this.homey.__('states.awtrixNg.offline')}: ${formatAwtrixNgErrorDetails(result.error)}`;
   }
 
 }

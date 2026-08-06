@@ -58,6 +58,16 @@ const loadAwtrixNgDriver = ({ onTransportCreated, request }) => {
   }
 };
 
+test('AWTRIX NG manual pairing option uses the localized title', () => {
+  const AwtrixNgDriver = loadAwtrixNgDriver({});
+  const driver = new AwtrixNgDriver();
+  driver.homey = {
+    __: (key) => `localized:${key}`,
+  };
+
+  assert.equal(driver.createManualPairingOption().name, 'localized:pair.manual.title');
+});
+
 test('AWTRIX NG driver constructs all three probe clients through one private factory', async () => {
   const driverSource = fs.readFileSync(path.join(root, 'drivers/awtrixng/driver.ts'), 'utf8');
   const clientOptions = [];

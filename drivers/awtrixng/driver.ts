@@ -230,7 +230,7 @@ class AwtrixNgDriver extends Driver {
 
   private createManualPairingOption(): AwtrixNgManualPairingOption {
     return {
-      name: 'Add manually',
+      name: this.homey.__('pair.manual.title'),
       data: {
         id: AwtrixNgManualPairingOptionId,
       },
