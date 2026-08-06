@@ -412,7 +412,7 @@ Pořadí uvnitř fáze respektuj: H3 → H4 (testy před refaktorem), H5 po H3/H
 | G5 | S | ✅ | `ca6009a` | 5 discovery testů přepsaných z `rejects` na `false` + zalogovaná chyba (předepsaná změna chování) |
 | G6 | S | ✅ | `1414daa` | R3a dluh splacen; text 2.1.0 má 311 znaků; lint u G3–G6 neověřen v Linux VM (viz G1) – 298 pass |
 | H1 | O | ✅ | `1992b55` | `Support/Guards.ts`: `isRecord` (pole procházejí) + `isPlainObject` (prototype check z device – Transformers/JsonPayload/Icons prošly beze změny testů) + `toValidTcpPort`; device si nechává hard-fail wrapper `toConnectionPort`. Jediná změna testu: registrace `Support` v `awtrixng-lib-structure` (mechanická, ne sémantická). Lint už v sandboxu běží (doinstalován `@unrs/resolver-binding-linux-arm64-gnu`, `--no-save`) |
-| H2 | S | ⬜ | | |
+| H2 | S | ✅ | `f6c5830` | `#clientGetInternal` v `Api.ts`; `Client.get/getDirect` už delegovaly na `#getRequest` – bez duplicity, nemění se; S12: hláška z `weatherOverlayApiValues` |
 | H3 | S | ⬜ | | PŘED H4 |
 | H4 | O | ⬜ | | P2: opravit vše vč. barvy; indikátory NEMĚNIT |
 | H5 | O | ⬜ | | pak posoudit refreshAvailability |
