@@ -23,6 +23,8 @@ const weatherOverlayApiValues = new Set<string>(AwtrixNgWeatherOverlayValues.fil
 
 const expectedWeatherOverlayValues = AwtrixNgWeatherOverlayValues.join(', ');
 
+const expectedWeatherOverlayApiValues = [...weatherOverlayApiValues].join(', ');
+
 export const isAwtrixNgWeatherOverlayValue = (value: unknown): value is AwtrixNgWeatherOverlayValue => (
   typeof value === 'string' && weatherOverlayValues.has(value)
 );
@@ -55,6 +57,6 @@ export const toAwtrixNgHomeyWeatherOverlayValue = (overlay: string | null): Awtr
     field: 'overlay',
     target: 'displayOverlay',
     reason: 'invalid-value',
-    details: `Expected null or one of: ${AwtrixNgWeatherOverlayValues.filter((value) => value !== 'none').join(', ')}.`,
+    details: `Expected null or one of: ${expectedWeatherOverlayApiValues}.`,
   });
 };

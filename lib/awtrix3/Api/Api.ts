@@ -10,7 +10,7 @@ import {
   appName,
   appOptions,
 } from '../Normalizer';
-import { Status } from './Response';
+import { Response, Status } from './Response';
 import { AwtrixImage, AwtrixStats, SettingOptions } from '../Types';
 import { DeviceFailer, DevicePoll } from '../../../drivers/awtrixlight/interfaces';
 
@@ -117,20 +117,17 @@ export default class Api {
 
   /** bckp ******* NETWORK LAYER  ******* */
   async clientGet<T>(endpoint: string): Promise<T|null> {
-    try {
-      const response = await this.client.get(endpoint);
-      await this.processResponseCode(response.status, response.message);
-
-      return response.data ?? null;
-    } catch (error: any) {
-      this.device.log(error);
-      return null;
-    }
+    return this.#clientGetInternal(() => this.client.get(endpoint));
   }
 
   async clientGetDirect(endpoint: string): Promise<any> {
+    return this.#clientGetInternal(() => this.client.getDirect(endpoint));
+  }
+
+  /** Shared GET handling: report the status code, unwrap data, swallow transport errors as null. */
+  async #clientGetInternal(fetch: () => Promise<Response>): Promise<any> {
     try {
-      const response = await this.client.getDirect(endpoint);
+      const response = await fetch();
       await this.processResponseCode(response.status, response.message);
 
       return response.data ?? null;
