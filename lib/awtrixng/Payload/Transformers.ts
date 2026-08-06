@@ -88,70 +88,96 @@ export interface AwtrixNgSettingsPatchInput {
   transitionEffect?: string;
 }
 
-const pageFields = [
-  'backgroundColor',
-  'barChart',
-  'chartAutoscale',
-  'chartColor',
-  'draw',
-  'durationMs',
-  'effect',
-  'effectSpeed',
-  'font',
-  'icon',
-  'iconMode',
-  'iconOffsetX',
-  'lineChart',
-  'overlay',
-  'palette',
-  'paletteBlend',
-  'paletteSpan',
-  'paletteSpeed',
-  'progress',
-  'progressColor',
-  'progressTrackColor',
-  'repeat',
-  'scroll',
-  'text',
-  'textBlinkMs',
-  'textCase',
-  'textCenter',
-  'textColor',
-  'textFadeMs',
-  'textInFront',
-  'textOffsetX',
-] as const;
+const pageFieldMap: Record<keyof AwtrixNgApiPagePayload, true> = {
+  backgroundColor: true,
+  barChart: true,
+  chartAutoscale: true,
+  chartColor: true,
+  draw: true,
+  durationMs: true,
+  effect: true,
+  effectSpeed: true,
+  font: true,
+  icon: true,
+  iconMode: true,
+  iconOffsetX: true,
+  lineChart: true,
+  overlay: true,
+  palette: true,
+  paletteBlend: true,
+  paletteSpan: true,
+  paletteSpeed: true,
+  progress: true,
+  progressColor: true,
+  progressTrackColor: true,
+  repeat: true,
+  scroll: true,
+  text: true,
+  textBlinkMs: true,
+  textCase: true,
+  textCenter: true,
+  textColor: true,
+  textFadeMs: true,
+  textInFront: true,
+  textOffsetX: true,
+};
+
+const pageFields = Object.keys(pageFieldMap);
+
+const notificationOnlyFieldMap: Record<
+  Exclude<keyof AwtrixNgApiNotificationPayload, keyof AwtrixNgApiPagePayload>,
+  true
+> = {
+  hold: true,
+  name: true,
+  sound: true,
+  soundLoop: true,
+  soundRtttl: true,
+  stack: true,
+  wakeup: true,
+};
+
+const notificationOnlyFields = new Set<string>(Object.keys(notificationOnlyFieldMap));
 
 const notificationFields = new Set<string>([
   ...pageFields,
-  'hold',
-  'name',
-  'sound',
-  'soundLoop',
-  'soundRtttl',
-  'stack',
-  'wakeup',
+  ...notificationOnlyFields,
 ]);
+
+const pushedAppOnlyFieldMap: Record<
+  Exclude<keyof AwtrixNgApiPushedAppPayload, keyof AwtrixNgApiPagePayload>,
+  true
+> = {
+  lifetimeExpiry: true,
+  lifetimeMs: true,
+};
+
+const pushedAppOnlyFields = new Set<string>(Object.keys(pushedAppOnlyFieldMap));
 
 const pushedAppFields = new Set<string>([
   ...pageFields,
-  'lifetimeExpiry',
-  'lifetimeMs',
+  ...pushedAppOnlyFields,
 ]);
 
-const indicatorFields = new Set<string>([
-  'blinkMs',
-  'color',
-  'fadeMs',
-]);
+const indicatorFieldMap: Record<keyof AwtrixNgApiIndicatorPayload, true> = {
+  blinkMs: true,
+  color: true,
+  fadeMs: true,
+};
 
-const settingsFields = new Set<string>([
-  'autoBrightness',
-  'autoTransition',
-  'blockNavigation',
-  'transitionEffect',
-  'uppercase',
-]);
+const indicatorFields = new Set<string>(Object.keys(indicatorFieldMap));
+
+const settingsFieldMap: Record<keyof AwtrixNgSettingsPatchInput, true> = {
+  autoBrightness: true,
+  autoTransition: true,
+  blockNavigation: true,
+  transitionEffect: true,
+  uppercase: true,
+};
+
+export const AwtrixNgWritableSettingsFields = Object.keys(settingsFieldMap);
+
+const settingsFields = new Set<string>(AwtrixNgWritableSettingsFields);
 
 const awtrix3FieldReplacements: Readonly<Record<string, string>> = {
   background: 'backgroundColor',
@@ -187,30 +213,17 @@ const unsupportedAwtrix3Fields = new Set<string>([
   'save',
 ]);
 
-const notificationOnlyFields = new Set<string>([
-  'hold',
-  'name',
-  'sound',
-  'soundLoop',
-  'soundRtttl',
-  'stack',
-  'wakeup',
-]);
+const scrollFieldMap: Record<keyof AwtrixNgApiScrollPayload, true> = {
+  direction: true,
+  entry: true,
+  gap: true,
+  holdMs: true,
+  mode: true,
+  speed: true,
+  whenFits: true,
+};
 
-const pushedAppOnlyFields = new Set<string>([
-  'lifetimeExpiry',
-  'lifetimeMs',
-]);
-
-const scrollFields = new Set<string>([
-  'direction',
-  'entry',
-  'gap',
-  'holdMs',
-  'mode',
-  'speed',
-  'whenFits',
-]);
+const scrollFields = new Set<string>(Object.keys(scrollFieldMap));
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 

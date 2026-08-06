@@ -1,5 +1,6 @@
 import {
   AwtrixNgSettingsPatchInput,
+  AwtrixNgWritableSettingsFields,
   UnsupportedAwtrixNgPayloadFieldError,
   toAwtrixNgSettingsPatch,
 } from '../Payload/Transformers';
@@ -12,7 +13,7 @@ export type AwtrixNgHomeySettingValue = boolean | string | number | undefined | 
 
 export type AwtrixNgHomeySettings = Record<string, AwtrixNgHomeySettingValue>;
 
-export type AwtrixNgWritableSettingsField = 'autoBrightness' | 'autoTransition' | 'blockNavigation' | 'uppercase' | 'transitionEffect';
+export type AwtrixNgWritableSettingsField = keyof AwtrixNgSettingsPatchInput;
 
 export type AwtrixNgLocalSettingsField = 'address' | 'port' | 'authUser' | 'authPass';
 
@@ -28,13 +29,7 @@ export interface AwtrixNgHomeySettingsApplyResult {
   homeySettingsUpdate: AwtrixNgHomeySettingsPatch;
 }
 
-const writableSettingsFields = new Set<string>([
-  'autoBrightness',
-  'autoTransition',
-  'blockNavigation',
-  'transitionEffect',
-  'uppercase',
-]);
+const writableSettingsFields = new Set<string>(AwtrixNgWritableSettingsFields);
 
 const localSettingsFields = new Set<string>([
   'address',
