@@ -1,8 +1,10 @@
 # Prováděcí plán 2 – hotfixy po review 2.1.0 + následný úklid
 
-> Nástupce dokončeného [`plan.md`](plan.md). **Nahrazuje a pohlcuje [`plan-after.md`](plan-after.md)**
+> Nástupce dokončeného `plan.md`. **Nahrazuje a pohlcuje `plan-after.md`**
 > – jeho kandidáti F1p–F8p jsou zde rozpracovaní do prováděcích balíčků.
-> Nálezy V1–V7 pocházejí z [`claude-review-2.1.0.md`](claude-review-2.1.0.md).
+> Nálezy V1–V7 pocházejí z `claude-review-2.1.0.md`.
+> Všechny tři dokumenty byly po dokončení fáze H a vydání 2.2.0 smazané –
+> dohledatelné v git historii do commitu `8dcf85d`.
 > Vztažný commit: `ccdccad` („chore(release): prepare 2.1.0").
 > **Čísla řádků v analýzách driftují – hledej podle symbolů.**
 >
@@ -84,7 +86,7 @@ Baseline neprochází před tvou změnou → stop, nahlas, nezačínej.
 | P3 | F8p: CI platforma a přísnost | H14 | **GitHub Actions, `npm audit` jen report** (neblokující krok). |
 | P4 | Kdy publikovat 2.1.0 | REL2 | **Až později** – po fázi G a vybrané části H. REL2 čeká na výslovný pokyn. |
 
-Zděděná platná rozhodnutí z `plan.md`/`plan-after.md`: R7 (sekvenční fail-fast NG
+Zděděná platná rozhodnutí z `plan.md`/`plan-after.md` (oba smazané, viz git historii): R7 (sekvenční fail-fast NG
 settings), R8 (oddělené TTL), R9 (bundled ikony nekritické se strukturovanou
 diagnostikou), R6 (401 = auth, Node 22, `txt.id === uid`).
 

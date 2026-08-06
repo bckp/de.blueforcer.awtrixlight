@@ -244,12 +244,11 @@ Nikdy nechytat a neignorovat AWTRIX NG API chyby.
   `/api/v1/device`, `/api/v1/settings`, `/api/v1/apps`, `/api/v1/apps/order`, page payload a
   `/api/v1/system`; poté aktualizovat oba soubory v `docs/vendor` i metadata v
   `docs/vendor/awtrixng-source.md`.
-- Každou nejasnost označit jako `UNKNOWN` a propsat do `docs/awtrix-ng/05-todo-list.md`, pokud jde o budoucí backlog, nebo přímo sem, pokud jde o dlouhodobé maintainer pravidlo.
+- Každou nejasnost označit jako `UNKNOWN` a propsat přímo sem (dřívější backlog `docs/awtrix-ng/05-todo-list.md` byl po dokončení smazán).
 
 ## Související dokumenty
 
 - `docs/awtrix-ng/01-existing-driver-analysis.md` — analýza existujícího AWTRIX 3 driveru.
 - `docs/awtrix-ng/02-api-compatibility-matrix.md` — detailní API srovnání AWTRIX 3 vs. AWTRIX NG.
 - `docs/awtrix-ng/03-json-options.md` — user-facing reference podporovaných AWTRIX NG JSON options pro messages a pushed apps.
-- `docs/awtrix-ng/05-todo-list.md` — aktuální budoucí backlog po první distribuční iteraci.
 - `docs/awtrix-ng/06-user-maintainer-guide.md` — aktuální stav podpory AWTRIX NG a maintainer zásady.

@@ -4,8 +4,9 @@
 > Stav repozitáře: commit `f596dc9` („Bump 2.0.1"), pracovní strom čistý.
 > **V rámci této analýzy nebyl změněn žádný zdrojový soubor.**
 >
-> **Konkrétní postupy náprav:** [`docs/claude-remediation-plan.md`](claude-remediation-plan.md)
-> **Nezávislý audit z téhož dne:** [`docs/code-audit-2026-08-05.md`](code-audit-2026-08-05.md)
+> **Pozn. (po vydání 2.2.0):** doprovodné dokumenty `claude-remediation-plan.md` a
+> `code-audit-2026-08-05.md` byly po dokončení náprav smazané. Jsou dohledatelné
+> v git historii do commitu `8dcf85d`.
 > – překryv a doplňky viz sekce 9.
 
 ## 0. Výchozí předpoklad
@@ -507,7 +508,7 @@ který by odchytil CI krok „build → `git diff --exit-code app.json` → `hom
 Po dokončení této analýzy jsem ji porovnal s nezávislým auditem z téhož dne.
 Většina nálezů se překrývá. Následující položky **v mé analýze chyběly nebo byly neúplné**
 – ověřil jsem je v tomto repozitáři a doplňuji je sem, aby byl dokument úplný.
-Podrobné postupy náprav jsou v `claude-remediation-plan.md` pod uvedenými ID.
+Podrobné postupy náprav byly v `claude-remediation-plan.md` pod uvedenými ID (dokument smazán, viz git historii).
 
 ### N2 – Počítadlo chyb AWTRIX 3 má dvě vady · **vysoký**
 
