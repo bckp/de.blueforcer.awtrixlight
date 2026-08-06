@@ -407,10 +407,10 @@ Pořadí uvnitř fáze respektuj: H3 → H4 (testy před refaktorem), H5 po H3/H
 |---|---|---|---|---|
 | G1 | S | ✅ | `3c016d2` | P1: propsat chybu; lint nešel spustit v Linux VM (chybí native binding `unrs-resolver`) |
 | G2 | S | ✅ | `5835460` | lint neověřen v Linux VM (stejný důvod jako G1); 289 pass |
-| G3 | O | ⬜ | | fallback store + sync settings |
-| G4 | S | ⬜ | | |
-| G5 | S | ⬜ | | |
-| G6 | S | ⬜ | | R3a changelog dluh |
+| G3 | O | ✅ | `fb0a8ed` | fallback ze store; `setSettings` v `onSettings` je zakázané (`docs/awtrix-ng/06-user-maintainer-guide.md`), sync proto odložený přes `setImmediate` a jen při použití fallbacku; `commitConnection(..., false)` zůstává |
+| G4 | S | ✅ | `a4f65a5` | lokální `isRecord`, `AwtrixNgInvalidResponseError` |
+| G5 | S | ✅ | `ca6009a` | 5 discovery testů přepsaných z `rejects` na `false` + zalogovaná chyba (předepsaná změna chování) |
+| G6 | S | ✅ | `1414daa` | R3a dluh splacen; text 2.1.0 má 311 znaků; lint u G3–G6 neověřen v Linux VM (viz G1) – 298 pass |
 | H1 | O | ⬜ | | mapovat call-sites předem |
 | H2 | S | ⬜ | | |
 | H3 | S | ⬜ | | PŘED H4 |
