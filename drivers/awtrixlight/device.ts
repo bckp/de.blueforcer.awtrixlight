@@ -101,7 +101,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       if (this.getAvailable()) {
         this.log('Device availalible');
         await this.refreshAll();
-        this.connected();
+        await this.connected();
       } else {
         this.log('Polling set to extended mode, device is not available');
       }
@@ -136,9 +136,9 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
    */
   async onAdded() {
     this.log('AwtrixLightDevice has been added');
-    this.connected();
+    await this.connected();
 
-    this.setCapabilityValue('ip', this.getStoreValue('address'));
+    await this.setCapabilityValue('ip', this.getStoreValue('address')).catch(this.error);
 
     // Upload files
     const directory = `${__dirname}/assets/images/icons`;
@@ -333,8 +333,14 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     }
   }
 
-  connected() {
-    this.cmdNotify('HOMEY', { color: '#FFFFFF', duration: '2', icon: 'homey' });
+  async connected(): Promise<void> {
+    // The welcome notification is best-effort: a device that cannot show it must
+    // not break initialization or pairing.
+    try {
+      await this.cmdNotify('HOMEY', { color: '#FFFFFF', duration: '2', icon: 'homey' });
+    } catch (error) {
+      this.error(error);
+    }
   }
 
   initFlows() {

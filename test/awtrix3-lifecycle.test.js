@@ -510,6 +510,111 @@ test('AWTRIX 3 onAdded uploads all bundled icons sequentially and contains failu
   assert.equal(diagnostics[0].errors[0].cause, uploadError);
 });
 
+const countUnhandledRejections = async (operation) => {
+  let unhandled = 0;
+  const listener = () => {
+    unhandled += 1;
+  };
+  process.on('unhandledRejection', listener);
+  try {
+    await operation();
+    // Unhandled rejections are reported on a later macrotask tick.
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  } finally {
+    process.off('unhandledRejection', listener);
+  }
+  return unhandled;
+};
+
+test('AWTRIX 3 initialization survives a failing welcome notification', async () => {
+  const notifyError = new Error('notify failed');
+  const errors = [];
+  const events = [];
+  const context = {
+    api: {
+      setDebug() {},
+    },
+    async getSettings() {
+      return {};
+    },
+    async testDevice() {
+      return Status.Ok;
+    },
+    setAvailable: asyncNoop,
+    poll: {
+      stop() {},
+      start() {
+        events.push('poll.start');
+      },
+    },
+    failsReset() {},
+    failsCritical() {},
+    getAvailable() {
+      return true;
+    },
+    log() {},
+    error(error) {
+      errors.push(error);
+    },
+    async refreshAll() {
+      events.push('refresh');
+    },
+    connected: AwtrixLightDevice.prototype.connected,
+    async cmdNotify() {
+      events.push('notify');
+      throw notifyError;
+    },
+    registerCapabilityListener() {},
+  };
+
+  const unhandled = await countUnhandledRejections(
+    () => AwtrixLightDevice.prototype.initializeDevice.call(context),
+  );
+
+  assert.deepEqual(events, ['refresh', 'notify', 'poll.start']);
+  assert.deepEqual(errors, [notifyError], 'the best-effort greeting failure is logged');
+  assert.equal(unhandled, 0);
+});
+
+test('AWTRIX 3 onAdded contains greeting and capability write failures', async () => {
+  const notifyError = new Error('notify failed');
+  const capabilityError = new Error('capability write failed');
+  const errors = [];
+  const uploads = [];
+  const context = {
+    log() {},
+    error(error) {
+      errors.push(error);
+    },
+    connected: AwtrixLightDevice.prototype.connected,
+    async cmdNotify() {
+      throw notifyError;
+    },
+    getStoreValue() {
+      return '127.0.0.1';
+    },
+    async setCapabilityValue() {
+      throw capabilityError;
+    },
+    api: {
+      async uploadImage(data, fileName) {
+        uploads.push(fileName);
+      },
+    },
+    icons: {
+      invalidate() {},
+    },
+  };
+
+  const unhandled = await countUnhandledRejections(
+    () => AwtrixLightDevice.prototype.onAdded.call(context),
+  );
+
+  assert.deepEqual(errors, [notifyError, capabilityError]);
+  assert.equal(unhandled, 0);
+  assert.equal(uploads.length > 0, true, 'pairing continues with the bundled icon upload');
+});
+
 test('AWTRIX 3 discovery address change persists state before verification', async () => {
   const storeWrite = deferred();
   const capabilityWrite = deferred();
