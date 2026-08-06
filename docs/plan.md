@@ -763,4 +763,4 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | D13 | ✅ | R9: uploady pokračují po chybě; strukturovaná diagnostika zachovává fileName i původní NG error |
 | E1 | ✅ | osm string-literal unionů je odvozeno z exportovaných const polí; transformery používají stejný zdroj pravdy |
 | E2 | ✅ | allowlisty payloadů jsou typově svázané s API typy; zapisovatelné settings používají jediný runtime seznam |
-| REL1 | ⬜ | R12: 2.1.0, bez publikace |
+| REL1 | ✅ | R12: 2.1.0 připravena; manifest vygenerován a publish validace prošla; bez publikace |
