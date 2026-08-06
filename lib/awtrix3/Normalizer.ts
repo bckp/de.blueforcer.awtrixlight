@@ -70,27 +70,39 @@ function toColor(color: any): Color {
   return '0';
 }
 
+function toFragmentText(value: unknown): TextFragment[] | undefined {
+  if (isArrayOfTextFragments(value)) {
+    return value.map((fragment) => ({ t: fragment.t, c: toColor(fragment.c) }));
+  }
+
+  return undefined;
+}
+
+/**
+ * A text input is either a fragment array or literal text.
+ *
+ * JSON is only parsed when the trimmed input starts with `[`, so literal text is
+ * never reinterpreted: `"abc"`, `null` and ` 123 ` are shown exactly as entered.
+ */
 function toText(text: any): Text | undefined {
-  try {
-    if (isString(text)) {
-      text = JSON.parse(text);
+  if (isString(text) && text.trim().startsWith('[')) {
+    let parsed: unknown;
+
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      // Not JSON at all - show it as literal text.
+      return text;
     }
 
-    if (isString(text) || isNumeric(text)) {
-      return text.toString();
-    }
-
-    if (isArrayOfTextFragments(text)) {
-      return text.map((fragment) => ({ t: fragment.t, c: toColor(fragment.c) }));
-    }
-  } catch {
+    return toFragmentText(parsed);
   }
 
   if (isString(text) || isNumeric(text)) {
     return text.toString();
   }
 
-  return undefined;
+  return toFragmentText(text);
 }
 
 export const isHomeyApp = (app: string): boolean => {
@@ -144,113 +156,90 @@ export const powerOptions = (options: Record<'power', any>): PowerOptions => {
   };
 };
 
+interface BasicOptionContext {
+  /** Raw caller options. Rules may mutate it: `repeat` clears `duration`. */
+  options: Record<string, any>;
+  /** Output built so far - later rules depend on earlier results. */
+  opt: BaseOptions;
+  /** Effect names reported by the device. */
+  effects: string[];
+}
+
+interface BasicOptionRule {
+  key: keyof BaseOptions;
+  /** Decides whether the raw value is accepted. */
+  guard: (value: any, context: BasicOptionContext) => boolean;
+  /** Converts an accepted value; the raw value is used when omitted. */
+  transform?: (value: any) => any;
+  /** Runs after the value was written. */
+  onAccepted?: (context: BasicOptionContext) => void;
+}
+
+const isBoolean = (value: any): value is boolean => typeof value === 'boolean';
+
+/**
+ * Declarative description of `basicOptions`. The order matters twice: it defines the
+ * key order of the payload and later rules read values produced by earlier ones
+ * (blinkText/fadeText check gradient and rainbow, bar/line check icon, barBC checks bar/line).
+ */
+const basicOptionRules: BasicOptionRule[] = [
+  { key: 'text', guard: (value) => toText(value) !== undefined, transform: toText },
+  { key: 'textCase', guard: isNumeric, transform: toTextCase },
+  { key: 'topText', guard: isBoolean },
+  { key: 'textOffset', guard: isNumeric, transform: toNumber },
+  { key: 'center', guard: isBoolean },
+  // H4/P2: an invalid color is dropped instead of being sent as '0'.
+  { key: 'color', guard: isColor },
+  {
+    key: 'gradient',
+    guard: (value) => Array.isArray(value) && value.length === 2 && isColor(value[0]) && isColor(value[1]),
+  },
+  { key: 'background', guard: isColor },
+  { key: 'rainbow', guard: isBoolean },
+  {
+    key: 'icon',
+    guard: (value) => isString(value) && value !== '-' && (value.length < 32 || value.startsWith('data:image/jpeg;base64,')),
+  },
+  { key: 'pushIcon', guard: isNumeric, transform: toPushIcon },
+  {
+    key: 'repeat',
+    guard: isNumeric,
+    transform: toNumber,
+    // Repeat and duration are mutually exclusive; repeat wins.
+    onAccepted: ({ options }) => {
+      options.duration = undefined;
+    },
+  },
+  { key: 'duration', guard: isNumeric, transform: toNumber },
+  { key: 'noScroll', guard: isBoolean },
+  { key: 'scrollSpeed', guard: isNumeric, transform: toNumber },
+  { key: 'effect', guard: (value, { effects }) => Boolean(value) && isString(value) && effects.includes(value) },
+  { key: 'effectSettings', guard: (value) => Boolean(value) && isEffectSettings(value) },
+  { key: 'progress', guard: isNumeric, transform: (value) => minMaxNumber(0, 100, value) },
+  { key: 'progressC', guard: isColor },
+  { key: 'progressBC', guard: isColor },
+  // H4/P2: zero is a valid interval, so `isNumeric` replaces the truthy check.
+  { key: 'blinkText', guard: (value, { opt }) => isNumeric(value) && !opt.gradient && !opt.rainbow, transform: toNumber },
+  { key: 'fadeText', guard: (value, { opt }) => isNumeric(value) && !opt.gradient && !opt.rainbow, transform: toNumber },
+  { key: 'overlay', guard: (value) => Boolean(value) && isOverlay(value) },
+  { key: 'bar', guard: (value, { opt }) => Boolean(value) && isBarLineValues(value, !!opt.icon) },
+  { key: 'line', guard: (value, { opt }) => Boolean(value) && isBarLineValues(value, !!opt.icon) },
+  { key: 'barBC', guard: (value, { opt }) => isColor(value) && Boolean(opt.bar || opt.line) },
+];
+
 const basicOptions = (options: Record<keyof BaseOptions, any>, effects: string[]): BaseOptions => {
   const opt: BaseOptions = {};
+  const context: BasicOptionContext = { options, opt, effects };
 
-  const text = toText(options.text);
-  if (text !== undefined) {
-    opt.text = text;
-  }
+  for (const rule of basicOptionRules) {
+    const value = options[rule.key];
 
-  if (isNumeric(options.textCase)) {
-    opt.textCase = toTextCase(options.textCase);
-  }
+    if (!rule.guard(value, context)) {
+      continue;
+    }
 
-  if (typeof options.topText === 'boolean') {
-    opt.topText = options.topText;
-  }
-
-  if (isNumeric(options.textOffset)) {
-    opt.textOffset = toNumber(options.textOffset);
-  }
-
-  if (typeof options.center === 'boolean') {
-    opt.center = options.center;
-  }
-
-  if (options.color !== undefined) {
-    opt.color = toColor(options.color);
-  }
-
-  if (options.gradient && options.gradient.length === 2 && isColor(options.gradient[0]) && isColor(options.gradient[1])) {
-    opt.gradient = options.gradient;
-  }
-
-  if (options.background && isColor(options.background)) {
-    opt.background = options.background;
-  }
-
-  if (typeof options.rainbow === 'boolean') {
-    opt.rainbow = options.rainbow;
-  }
-
-  if (isString(options.icon) && options.icon !== '-' && (options.icon.length < 32 || options.icon.startsWith('data:image/jpeg;base64,'))) {
-    opt.icon = options.icon;
-  }
-
-  if (isNumeric(options.pushIcon)) {
-    opt.pushIcon = toPushIcon(options.pushIcon);
-  }
-
-  if (isNumeric(options.repeat)) {
-    opt.repeat = toNumber(options.repeat);
-    options.duration = undefined;
-  }
-
-  if (isNumeric(options.duration)) {
-    opt.duration = toNumber(options.duration);
-  }
-
-  if (typeof options.noScroll === 'boolean') {
-    opt.noScroll = options.noScroll;
-  }
-
-  if (isNumeric(options.scrollSpeed)) {
-    opt.scrollSpeed = toNumber(options.scrollSpeed);
-  }
-
-  if (options.effect && isString(options.effect) && effects.includes(options.effect)) {
-    opt.effect = options.effect;
-  }
-
-  if (options.effectSettings && isEffectSettings(options.effectSettings)) {
-    opt.effectSettings = options.effectSettings;
-  }
-
-  if (isNumeric(options.progress)) {
-    opt.progress = minMaxNumber(0, 100, options.progress); // 0-100
-  }
-
-  if (options.progressC && isColor(options.progressC)) {
-    opt.progressC = options.progressC;
-  }
-
-  if (options.progressBC && isColor(options.progressBC)) {
-    opt.progressBC = options.progressBC;
-  }
-
-  if (options.blinkText && isNumeric(options.blinkText) && !opt.gradient && !opt.rainbow) {
-    opt.blinkText = toNumber(options.blinkText);
-  }
-
-  if (options.fadeText && isNumeric(options.fadeText) && !opt.gradient && !opt.rainbow) {
-    opt.fadeText = toNumber(options.fadeText);
-  }
-
-  if (options.overlay && isOverlay(options.overlay)) {
-    opt.overlay = options.overlay;
-  }
-
-  if (options.bar && isBarLineValues(options.bar, !!opt.icon)) {
-    opt.bar = options.bar;
-  }
-
-  if (options.line && isBarLineValues(options.line, !!opt.icon)) {
-    opt.line = options.line;
-  }
-
-  if (options.barBC && isColor(options.barBC) && (opt.bar || opt.line)) {
-    opt.barBC = options.barBC;
+    (opt as Record<string, any>)[rule.key] = rule.transform ? rule.transform(value) : value;
+    rule.onAccepted?.(context);
   }
 
   return opt;

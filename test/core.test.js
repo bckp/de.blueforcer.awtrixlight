@@ -219,14 +219,21 @@ test('AWTRIX 3 Poll reports rejection and continues polling', async () => {
 });
 
 /**
- * H3 characterization tests: these pin the CURRENT normalizer behaviour so that H4
- * can only change it deliberately. Cases marked `characterization: pre-H4` are the
- * ones H4 is allowed to change (decision P2); all others must stay as they are.
+ * Normalizer behaviour tests. Introduced in H3 as characterization tests; the cases
+ * H4 changed on purpose (decision P2 plus literal toText semantics) are now asserted
+ * against the new behaviour. Everything else must stay exactly as it is.
  */
 
-test('characterization: pre-H4 - zero blinkText and fadeText are dropped', () => {
-  assert.deepEqual(normalizer.appOptions({ blinkText: 0, fadeText: 0 }, []), {});
-  assert.deepEqual(normalizer.notifyOptions({ blinkText: 0, fadeText: 0 }, []), {});
+test('zero blinkText and fadeText are sent to the device', () => {
+  // H4/P2: zero is a valid interval, so it must not be swallowed by a truthy check.
+  assert.deepEqual(normalizer.appOptions({ blinkText: 0, fadeText: 0 }, []), {
+    blinkText: 0,
+    fadeText: 0,
+  });
+  assert.deepEqual(normalizer.notifyOptions({ blinkText: 0, fadeText: 0 }, []), {
+    blinkText: 0,
+    fadeText: 0,
+  });
 });
 
 test('characterization: non-zero blinkText and fadeText pass through', () => {
@@ -236,8 +243,16 @@ test('characterization: non-zero blinkText and fadeText pass through', () => {
   });
 });
 
-test('characterization: pre-H4 - invalid basicOptions color falls back to zero', () => {
-  assert.deepEqual(normalizer.appOptions({ color: 'red' }, []), { color: '0' });
+test('invalid basicOptions color is omitted instead of sent as zero', () => {
+  // H4/P2: '0' means "black" here, so an unparseable color must be left out entirely.
+  assert.deepEqual(normalizer.appOptions({ color: 'red' }, []), {});
+  assert.deepEqual(normalizer.appOptions({ color: '' }, []), {});
+});
+
+test('indicator options keep the zero color fallback', () => {
+  // Unchanged on purpose: for indicators color '0' is the documented "turn off" value.
+  assert.deepEqual(normalizer.indicatorOptions({ color: 'red' }), { color: '0' });
+  assert.deepEqual(normalizer.indicatorOptions({}), { color: '0' });
 });
 
 test('characterization: valid basicOptions color passes through unchanged', () => {
@@ -268,27 +283,46 @@ test('characterization: blinkText and fadeText are mutually exclusive with rainb
   });
 });
 
-test('characterization: toText handles numeric, JSON and plain string inputs', () => {
-  // Numeric-looking strings and numbers stringify.
+test('toText shows non-array input literally', () => {
+  // H4: JSON is only parsed for fragment arrays, so literal text is never reinterpreted.
   assert.deepEqual(normalizer.appOptions({ text: '123' }, []), { text: '123' });
   assert.deepEqual(normalizer.appOptions({ text: 123 }, []), { text: '123' });
-
-  // JSON scalars that are neither string nor numeric are dropped.
-  assert.deepEqual(normalizer.appOptions({ text: 'null' }, []), {});
-  assert.deepEqual(normalizer.appOptions({ text: 'true' }, []), {});
-  assert.deepEqual(normalizer.appOptions({ text: '{"a":1}' }, []), {});
-
-  // Non-JSON strings pass through untouched.
   assert.deepEqual(normalizer.appOptions({ text: 'hello world' }, []), { text: 'hello world' });
   assert.deepEqual(normalizer.appOptions({ text: '' }, []), { text: '' });
 
-  // Fragments require a valid color: isTextFragment rejects the whole array otherwise,
-  // so the toColor('0') fallback inside toText is unreachable today.
-  assert.deepEqual(normalizer.appOptions({ text: '[{"t":"a","c":"bad"}]' }, []), {});
-  assert.deepEqual(normalizer.appOptions({ text: '[{"t":"a"}]' }, []), {});
+  // Previously these were parsed as JSON and dropped or rewritten; now they stay as typed.
+  assert.deepEqual(normalizer.appOptions({ text: 'null' }, []), { text: 'null' });
+  assert.deepEqual(normalizer.appOptions({ text: 'true' }, []), { text: 'true' });
+  assert.deepEqual(normalizer.appOptions({ text: '{"a":1}' }, []), { text: '{"a":1}' });
+  assert.deepEqual(normalizer.appOptions({ text: '"abc"' }, []), { text: '"abc"' });
+  assert.deepEqual(normalizer.appOptions({ text: ' 123 ' }, []), { text: ' 123 ' });
+  assert.deepEqual(normalizer.appOptions({ text: '1e3' }, []), { text: '1e3' });
+
+  // Non-string, non-numeric input without fragments is dropped.
+  assert.deepEqual(normalizer.appOptions({ text: null }, []), {});
+  assert.deepEqual(normalizer.appOptions({ text: {} }, []), {});
+});
+
+test('toText parses bracketed input as text fragments', () => {
   assert.deepEqual(normalizer.appOptions({ text: '[{"t":"a","c":"#FFFFFF"}]' }, []), {
     text: [{ t: 'a', c: '#FFFFFF' }],
   });
+  assert.deepEqual(normalizer.appOptions({ text: '  [{"t":"a","c":"#FFFFFF"}]  ' }, []), {
+    text: [{ t: 'a', c: '#FFFFFF' }],
+  });
+  assert.deepEqual(normalizer.appOptions({ text: [{ t: 'a', c: '#FFFFFF' }] }, []), {
+    text: [{ t: 'a', c: '#FFFFFF' }],
+  });
+  assert.deepEqual(normalizer.appOptions({ text: '[]' }, []), { text: [] });
+
+  // A valid JSON array that is not a fragment list is dropped. Fragments require a valid
+  // color, so the toColor('0') fallback inside toText stays unreachable - unchanged by H4.
+  assert.deepEqual(normalizer.appOptions({ text: '[1,2]' }, []), {});
+  assert.deepEqual(normalizer.appOptions({ text: '[{"t":"a","c":"bad"}]' }, []), {});
+  assert.deepEqual(normalizer.appOptions({ text: '[{"t":"a"}]' }, []), {});
+
+  // Bracketed but invalid JSON is literal text, not an error.
+  assert.deepEqual(normalizer.appOptions({ text: '[abc' }, []), { text: '[abc' });
 });
 
 test('characterization: repeat wins over duration and clears it on the input object', () => {
