@@ -324,7 +324,7 @@ test('AWTRIX NG starts polling and preserves API error details when initial sett
   assert.equal(awtrixNgDevice.poll.isActive(), true);
 });
 
-test('AWTRIX NG onAdded reports bundled icon failures without blocking later uploads', async () => {
+test('AWTRIX NG onAdded uploads bundled icons with bounded parallelism and reports failures', async () => {
   const iconDirectory = path.join(__dirname, '../.homeybuild/drivers/awtrixng/assets/images/icons');
   const expectedFiles = fs.readdirSync(iconDirectory)
     .filter((fileName) => fs.statSync(path.join(iconDirectory, fileName)).isFile());
@@ -358,8 +358,10 @@ test('AWTRIX NG onAdded reports bundled icon failures without blocking later upl
 
   await assert.doesNotReject(() => awtrixNgDevice.onAdded());
 
-  assert.deepEqual(uploads, expectedFiles);
-  assert.equal(maximumActiveUploads, 1);
+  assert.deepEqual(uploads.slice().sort(), expectedFiles.slice().sort(), 'R9: every bundled icon is attempted');
+  // H12: bounded worker pool of 3 replaces the sequential loop.
+  assert.ok(maximumActiveUploads > 1, 'uploads run in parallel');
+  assert.ok(maximumActiveUploads <= 3, `at most 3 uploads run at once, saw ${maximumActiveUploads}`);
   const failedUploadIndex = uploads.indexOf('homey.jpg');
   assert.notEqual(failedUploadIndex, -1);
   assert.ok(failedUploadIndex < uploads.length - 1, 'an icon after the failure was uploaded');

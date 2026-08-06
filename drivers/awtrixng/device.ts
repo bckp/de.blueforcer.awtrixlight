@@ -44,6 +44,7 @@ import { AwtrixDeviceType } from '../awtrix-device-type';
 
 const PollIntervalMs = 60000;
 const BundledIconsDirectory = path.join(__dirname, 'assets/images/icons');
+const MaxConcurrentIconUploads = 3;
 
 // Hard-failing wrapper: the connection cannot be built without a usable port.
 const toConnectionPort = (value: unknown): number => {
@@ -600,28 +601,49 @@ class AwtrixNgDevice extends Device {
     }
   }
 
+  /**
+   * Uploads the bundled icons with bounded parallelism - same worker-pool shape as
+   * findDiscoveredDevices() in the driver.
+   *
+   * R9 is preserved: every file is attempted even after a failure, failures are collected
+   * instead of thrown and reported once. They are logged in file order so the diagnostics
+   * stay stable regardless of which worker hit them.
+   */
   private async uploadBundledIcons(): Promise<void> {
-    if (this.icons === undefined) {
+    const { icons } = this;
+
+    if (icons === undefined) {
       throw new Error(this.getConnectionNotConfiguredMessage());
     }
 
     const iconFiles = fs.readdirSync(BundledIconsDirectory)
       .filter((fileName) => fs.statSync(path.join(BundledIconsDirectory, fileName)).isFile());
-    const failures: Array<{ fileName: string; error: unknown }> = [];
+    const failures: Array<{ fileName: string; error: unknown; index: number }> = [];
+    let nextIconIndex = 0;
 
-    for (const fileName of iconFiles) {
-      try {
-        await this.icons.upload({
-          fileName,
-          body: fs.readFileSync(path.join(BundledIconsDirectory, fileName)),
-        });
-      } catch (error: unknown) {
-        failures.push({ fileName, error });
+    const uploadNextIcon = async (): Promise<void> => {
+      while (nextIconIndex < iconFiles.length) {
+        const index = nextIconIndex;
+        const fileName = iconFiles[index];
+        nextIconIndex += 1;
+
+        try {
+          await icons.upload({
+            fileName,
+            body: fs.readFileSync(path.join(BundledIconsDirectory, fileName)),
+          });
+        } catch (error: unknown) {
+          failures.push({ fileName, error, index });
+        }
       }
-    }
+    };
+
+    const concurrency = Math.min(MaxConcurrentIconUploads, iconFiles.length);
+    await Promise.all(Array.from({ length: concurrency }, () => uploadNextIcon()));
 
     if (failures.length > 0) {
-      this.error(failures);
+      failures.sort((left, right) => left.index - right.index);
+      this.error(failures.map(({ fileName, error }) => ({ fileName, error })));
     }
   }
 
