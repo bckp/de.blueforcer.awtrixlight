@@ -1,5 +1,10 @@
 # Následný backlog po dokončení `docs/plan.md`
 
+> **⛔ NAHRAZENO (2026-08-06): tento dokument pohltil [`plan2.md`](plan2.md).**
+> Všichni kandidáti F1p–F8p jsou tam rozpracovaní do prováděcích balíčků H1–H14
+> se soubory, kroky, testy a zodpovězenými rozhodnutími. **Neprováděj nic podle
+> tohoto souboru** – slouží už jen jako historický kontext závazných pravidel.
+
 > **Stav: ODLOŽENO / NENÍ PŘIPRAVENO K IMPLEMENTACI.**
 >
 > Tento dokument vznikl rozhodnutím R11 dne 2026-08-05. Obsahuje nízkoprioritní
