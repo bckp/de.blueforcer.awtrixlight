@@ -427,6 +427,23 @@ Pořadí uvnitř fáze respektuj: H3 → H4 (testy před refaktorem), H5 po H3/H
 | H14 | S | ✅ | `8ced472` | `.github/workflows/ci.yml`, ubuntu-latest, Node 22, `npm ci`, cache npm; blokující `tsc --noEmit` / `build` / `node --test` / `lint`. **Homey kroky ověřeny headless bez přihlášení** (`homey app build` i `validate --level publish` prošly s čistým `HOME`) → jsou blokující, žádné `continue-on-error`; použit `npx --yes homey@4` (CLI není v devDependencies, neinteraktivně). `npm audit --omit=dev` je `continue-on-error: true` (P3). Trigger push + pull_request na `main`. Všechny kroky odsimulované lokálně |
 | REL2 🔒 | – | ⬜ | | čeká na pokyn bckp (P4). **Dluh k changelogu:** H4 změnil pozorovatelné chování (`blinkText`/`fadeText` 0 se posílají; neplatná barva se vynechá; `toText` je literální – `'null'`, `'"abc"'`, `' 123 '`, `'1e3'` se zobrazí přesně jak zadané) – při publikaci rozhodnout verzi a doplnit text |
 
+### Stav po dokončení fáze H (2026-08-07)
+
+Baseline po fázi H: `tsc` 0 chyb, `npm run build` OK, **328 pass / 0 fail**, `npm run lint`
+0 chyb, `homey app validate --level publish` OK, `git diff --exit-code app.json` čistý.
+
+**Pro bckp – co udělat na Macu po `git pull`:**
+
+1. `rm -rf node_modules && npm install` – H13 přegeneroval `package-lock.json` (ESLint 8 +
+   typescript-eslint 8 + `overrides`) a složka `node_modules` v pracovní kopii obsahuje
+   Linux/arm64 native binárky ze sandboxu. Lockfile je platformně kompletní (obsahuje
+   `darwin-arm64` i `darwin-x64` bindingy), takže reinstal to spraví.
+2. Znovu spustit ověřovací rituál na macOS – lint běžel v sandboxu, ale potvrzení na
+   vlastním stroji je poslední kontrola.
+3. Rozhodnout verzi a changelog pro REL2 (viz řádek REL2 – H4 změnil pozorovatelné chování).
+
+Fáze H nezaložila žádný nový dluh mimo to, co je zaznamenané v checklistu.
+
 ## 7. Vědomě vynecháno
 
 - **V7 i18n drobnosti** (anglické hlášky adaptéru `applicationIcon` a
