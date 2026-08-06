@@ -574,14 +574,25 @@ const assertPaletteValue = (input: Record<string, unknown>, target: AwtrixNgTran
   });
 };
 
-const assertPagePayload = (input: Record<string, unknown>, target: 'notification' | 'pushedApp'): void => {
-  assertTextValue(input, target);
-  assertScrollValue(input, target);
-  assertDrawValue(input, target);
-  assertPaletteValue(input, target);
-  assertStringEnumField(input, 'textCase', textCases, target);
-  assertStringEnumField(input, 'font', fonts, target);
-  assertStringEnumField(input, 'iconMode', iconModes, target);
+const assertFiniteNumberField = (
+  input: Record<string, unknown>,
+  field: string,
+  target: AwtrixNgTransformTarget,
+  requireInteger = false,
+): void => {
+  const value = input[field];
+
+  if (value === undefined
+    || (typeof value === 'number' && Number.isFinite(value) && (!requireInteger || Number.isInteger(value)))) {
+    return;
+  }
+
+  throw new UnsupportedAwtrixNgPayloadFieldError({
+    field,
+    target,
+    reason: 'invalid-value',
+    details: requireInteger ? 'Expected a finite integer.' : 'Expected a finite number.',
+  });
 };
 
 const assertBooleanField = (input: Record<string, unknown>, field: string, target: AwtrixNgTransformTarget): void => {
@@ -597,6 +608,40 @@ const assertBooleanField = (input: Record<string, unknown>, field: string, targe
     reason: 'invalid-value',
     details: 'Expected a boolean value.',
   });
+};
+
+const assertPagePayload = (input: Record<string, unknown>, target: 'notification' | 'pushedApp'): void => {
+  assertTextValue(input, target);
+  assertScrollValue(input, target);
+  assertDrawValue(input, target);
+  assertPaletteValue(input, target);
+  assertStringEnumField(input, 'textCase', textCases, target);
+  assertStringEnumField(input, 'font', fonts, target);
+  assertStringEnumField(input, 'iconMode', iconModes, target);
+  // UNKNOWN: range not documented (durationMs).
+  assertFiniteNumberField(input, 'durationMs', target);
+  // UNKNOWN: range not documented (repeat).
+  assertFiniteNumberField(input, 'repeat', target);
+  // UNKNOWN: range not documented (textBlinkMs).
+  assertFiniteNumberField(input, 'textBlinkMs', target);
+  // UNKNOWN: range not documented (textFadeMs).
+  assertFiniteNumberField(input, 'textFadeMs', target);
+  // UNKNOWN: range not documented (textOffsetX); flat pushed-app OpenAPI requires an integer.
+  assertFiniteNumberField(input, 'textOffsetX', target, target === 'pushedApp');
+  // UNKNOWN: range not documented (iconOffsetX).
+  assertFiniteNumberField(input, 'iconOffsetX', target);
+  // UNKNOWN: range not documented (effectSpeed).
+  assertFiniteNumberField(input, 'effectSpeed', target);
+  // UNKNOWN: range not documented (paletteSpan).
+  assertFiniteNumberField(input, 'paletteSpan', target);
+  // UNKNOWN: range not documented (paletteSpeed).
+  assertFiniteNumberField(input, 'paletteSpeed', target);
+  // UNKNOWN: range not documented (progress).
+  assertFiniteNumberField(input, 'progress', target);
+  assertBooleanField(input, 'textCenter', target);
+  assertBooleanField(input, 'textInFront', target);
+  assertBooleanField(input, 'chartAutoscale', target);
+  assertBooleanField(input, 'paletteBlend', target);
 };
 
 const assertSettingsPatch = (input: Record<string, unknown>): void => {
@@ -637,6 +682,10 @@ export const toAwtrixNgNotificationPayload = (input: AwtrixNgNotificationInput):
   assertNoTargetOnlyFields(inputRecord, pushedAppOnlyFields, 'notification');
   assertKnownFields(inputRecord, notificationFields, 'notification');
   assertPagePayload(inputRecord, 'notification');
+  assertBooleanField(inputRecord, 'hold', 'notification');
+  assertBooleanField(inputRecord, 'stack', 'notification');
+  assertBooleanField(inputRecord, 'wakeup', 'notification');
+  assertBooleanField(inputRecord, 'soundLoop', 'notification');
 
   return {
     ...input,
@@ -649,6 +698,8 @@ export const toAwtrixNgPushedAppPayload = (input: AwtrixNgPushedAppInput): Awtri
   assertKnownFields(inputRecord, pushedAppFields, 'pushedApp');
   assertPagePayload(inputRecord, 'pushedApp');
   assertStringEnumField(inputRecord, 'lifetimeExpiry', lifetimeExpiries, 'pushedApp');
+  // UNKNOWN: range not documented (lifetimeMs).
+  assertFiniteNumberField(inputRecord, 'lifetimeMs', 'pushedApp');
 
   return {
     ...input,
