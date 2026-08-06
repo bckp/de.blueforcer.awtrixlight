@@ -7,6 +7,7 @@ const {
   toAwtrixNgIconAutocompleteItems,
 } = require('../.homeybuild/lib/awtrixng/Services/Icons');
 const { AwtrixNgApiError } = require('../.homeybuild/lib/awtrixng/Api/ErrorParser');
+const { AwtrixNgInvalidResponseError } = require('../.homeybuild/lib/awtrixng/Api/InvalidResponseError');
 
 const labels = {
   emptyName: 'Empty',
@@ -359,3 +360,56 @@ test('AWTRIX NG icon upload form exposes multipart headers for transport', () =>
   assert.equal(typeof form.getHeaders, 'function');
   assert.match(form.getHeaders()['content-type'], /^multipart\/form-data; boundary=/);
 });
+
+for (const scenario of [{
+  name: 'a null body',
+  response: null,
+  actualType: 'null',
+}, {
+  name: 'an object without files',
+  response: {},
+  actualType: 'object',
+}, {
+  name: 'a non-array files field',
+  response: { files: 'x' },
+  actualType: 'object',
+}, {
+  name: 'an array body',
+  response: [],
+  actualType: 'array',
+}]) {
+  test(`AWTRIX NG icon list rejects ${scenario.name} from /api/v1/files without caching`, async () => {
+    const client = new FakeIconClient();
+    client.listResponses = [scenario.response, {
+      files: [{ name: 'homey.gif', size: 123 }],
+      usedBytes: 123,
+      totalBytes: 1048576,
+    }];
+    const icons = createIcons(client);
+
+    await assert.rejects(
+      () => icons.all(),
+      (error) => {
+        assert.equal(error instanceof AwtrixNgInvalidResponseError, true);
+        assert.equal(error.name, 'AwtrixNgInvalidResponseError');
+        assert.equal(error.endpoint, '/api/v1/files');
+        assert.equal(error.expectedShape, 'an object with a files array');
+        assert.equal(error.actualType, scenario.actualType);
+        return true;
+      },
+    );
+
+    assert.deepEqual(await icons.all(), [
+      {
+        name: 'Empty',
+        id: '-',
+        description: 'Without icon',
+      },
+      {
+        name: 'homey',
+        id: 'homey',
+      },
+    ], 'the rejected shape is not cached, so the next call reloads the list');
+    assert.deepEqual(client.calls.map((call) => call.method), ['listFiles', 'listFiles']);
+  });
+}
