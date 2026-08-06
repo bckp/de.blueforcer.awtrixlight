@@ -139,7 +139,10 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
 
         // Try to rediscover
         if (await this.tryRediscover()) {
-          this.setCapabilityValue('ip', this.getStoreValue('address'));
+          // Best-effort on purpose (same contract as onAdded): the device was found, so a
+          // failed IP capability write must not turn a successful rediscovery into a failed
+          // button action. Awaited with a catch so it cannot leak an unhandled rejection.
+          await this.setCapabilityValue('ip', this.getStoreValue('address')).catch(this.error);
           return;
         }
       } catch (error: any) {

@@ -1177,3 +1177,63 @@ test('AWTRIX 3 initialization waits for rediscovery before starting the poll', a
     'critical:false',
   ]);
 });
+
+test('AWTRIX 3 rediscover button survives a failing ip capability write', async () => {
+  const capabilityError = new Error('ip capability rejected');
+  const errors = [];
+  const listeners = {};
+  const context = {
+    homey: createFakeHomey(),
+    api: {
+      setDebug() {},
+      async clientVerify() {
+        return Status.Error;
+      },
+    },
+    async getSettings() {
+      return {};
+    },
+    async testDevice() {
+      return Status.Ok;
+    },
+    setAvailable: asyncNoop,
+    poll: { stop() {}, start() {} },
+    failsReset() {},
+    failsCritical() {},
+    getAvailable() {
+      return false;
+    },
+    log() {},
+    error(...args) {
+      errors.push(args);
+    },
+    async refreshAll() {
+      return undefined;
+    },
+    async connected() {
+      return undefined;
+    },
+    getStoreValue() {
+      return '192.0.2.10';
+    },
+    async tryRediscover() {
+      return true;
+    },
+    async setCapabilityValue() {
+      throw capabilityError;
+    },
+    registerCapabilityListener(capabilityId, listener) {
+      listeners[capabilityId] = listener;
+    },
+  };
+
+  await AwtrixLightDevice.prototype.initializeDevice.call(context);
+
+  const unhandled = await countUnhandledRejections(async () => {
+    // The rediscovery succeeded, so the action must resolve despite the capability failure.
+    await assert.doesNotReject(() => listeners['button.rediscover']());
+  });
+
+  assert.equal(unhandled, 0);
+  assert.deepEqual(errors, [[capabilityError]], 'the capability failure is logged, not thrown');
+});
