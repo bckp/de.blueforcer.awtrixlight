@@ -1,5 +1,7 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const Module = require('node:module');
+const path = require('node:path');
 const test = require('node:test');
 
 const {
@@ -320,4 +322,55 @@ test('AWTRIX NG starts polling and preserves API error details when initial sett
 
   assert.equal(calls.error[1], pollingError, 'poll logger receives the complete original NG error object');
   assert.equal(awtrixNgDevice.poll.isActive(), true);
+});
+
+test('AWTRIX NG onAdded reports bundled icon failures without blocking later uploads', async () => {
+  const iconDirectory = path.join(__dirname, '../.homeybuild/drivers/awtrixng/assets/images/icons');
+  const expectedFiles = fs.readdirSync(iconDirectory)
+    .filter((fileName) => fs.statSync(path.join(iconDirectory, fileName)).isFile());
+  const uploadError = new AwtrixNgApiError({
+    method: 'POST',
+    url: 'http://awtrix-ng.local/api/v1/files',
+    message: 'icon format rejected',
+    code: 'validationFailed',
+    field: 'file',
+    httpStatus: 422,
+  });
+  const uploads = [];
+  let activeUploads = 0;
+  let maximumActiveUploads = 0;
+  const { awtrixNgDevice, calls } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
+
+  awtrixNgDevice.icons = {
+    async upload({ fileName, body }) {
+      assert.equal(Buffer.isBuffer(body), true);
+      uploads.push(fileName);
+      activeUploads += 1;
+      maximumActiveUploads = Math.max(maximumActiveUploads, activeUploads);
+      await Promise.resolve();
+      activeUploads -= 1;
+
+      if (fileName === 'homey.jpg') {
+        throw uploadError;
+      }
+    },
+  };
+
+  await assert.doesNotReject(() => awtrixNgDevice.onAdded());
+
+  assert.deepEqual(uploads, expectedFiles);
+  assert.equal(maximumActiveUploads, 1);
+  const failedUploadIndex = uploads.indexOf('homey.jpg');
+  assert.notEqual(failedUploadIndex, -1);
+  assert.ok(failedUploadIndex < uploads.length - 1, 'an icon after the failure was uploaded');
+  assert.deepEqual(calls.setUnavailable, []);
+  assert.equal(calls.error.length, 1);
+  assert.equal(Array.isArray(calls.error[0]), true);
+  assert.equal(calls.error[0].length, 1);
+  assert.equal(calls.error[0][0].fileName, 'homey.jpg');
+  assert.equal(calls.error[0][0].error, uploadError);
+  assert.equal(calls.error[0][0].error.httpStatus, 422);
+  assert.equal(calls.error[0][0].error.code, 'validationFailed');
+  assert.equal(calls.error[0][0].error.message, 'icon format rejected');
+  assert.equal(calls.error[0][0].error.field, 'file');
 });

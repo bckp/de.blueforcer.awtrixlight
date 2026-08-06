@@ -528,12 +528,21 @@ class AwtrixNgDevice extends Device {
 
     const iconFiles = fs.readdirSync(BundledIconsDirectory)
       .filter((fileName) => fs.statSync(path.join(BundledIconsDirectory, fileName)).isFile());
+    const failures: Array<{ fileName: string; error: unknown }> = [];
 
     for (const fileName of iconFiles) {
-      await this.icons.upload({
-        fileName,
-        body: fs.readFileSync(path.join(BundledIconsDirectory, fileName)),
-      });
+      try {
+        await this.icons.upload({
+          fileName,
+          body: fs.readFileSync(path.join(BundledIconsDirectory, fileName)),
+        });
+      } catch (error: unknown) {
+        failures.push({ fileName, error });
+      }
+    }
+
+    if (failures.length > 0) {
+      this.error(failures);
     }
   }
 

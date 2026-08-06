@@ -760,7 +760,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | D10 | ✅ | sdílená probe factory bez output mapperu; discovery filtruje předem, používá limit 4 a řadí podle názvu |
 | D11 | ✅ | konečná čísla a boolean typy validovány; integer jen pushed-app textOffsetX, bez nedokumentovaných rozsahů |
 | D12 | ✅ | availability a pairing texty lokalizovány na Homey hranici; NG technické detaily zůstávají zachované |
-| D13 | ⬜ | R9: NG icon upload nekritický, strukturovaná diagnostika |
+| D13 | ✅ | R9: uploady pokračují po chybě; strukturovaná diagnostika zachovává fileName i původní NG error |
 | E1 | ⬜ | |
 | E2 | ⬜ | |
 | REL1 | ⬜ | R12: 2.1.0, bez publikace |
