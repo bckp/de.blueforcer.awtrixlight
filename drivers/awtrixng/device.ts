@@ -187,8 +187,17 @@ class AwtrixNgDevice extends Device {
     return discoveryResult.id === this.getData().id;
   }
 
+  // Homey ignores the resolved value of the discovery hooks but reports rejections as unhandled,
+  // so failures are logged and reported as "not reconnected" - parity with the AWTRIX 3 driver.
+  // An AwtrixNgDeviceIdentityMismatchError ends up here too, which is worth logging: it means the
+  // discovered address now belongs to a different device (recycled IP address).
   async onDiscoveryAddressChanged(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {
-    return this.commitDiscoveredConnection(discoveryResult);
+    try {
+      return await this.commitDiscoveredConnection(discoveryResult);
+    } catch (error: unknown) {
+      this.error(error);
+      return false;
+    }
   }
 
   async onDiscoveryAvailable(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {
@@ -196,7 +205,12 @@ class AwtrixNgDevice extends Device {
       return false;
     }
 
-    return this.commitDiscoveredConnection(discoveryResult);
+    try {
+      return await this.commitDiscoveredConnection(discoveryResult);
+    } catch (error: unknown) {
+      this.error(error);
+      return false;
+    }
   }
 
   async onSettings({ oldSettings, newSettings, changedKeys }: AwtrixNgDeviceSettingsChange): Promise<void> {

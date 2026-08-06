@@ -59,6 +59,7 @@ const createDiscoveryHarness = ({
   request,
 } = {}) => {
   const events = [];
+  const errors = [];
   const clientCreations = [];
   const store = new Map([
     ['baseUrl', 'http://192.0.2.10:80'],
@@ -95,7 +96,9 @@ const createDiscoveryHarness = ({
     icons: oldIcons,
     available,
     log() {},
-    error() {},
+    error(...args) {
+      errors.push(args);
+    },
     getData() {
       return { id: expectedUid };
     },
@@ -143,6 +146,7 @@ const createDiscoveryHarness = ({
   return {
     clientCreations,
     device,
+    errors,
     events,
     oldClient,
     oldIcons,
@@ -151,6 +155,12 @@ const createDiscoveryHarness = ({
     store,
     transport,
   };
+};
+
+const assertSingleLoggedError = (harness, predicate) => {
+  assert.equal(harness.errors.length, 1, 'the discovery failure is logged exactly once');
+  assert.equal(harness.errors[0].length, 1);
+  assert.equal(predicate(harness.errors[0][0]), true);
 };
 
 const discoveryResult = {
@@ -264,23 +274,33 @@ for (const scenario of [{
     httpStatus: 503,
   }),
 }]) {
-  test(`AWTRIX NG discovery ${scenario.name} preserves the original error and active connection`, async () => {
+  test(`AWTRIX NG discovery ${scenario.name} logs the original error and keeps the active connection`, async () => {
     const harness = createDiscoveryHarness({
       request: async () => {
         throw scenario.error;
       },
     });
 
-    await assert.rejects(
-      () => harness.device.onDiscoveryAddressChanged(discoveryResult),
-      (error) => error === scenario.error,
-    );
+    assert.equal(await harness.device.onDiscoveryAddressChanged(discoveryResult), false);
+    assertSingleLoggedError(harness, (error) => error === scenario.error);
     assertConnectionUnchanged(harness);
     assert.equal(harness.clientCreations.length, 1, 'only a temporary candidate client was created');
   });
+
+  test(`AWTRIX NG discovery available contains ${scenario.name} without an unhandled rejection`, async () => {
+    const harness = createDiscoveryHarness({
+      request: async () => {
+        throw scenario.error;
+      },
+    });
+
+    assert.equal(await harness.device.onDiscoveryAvailable(discoveryResult), false);
+    assertSingleLoggedError(harness, (error) => error === scenario.error);
+    assertConnectionUnchanged(harness);
+  });
 }
 
-test('AWTRIX NG discovery rejects a different device uid without changing the active connection', async () => {
+test('AWTRIX NG discovery logs a different device uid without changing the active connection', async () => {
   const harness = createDiscoveryHarness({
     request: async () => ({
       status: 200,
@@ -289,19 +309,17 @@ test('AWTRIX NG discovery rejects a different device uid without changing the ac
     }),
   });
 
-  await assert.rejects(
-    () => harness.device.onDiscoveryAddressChanged(discoveryResult),
-    (error) => {
-      assert.equal(error.name, 'AwtrixNgDeviceIdentityMismatchError');
-      assert.equal(error.expectedUid, expectedUid);
-      assert.equal(error.actualUid, 'different-device');
-      return true;
-    },
-  );
+  assert.equal(await harness.device.onDiscoveryAddressChanged(discoveryResult), false);
+  assertSingleLoggedError(harness, (error) => {
+    assert.equal(error.name, 'AwtrixNgDeviceIdentityMismatchError');
+    assert.equal(error.expectedUid, expectedUid);
+    assert.equal(error.actualUid, 'different-device');
+    return true;
+  });
   assertConnectionUnchanged(harness);
 });
 
-test('AWTRIX NG discovery rejects an invalid probe response with the structured shape error', async () => {
+test('AWTRIX NG discovery logs an invalid probe response with the structured shape error', async () => {
   const harness = createDiscoveryHarness({
     request: async () => ({
       status: 200,
@@ -310,29 +328,25 @@ test('AWTRIX NG discovery rejects an invalid probe response with the structured 
     }),
   });
 
-  await assert.rejects(
-    () => harness.device.onDiscoveryAddressChanged(discoveryResult),
-    (error) => {
-      assert.equal(error instanceof AwtrixNgInvalidResponseError, true);
-      assert.equal(error.endpoint, '/api/v1/device');
-      assert.equal(error.expectedShape, 'a valid AWTRIX NG device state object');
-      assert.equal(error.actualType, 'object');
-      return true;
-    },
-  );
+  assert.equal(await harness.device.onDiscoveryAddressChanged(discoveryResult), false);
+  assertSingleLoggedError(harness, (error) => {
+    assert.equal(error instanceof AwtrixNgInvalidResponseError, true);
+    assert.equal(error.endpoint, '/api/v1/device');
+    assert.equal(error.expectedShape, 'a valid AWTRIX NG device state object');
+    assert.equal(error.actualType, 'object');
+    return true;
+  });
   assertConnectionUnchanged(harness);
 });
 
-test('AWTRIX NG discovery rejects an invalid port before creating a candidate client', async () => {
+test('AWTRIX NG discovery logs an invalid port before creating a candidate client', async () => {
   const harness = createDiscoveryHarness();
 
-  await assert.rejects(
-    () => harness.device.onDiscoveryAddressChanged({
-      ...discoveryResult,
-      port: '70000',
-    }),
-    RangeError,
-  );
+  assert.equal(await harness.device.onDiscoveryAddressChanged({
+    ...discoveryResult,
+    port: '70000',
+  }), false);
+  assertSingleLoggedError(harness, (error) => error instanceof RangeError);
   assert.equal(harness.clientCreations.length, 0);
   assertConnectionUnchanged(harness);
 });
