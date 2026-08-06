@@ -420,7 +420,7 @@ Pořadí uvnitř fáze respektuj: H3 → H4 (testy před refaktorem), H5 po H3/H
 | H7 | S | ✅ | `ba4bca8` | `desiredCapabilityOrder` + `additionalCapabilities` + `isInDesiredOrder`, dvě smyčky; 6 nových testů fixujících chování PŘED refaktorem (no-op, drift, chybějící trojice, rssi/ip/rediscover, seed `ip` ze store, kontejnment chyby). Jediná drobná změna: přidání `button.rediscover` se teď loguje jako ostatní. 316 pass |
 | H8 | S | ⏭️ vynecháno | – | **Vynecháno po re-auditu.** `activateClient` se volá jen z `configureClient` (onInit) a `commitConnection`. NG icon cache má TTL 5 s (R8), takže její zachování přes uložení nastavení nemá měřitelnou hodnotu; naopak ponechat starou `icons` instanci (držící referenci na STARÝ klient) vedle právě ověřeného kandidáta je netriviální riziko. Porovnání tedy není „triviální" ve smyslu podmínky balíčku |
 | H9 | O | ✅ | `24fe43b` | `setCapabilityValues`: `allSettled` + `AggregateError` s klíči v message; odstraněn polykající `try/catch` z `refreshCapabilities`/`refreshSettings` (V6 – agregace v `refreshAll` už není mrtvá větev); `initializeDevice` obaluje `refreshAll` do `try/catch → this.error` (init i uvítací notifikace doběhnou, poll startuje); 6 nových testů vč. `unhandledRejection` čítačů. 322 pass |
-| H10 | S | ⬜ | | |
+| H10 | S | ✅ | `2d35da3` | 4 nové testy vstupních cest `bar`/`line` (16 bez ikony / 11 s ikonou / přes limit zahodit / nečíselné zahodit / `barBC` jen s bar nebo line) PŘED záměnou typu; 16řádkový union → `number[]` s odkazem na `isBarLineValues`. 326 pass |
 | H11 | S | ⬜ | | |
 | H12 | S | ⬜ | | R9 zachovat |
 | H13 | O | ⬜ | | samostatná větev |
