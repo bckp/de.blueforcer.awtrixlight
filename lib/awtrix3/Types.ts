@@ -9,23 +9,13 @@ export type ColorPalette = ColorPaletteBuildIn | ColorPaletteColors;
 export type Overlay = 'clear'| 'snow' | 'rain' | 'drizzle' | 'storm' | 'thunder' | 'frost';
 export type TransitionEffect = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
-export type BarLineValues =
-| [number]
-| [number, number]
-| [number, number, number]
-| [number, number, number, number]
-| [number, number, number, number, number]
-| [number, number, number, number, number, number]
-| [number, number, number, number, number, number, number]
-| [number, number, number, number, number, number, number, number]
-| [number, number, number, number, number, number, number, number, number]
-| [number, number, number, number, number, number, number, number, number, number]
-| [number, number, number, number, number, number, number, number, number, number, number]
-| [number, number, number, number, number, number, number, number, number, number, number, number]
-| [number, number, number, number, number, number, number, number, number, number, number, number, number]
-| [number, number, number, number, number, number, number, number, number, number, number, number, number, number]
-| [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]
-| [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number];
+/**
+ * Values of a bargraph or linechart.
+ *
+ * The length limit is enforced at runtime by isBarLineValues() in Validator.ts
+ * (16 values without an icon, 11 with one) - this type is documentation only.
+ */
+export type BarLineValues = number[];
 
 export type IndicatorOptions = {
   color: Color;

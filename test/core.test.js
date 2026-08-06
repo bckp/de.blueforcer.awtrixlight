@@ -335,3 +335,42 @@ test('characterization: repeat wins over duration and clears it on the input obj
   normalizer.appOptions(options, []);
   assert.equal(options.duration, undefined);
 });
+
+const barLineRange = (length) => Array.from({ length }, (unused, index) => index + 1);
+
+test('bar and line accept up to 16 values without an icon and 11 with one', () => {
+  assert.deepEqual(normalizer.appOptions({ bar: barLineRange(16) }, []), { bar: barLineRange(16) });
+  assert.deepEqual(normalizer.appOptions({ line: barLineRange(16) }, []), { line: barLineRange(16) });
+  assert.deepEqual(normalizer.appOptions({ icon: 'a', bar: barLineRange(11) }, []), {
+    icon: 'a',
+    bar: barLineRange(11),
+  });
+});
+
+test('bar and line are dropped when they exceed the runtime limit', () => {
+  assert.deepEqual(normalizer.appOptions({ bar: barLineRange(17) }, []), {});
+  assert.deepEqual(normalizer.appOptions({ line: barLineRange(17) }, []), {});
+  assert.deepEqual(normalizer.appOptions({ icon: 'a', bar: barLineRange(12) }, []), { icon: 'a' });
+  assert.deepEqual(normalizer.appOptions({ icon: 'a', line: barLineRange(12) }, []), { icon: 'a' });
+});
+
+test('bar and line are dropped when any value is not numeric', () => {
+  assert.deepEqual(normalizer.appOptions({ bar: [1, 'x', 3] }, []), {});
+  assert.deepEqual(normalizer.appOptions({ line: [1, null] }, []), {});
+  assert.deepEqual(normalizer.appOptions({ bar: 'not-an-array' }, []), {});
+
+  // Numeric strings are accepted and forwarded unchanged.
+  assert.deepEqual(normalizer.appOptions({ bar: ['1', '2'] }, []), { bar: ['1', '2'] });
+});
+
+test('barBC only survives together with bar or line', () => {
+  assert.deepEqual(normalizer.appOptions({ barBC: '#111111' }, []), {});
+  assert.deepEqual(normalizer.appOptions({ bar: [1], barBC: '#111111' }, []), {
+    bar: [1],
+    barBC: '#111111',
+  });
+  assert.deepEqual(normalizer.appOptions({ line: [1], barBC: '#111111' }, []), {
+    line: [1],
+    barBC: '#111111',
+  });
+});
