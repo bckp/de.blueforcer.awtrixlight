@@ -27,19 +27,21 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Test
-        run: node --test test/*.test.js
-
-      - name: Lint
-        run: npm run lint
-
-      # Regenerates app.json from .homeycompose. Both homey steps were verified to run
-      # headless without an App Store login, so they are blocking.
+      # Must run before the tests: `npm run build` is plain tsc, while the bundled icon
+      # tests read the asset files that only `homey app build` copies into .homeybuild.
+      # It also regenerates app.json from .homeycompose. Both homey steps were verified
+      # to run headless without an App Store login, so they are blocking.
       - name: Homey app build
         run: npx --yes homey@4 app build
 
       - name: app.json is in sync with .homeycompose
         run: git diff --exit-code app.json
+
+      - name: Test
+        run: node --test test/*.test.js
+
+      - name: Lint
+        run: npm run lint
 
       - name: Homey publish-level validation
         run: npx --yes homey@4 app validate --level publish
