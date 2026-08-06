@@ -1023,3 +1023,58 @@ test('AWTRIX 3 poll reports a failing capability refresh through onError', async
 
   poll.stop();
 });
+
+test('AWTRIX 3 refreshEffects waits for the store write and propagates its failure', async () => {
+  const storeError = new Error('store write rejected');
+  const order = [];
+  const failing = {
+    log() {},
+    async cmdGetEffects() {
+      order.push('read');
+      return ['Fade'];
+    },
+    async setStoreValue(key, value) {
+      order.push(`write:${key}=${JSON.stringify(value)}`);
+      throw storeError;
+    },
+  };
+
+  const unhandled = await countUnhandledRejections(async () => {
+    await assert.rejects(
+      () => AwtrixLightDevice.prototype.refreshEffects.call(failing),
+      storeError,
+    );
+  });
+
+  assert.equal(unhandled, 0);
+  assert.deepEqual(order, ['read', 'write:effects=["Fade"]']);
+});
+
+test('AWTRIX 3 refreshAll aggregates a failing effects store write', async () => {
+  const storeError = new Error('store write rejected');
+  const context = {
+    log() {},
+    async refreshCapabilities() {
+      return undefined;
+    },
+    async refreshSettings() {
+      return undefined;
+    },
+    async cmdGetEffects() {
+      return ['Fade'];
+    },
+    async setStoreValue() {
+      throw storeError;
+    },
+  };
+  context.refreshEffects = AwtrixLightDevice.prototype.refreshEffects.bind(context);
+
+  await assert.rejects(
+    () => AwtrixLightDevice.prototype.refreshAll.call(context),
+    (error) => {
+      assert.equal(error instanceof AggregateError, true);
+      assert.deepEqual(error.errors, [storeError]);
+      return true;
+    },
+  );
+});

@@ -285,7 +285,9 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   }
 
   async refreshEffects(): Promise<void> {
-    this.setStoreValue('effects', await this.cmdGetEffects());
+    // Awaited on purpose: refreshAll() aggregates refresh failures, so a store write that
+    // is left floating would escape as an unhandled rejection instead.
+    await this.setStoreValue('effects', await this.cmdGetEffects());
   }
 
   // Refresh device capabilities, this is expensive so we do not want to poll too often
