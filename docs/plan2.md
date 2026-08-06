@@ -406,7 +406,7 @@ Pořadí uvnitř fáze respektuj: H3 → H4 (testy před refaktorem), H5 po H3/H
 | Balíček | Model | Stav | Commit | Pozn. |
 |---|---|---|---|---|
 | G1 | S | ✅ | `3c016d2` | P1: propsat chybu; lint nešel spustit v Linux VM (chybí native binding `unrs-resolver`) |
-| G2 | S | ⬜ | | |
+| G2 | S | ✅ | `5835460` | lint neověřen v Linux VM (stejný důvod jako G1); 289 pass |
 | G3 | O | ⬜ | | fallback store + sync settings |
 | G4 | S | ⬜ | | |
 | G5 | S | ⬜ | | |
