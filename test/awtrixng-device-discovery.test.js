@@ -168,6 +168,22 @@ const assertConnectionUnchanged = (harness) => {
   assert.equal(harness.device.icons, harness.oldIcons);
 };
 
+const activateCurrentConnection = (harness) => {
+  harness.device.client = harness.device.createClient('http://192.0.2.10:80', {
+    username: 'homey',
+    password: 'secret',
+  });
+};
+
+const createSettingsAppsInventory = () => ['Time', 'Date', 'Temperature', 'Humidity', 'Battery'].map((name, slot) => ({
+  name,
+  enabled: true,
+  inLoop: true,
+  slot,
+  present: true,
+  origin: 'builtin',
+}));
+
 test('AWTRIX NG discovery results match the paired device by the verified mDNS id and API uid', () => {
   const harness = createDiscoveryHarness();
 
@@ -598,4 +614,157 @@ test('AWTRIX NG invalid local device setting blocks candidate probe and every wr
   assert.equal(harness.clientCreations.length, 0);
   assert.equal(harness.transport.calls.length, 0);
   assertConnectionUnchanged(harness);
+});
+
+test('AWTRIX NG settings validate an invalid second write group before every request', async () => {
+  const harness = createDiscoveryHarness();
+  activateCurrentConnection(harness);
+
+  await assert.rejects(
+    () => harness.device.onSettings({
+      oldSettings: {},
+      newSettings: {
+        showBuiltinDate: false,
+        autoBrightness: 'yes',
+      },
+      changedKeys: ['showBuiltinDate', 'autoBrightness'],
+    }),
+    /autoBrightness/,
+  );
+  assert.deepEqual(harness.transport.calls, []);
+});
+
+test('AWTRIX NG settings preserve a getApps error without starting a write', async () => {
+  const sourceError = new AwtrixNgApiError({
+    method: 'GET',
+    url: 'http://192.0.2.10:80/api/v1/apps',
+    message: 'apps unavailable',
+    code: 'internalError',
+    field: 'apps',
+    httpStatus: 503,
+  });
+  const harness = createDiscoveryHarness({
+    request: async (httpRequest) => {
+      if (httpRequest.method === 'GET' && httpRequest.path === '/api/v1/apps') {
+        throw sourceError;
+      }
+
+      throw new Error(`Unexpected request: ${httpRequest.method} ${httpRequest.path}`);
+    },
+  });
+  activateCurrentConnection(harness);
+
+  await assert.rejects(
+    () => harness.device.onSettings({
+      oldSettings: {},
+      newSettings: {
+        showBuiltinDate: false,
+        autoBrightness: true,
+      },
+      changedKeys: ['showBuiltinDate', 'autoBrightness'],
+    }),
+    (error) => error === sourceError,
+  );
+  assert.deepEqual(harness.transport.calls.map(({ method, path }) => ({ method, path })), [
+    { method: 'GET', path: '/api/v1/apps' },
+  ]);
+});
+
+test('AWTRIX NG settings stop before the second write when the first write fails', async () => {
+  const sourceError = new AwtrixNgApiError({
+    method: 'PUT',
+    url: 'http://192.0.2.10:80/api/v1/apps/order',
+    message: 'order rejected',
+    code: 'validationFailed',
+    field: 'order',
+    httpStatus: 422,
+  });
+  const harness = createDiscoveryHarness({
+    request: async (httpRequest) => {
+      if (httpRequest.method === 'GET' && httpRequest.path === '/api/v1/apps') {
+        return {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+          data: createSettingsAppsInventory(),
+        };
+      }
+
+      if (httpRequest.method === 'PUT' && httpRequest.path === '/api/v1/apps/order') {
+        throw sourceError;
+      }
+
+      throw new Error(`Unexpected request: ${httpRequest.method} ${httpRequest.path}`);
+    },
+  });
+  activateCurrentConnection(harness);
+
+  await assert.rejects(
+    () => harness.device.onSettings({
+      oldSettings: {},
+      newSettings: {
+        showBuiltinDate: false,
+        autoBrightness: true,
+      },
+      changedKeys: ['showBuiltinDate', 'autoBrightness'],
+    }),
+    (error) => error === sourceError,
+  );
+  assert.deepEqual(harness.transport.calls.map(({ method, path }) => ({ method, path })), [
+    { method: 'GET', path: '/api/v1/apps' },
+    { method: 'PUT', path: '/api/v1/apps/order' },
+  ]);
+});
+
+test('AWTRIX NG settings expose the only possible partial write when the second write fails', async () => {
+  const sourceError = new AwtrixNgApiError({
+    method: 'PATCH',
+    url: 'http://192.0.2.10:80/api/v1/settings',
+    message: 'brightness rejected',
+    code: 'validationFailed',
+    field: 'autoBrightness',
+    httpStatus: 422,
+  });
+  const harness = createDiscoveryHarness({
+    request: async (httpRequest) => {
+      if (httpRequest.method === 'GET' && httpRequest.path === '/api/v1/apps') {
+        return {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+          data: createSettingsAppsInventory(),
+        };
+      }
+
+      if (httpRequest.method === 'PUT' && httpRequest.path === '/api/v1/apps/order') {
+        return {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+          data: { ok: true },
+        };
+      }
+
+      if (httpRequest.method === 'PATCH' && httpRequest.path === '/api/v1/settings') {
+        throw sourceError;
+      }
+
+      throw new Error(`Unexpected request: ${httpRequest.method} ${httpRequest.path}`);
+    },
+  });
+  activateCurrentConnection(harness);
+
+  await assert.rejects(
+    () => harness.device.onSettings({
+      oldSettings: {},
+      newSettings: {
+        showBuiltinDate: false,
+        autoBrightness: true,
+      },
+      changedKeys: ['showBuiltinDate', 'autoBrightness'],
+    }),
+    (error) => error === sourceError,
+  );
+  assert.deepEqual(harness.transport.calls.map(({ method, path }) => ({ method, path })), [
+    { method: 'GET', path: '/api/v1/apps' },
+    { method: 'PUT', path: '/api/v1/apps/order' },
+    { method: 'PATCH', path: '/api/v1/settings' },
+  ]);
 });

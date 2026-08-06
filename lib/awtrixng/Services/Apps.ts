@@ -59,6 +59,23 @@ export const hasAwtrixNgBuiltinAppSettingsChange = (changedKeys: readonly string
   changedKeys.some(isAwtrixNgBuiltinAppSetting)
 );
 
+export const validateAwtrixNgBuiltinAppSettingsChange = (
+  newSettings: Record<string, unknown>,
+  changedKeys: readonly string[],
+): void => {
+  if (!hasAwtrixNgBuiltinAppSettingsChange(changedKeys)) {
+    return;
+  }
+
+  for (const setting of AwtrixNgBuiltinAppSettingIds) {
+    const value = newSettings[setting];
+
+    if (value !== undefined && typeof value !== 'boolean') {
+      throw new Error(`Built-in app setting ${setting} must be a boolean.`);
+    }
+  }
+};
+
 const isAvailableBuiltinApp = (app: AwtrixNgApiAppInventoryItem, appName: AwtrixNgBuiltinAppName): boolean => (
   app.origin === 'builtin' && app.present !== false && app.name === appName
 );
@@ -189,13 +206,15 @@ export const createAwtrixNgAppsOrderPayloadFromBuiltinSettingsChange = (
   return createAwtrixNgAppsOrderPayloadFromBuiltinSettings(apps, newSettings);
 };
 
-export const applyAwtrixNgBuiltinAppSettingsChange = async (
-  client: AwtrixNgAppsClient,
+export const prepareAwtrixNgBuiltinAppSettingsChange = async (
+  client: Pick<AwtrixNgAppsClient, 'getApps'>,
   newSettings: Record<string, unknown>,
   changedKeys: readonly string[],
-): Promise<AwtrixNgBuiltinAppSettingsApplyResult> => {
+): Promise<AwtrixNgApiAppsOrderPayload | undefined> => {
+  validateAwtrixNgBuiltinAppSettingsChange(newSettings, changedKeys);
+
   if (!hasAwtrixNgBuiltinAppSettingsChange(changedKeys)) {
-    return {};
+    return undefined;
   }
 
   const apps = await client.getApps();
@@ -208,9 +227,24 @@ export const applyAwtrixNgBuiltinAppSettingsChange = async (
     });
   }
 
-  const payload = createAwtrixNgAppsOrderPayloadFromBuiltinSettings(apps, newSettings);
+  return createAwtrixNgAppsOrderPayloadFromBuiltinSettingsChange(apps, newSettings, changedKeys);
+};
 
+export const writeAwtrixNgAppsOrder = async (
+  client: Pick<AwtrixNgAppsClient, 'putAppsOrder'>,
+  payload: AwtrixNgApiAppsOrderPayload,
+): Promise<AwtrixNgApiAppsOrderPayload> => {
   await client.putAppsOrder(payload);
 
   return payload;
+};
+
+export const applyAwtrixNgBuiltinAppSettingsChange = async (
+  client: AwtrixNgAppsClient,
+  newSettings: Record<string, unknown>,
+  changedKeys: readonly string[],
+): Promise<AwtrixNgBuiltinAppSettingsApplyResult> => {
+  const payload = await prepareAwtrixNgBuiltinAppSettingsChange(client, newSettings, changedKeys);
+
+  return payload === undefined ? {} : writeAwtrixNgAppsOrder(client, payload);
 };

@@ -20,11 +20,11 @@ import { AwtrixNgDeviceProbeResult, probeAwtrixNgDevice, toAwtrixNgBaseUrl } fro
 import { AwtrixNgBasicAuthOptions } from '../../lib/awtrixng/Http/Transport';
 import AwtrixNgIcons from '../../lib/awtrixng/Services/Icons';
 import {
-  applyAwtrixNgBuiltinAppSettingsChange,
-  createAwtrixNgAppsOrderPayloadFromBuiltinSettingsChange,
-  hasAwtrixNgBuiltinAppSettingsChange,
+  prepareAwtrixNgBuiltinAppSettingsChange,
   isAwtrixNgBuiltinAppSetting,
   toAwtrixNgBuiltinAppSettingsUpdate,
+  validateAwtrixNgBuiltinAppSettingsChange,
+  writeAwtrixNgAppsOrder,
 } from '../../lib/awtrixng/Services/Apps';
 import {
   AwtrixNgWeatherOverlayCapabilityId,
@@ -33,12 +33,16 @@ import {
 import AwtrixNgPoll from '../../lib/awtrixng/Device/Poll';
 import {
   AwtrixNgHomeySettings,
-  applyAwtrixNgHomeySettingsChange,
   createAwtrixNgSettingsPatchFromChangedSettings,
   hasAwtrixNgLocalSettingsChange,
   toAwtrixNgHomeySettingsUpdate,
+  writeAwtrixNgSettingsPatch,
 } from '../../lib/awtrixng/Services/Settings';
-import { AwtrixNgApiDeviceStateResponse } from '../../lib/awtrixng/Api/Types';
+import {
+  AwtrixNgApiAppsOrderPayload,
+  AwtrixNgApiDeviceStateResponse,
+  AwtrixNgApiSettingsPatch,
+} from '../../lib/awtrixng/Api/Types';
 import { AwtrixDeviceType } from '../awtrix-device-type';
 
 const PollIntervalMs = 60000;
@@ -108,6 +112,14 @@ interface AwtrixNgConnectionCandidate {
   port: number;
   baseUrl: string;
   auth?: AwtrixNgBasicAuthOptions;
+}
+
+interface AwtrixNgLocallyPreparedSettingsChanges {
+  settingsPatch?: AwtrixNgApiSettingsPatch;
+}
+
+interface AwtrixNgPreparedSettingsChanges extends AwtrixNgLocallyPreparedSettingsChanges {
+  appsOrderPayload?: AwtrixNgApiAppsOrderPayload;
 }
 
 class AwtrixNgDevice extends Device {
@@ -180,23 +192,26 @@ class AwtrixNgDevice extends Device {
 
   async onSettings({ oldSettings, newSettings, changedKeys }: AwtrixNgDeviceSettingsChange): Promise<void> {
     this.log('AwtrixNgDevice settings were changed', oldSettings, newSettings, changedKeys);
+    const locallyPreparedChanges = this.prepareLocalSettingsChanges(newSettings, changedKeys);
 
     if (hasAwtrixNgLocalSettingsChange(changedKeys)) {
       await this.applySettingsChangesWithCandidateConnection(
         newSettings as AwtrixNgDeviceSettings,
         changedKeys,
+        locallyPreparedChanges,
       );
       return;
     }
 
     const client = this.getClient();
-
-    await applyAwtrixNgBuiltinAppSettingsChange(client, newSettings, changedKeys);
-    await applyAwtrixNgHomeySettingsChange(
+    const preparedChanges = await this.prepareSettingsChanges(
       client,
       newSettings,
-      changedKeys.filter((key) => !isAwtrixNgBuiltinAppSetting(key)),
+      changedKeys,
+      locallyPreparedChanges,
     );
+
+    await this.writePreparedSettingsChanges(client, preparedChanges);
   }
 
   async refreshAvailability(): Promise<AwtrixNgDeviceProbeResult | undefined> {
@@ -401,42 +416,63 @@ class AwtrixNgDevice extends Device {
   private async applySettingsChangesWithCandidateConnection(
     newSettings: AwtrixNgDeviceSettings,
     changedKeys: readonly string[],
+    locallyPreparedChanges: AwtrixNgLocallyPreparedSettingsChanges,
   ): Promise<void> {
-    const remoteSettingsKeys = changedKeys.filter((key) => !isAwtrixNgBuiltinAppSetting(key));
-    const settingsPatch = createAwtrixNgSettingsPatchFromChangedSettings(newSettings, remoteSettingsKeys);
     const connection = this.getConnectionCandidateFromSettings(newSettings);
     const client = await this.verifyCandidateConnection(connection.baseUrl, connection.auth);
-    let appsOrderPayload: ReturnType<typeof createAwtrixNgAppsOrderPayloadFromBuiltinSettingsChange>;
+    const preparedChanges = await this.prepareSettingsChanges(
+      client,
+      newSettings,
+      changedKeys,
+      locallyPreparedChanges,
+    );
 
-    if (hasAwtrixNgBuiltinAppSettingsChange(changedKeys)) {
-      const apps = await client.getApps();
-
-      if (!Array.isArray(apps)) {
-        throw new AwtrixNgInvalidResponseError({
-          endpoint: '/api/v1/apps',
-          expectedShape: 'an array',
-          actualValue: apps,
-        });
-      }
-
-      appsOrderPayload = createAwtrixNgAppsOrderPayloadFromBuiltinSettingsChange(
-        apps,
-        newSettings,
-        changedKeys,
-      );
-    }
-
-    if (appsOrderPayload !== undefined) {
-      await client.putAppsOrder(appsOrderPayload);
-    }
-
-    if (settingsPatch !== undefined) {
-      await client.patchSettings(settingsPatch);
-    }
+    await this.writePreparedSettingsChanges(client, preparedChanges);
 
     await this.commitConnection(connection, client, false);
     this.ensurePollingStarted();
     await this.refreshDeviceState({ allowAddCapabilities: false });
+  }
+
+  private prepareLocalSettingsChanges(
+    newSettings: AwtrixNgHomeySettings,
+    changedKeys: readonly string[],
+  ): AwtrixNgLocallyPreparedSettingsChanges {
+    const remoteSettingsKeys = changedKeys.filter((key) => !isAwtrixNgBuiltinAppSetting(key));
+    const settingsPatch = createAwtrixNgSettingsPatchFromChangedSettings(newSettings, remoteSettingsKeys);
+
+    validateAwtrixNgBuiltinAppSettingsChange(newSettings, changedKeys);
+
+    return { settingsPatch };
+  }
+
+  private async prepareSettingsChanges(
+    client: AwtrixNgClient,
+    newSettings: AwtrixNgHomeySettings,
+    changedKeys: readonly string[],
+    locallyPreparedChanges: AwtrixNgLocallyPreparedSettingsChanges,
+  ): Promise<AwtrixNgPreparedSettingsChanges> {
+    const appsOrderPayload = await prepareAwtrixNgBuiltinAppSettingsChange(client, newSettings, changedKeys);
+
+    return {
+      ...locallyPreparedChanges,
+      appsOrderPayload,
+    };
+  }
+
+  private async writePreparedSettingsChanges(
+    client: AwtrixNgClient,
+    changes: AwtrixNgPreparedSettingsChanges,
+  ): Promise<void> {
+    // These endpoints do not provide a transaction. Writes are sequential and fail-fast:
+    // if the second write fails, the first may already be applied and the next save reconciles the state.
+    if (changes.appsOrderPayload !== undefined) {
+      await writeAwtrixNgAppsOrder(client, changes.appsOrderPayload);
+    }
+
+    if (changes.settingsPatch !== undefined) {
+      await writeAwtrixNgSettingsPatch(client, changes.settingsPatch);
+    }
   }
 
   private async commitDiscoveredConnection(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {

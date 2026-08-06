@@ -81,6 +81,11 @@ export const createAwtrixNgSettingsPatchFromChangedSettings = (
   return toAwtrixNgSettingsPatch(patchInput as AwtrixNgSettingsPatchInput);
 };
 
+export const writeAwtrixNgSettingsPatch = (
+  client: AwtrixNgSettingsClient,
+  patch: AwtrixNgApiSettingsPatch,
+): Promise<AwtrixNgApiSettingsResponse> => client.patchSettings(patch);
+
 export const toAwtrixNgHomeySettingsFromApiSettings = (settings: AwtrixNgApiSettingsResponse): AwtrixNgHomeySettingsPatch => ({
   autoBrightness: settings.autoBrightness,
   autoTransition: settings.autoTransition,
@@ -118,7 +123,7 @@ export const applyAwtrixNgHomeySettingsChange = async (
     };
   }
 
-  const apiSettings = await client.patchSettings(patch);
+  const apiSettings = await writeAwtrixNgSettingsPatch(client, patch);
 
   return {
     patch,

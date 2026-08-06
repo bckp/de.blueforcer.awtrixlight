@@ -756,7 +756,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | D6 | ✅ | R6-1 zdokumentováno; discovery probe a kontrola UID proběhnou před přepnutím spojení |
 | D7 | ✅ | R4: address/port/auth se ověřují kandidátním klientem; pairing a settings jsou synchronizované |
 | D8 | ✅ | overlay capability má guard; NG transport nepovoluje redirecty; mDNS runtime kontroluje TXT typ |
-| D9 | ⬜ | R7: validate-all, potom sequential fail-fast |
+| D9 | ✅ | R7: obě skupiny se připraví před zápisem; zápisy jsou sekvenční fail-fast a neatomické |
 | D10 | ⬜ | sdílet factory, ne output mapper |
 | D11 | ⬜ | žádné nedokumentované rozsahy |
 | D12 | ⬜ | |
