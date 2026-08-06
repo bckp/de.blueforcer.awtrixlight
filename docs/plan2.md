@@ -413,7 +413,7 @@ Pořadí uvnitř fáze respektuj: H3 → H4 (testy před refaktorem), H5 po H3/H
 | G6 | S | ✅ | `1414daa` | R3a dluh splacen; text 2.1.0 má 311 znaků; lint u G3–G6 neověřen v Linux VM (viz G1) – 298 pass |
 | H1 | O | ✅ | `1992b55` | `Support/Guards.ts`: `isRecord` (pole procházejí) + `isPlainObject` (prototype check z device – Transformers/JsonPayload/Icons prošly beze změny testů) + `toValidTcpPort`; device si nechává hard-fail wrapper `toConnectionPort`. Jediná změna testu: registrace `Support` v `awtrixng-lib-structure` (mechanická, ne sémantická). Lint už v sandboxu běží (doinstalován `@unrs/resolver-binding-linux-arm64-gnu`, `--no-save`) |
 | H2 | S | ✅ | `f6c5830` | `#clientGetInternal` v `Api.ts`; `Client.get/getDirect` už delegovaly na `#getRequest` – bez duplicity, nemění se; S12: hláška z `weatherOverlayApiValues` |
-| H3 | S | ⬜ | | PŘED H4 |
+| H3 | S | ✅ | `44f07f5` | 9 charakterizačních testů, 307 pass. **Korekce plánu (bod 7):** vadná barva ve fragmentu NEDÁ `c: '0'` – `isTextFragment` vyžaduje platnou barvu, takže se text zahodí celý a fallback `toColor('0')` v `toText` je dnes nedosažitelný. Navíc zafixován vedlejší efekt: `basicOptions` mutuje vstupní objekt (`options.duration = undefined`) |
 | H4 | O | ⬜ | | P2: opravit vše vč. barvy; indikátory NEMĚNIT |
 | H5 | O | ⬜ | | pak posoudit refreshAvailability |
 | H6 | S | ⬜ | | |
