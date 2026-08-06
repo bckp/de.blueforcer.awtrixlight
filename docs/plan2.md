@@ -417,7 +417,7 @@ Pořadí uvnitř fáze respektuj: H3 → H4 (testy před refaktorem), H5 po H3/H
 | H4 | O | ✅ | `f269ccb` | tabulka `basicOptionRules` + jedna smyčka, pořadí klíčů zachováno; P2: `blinkText/fadeText: 0` se posílají, neplatná `color` se vynechá; `indicatorOptions` a fragmenty NEZMĚNĚNY. **Rozhodnutí bckp k `toText` (nad rámec P2):** JSON se parsuje jen u vstupu začínajícího `[`, ostatní text je literální – změna u `'null'`/`'true'`/`'{"a":1}'`/`'"abc"'`/`' 123 '`/`'1e3'` (3 aserce z H3 vědomě přepsané). **Changelog neřešen** (rozhodnutí bckp – text doplní při REL2, verze nebumpnuta). 309 pass |
 | H5 | O | ✅ | `e71ce74` | 7 source-parsing testů nahrazeno 8 behaviorálními (routovaný fake transport: onInit sync, listenery bez spojení, selhání init sync, builtin apps, kombinovaná změna, R7 fail-fast, validace neznámého klíče před requestem, pořadí probe→write→commit). Strukturní/compose/entrypoint testy PONECHÁNY. `refreshAvailability` ZŮSTÁVÁ (má testovací call-site v `awtrixng-device-availability`) + doplněn doc komentář proč. 310 pass |
 | H6 | S | ✅ | `d90db57` | obsah interfaců beze změny; `grep -rn "drivers/" lib/awtrix3/` je prázdný |
-| H7 | S | ⬜ | | |
+| H7 | S | ✅ | `ba4bca8` | `desiredCapabilityOrder` + `additionalCapabilities` + `isInDesiredOrder`, dvě smyčky; 6 nových testů fixujících chování PŘED refaktorem (no-op, drift, chybějící trojice, rssi/ip/rediscover, seed `ip` ze store, kontejnment chyby). Jediná drobná změna: přidání `button.rediscover` se teď loguje jako ostatní. 316 pass |
 | H8 | S | ⬜ | | kandidát na skip po re-auditu |
 | H9 | O | ⬜ | | AggregateError, ne log+resolve |
 | H10 | S | ⬜ | | |
