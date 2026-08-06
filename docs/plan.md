@@ -757,7 +757,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | D7 | ✅ | R4: address/port/auth se ověřují kandidátním klientem; pairing a settings jsou synchronizované |
 | D8 | ✅ | overlay capability má guard; NG transport nepovoluje redirecty; mDNS runtime kontroluje TXT typ |
 | D9 | ✅ | R7: obě skupiny se připraví před zápisem; zápisy jsou sekvenční fail-fast a neatomické |
-| D10 | ⬜ | sdílet factory, ne output mapper |
+| D10 | ✅ | sdílená probe factory bez output mapperu; discovery filtruje předem, používá limit 4 a řadí podle názvu |
 | D11 | ⬜ | žádné nedokumentované rozsahy |
 | D12 | ⬜ | |
 | D13 | ⬜ | R9: NG icon upload nekritický, strukturovaná diagnostika |
