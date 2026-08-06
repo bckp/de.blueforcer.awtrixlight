@@ -415,7 +415,7 @@ Pořadí uvnitř fáze respektuj: H3 → H4 (testy před refaktorem), H5 po H3/H
 | H2 | S | ✅ | `f6c5830` | `#clientGetInternal` v `Api.ts`; `Client.get/getDirect` už delegovaly na `#getRequest` – bez duplicity, nemění se; S12: hláška z `weatherOverlayApiValues` |
 | H3 | S | ✅ | `44f07f5` | 9 charakterizačních testů, 307 pass. **Korekce plánu (bod 7):** vadná barva ve fragmentu NEDÁ `c: '0'` – `isTextFragment` vyžaduje platnou barvu, takže se text zahodí celý a fallback `toColor('0')` v `toText` je dnes nedosažitelný. Navíc zafixován vedlejší efekt: `basicOptions` mutuje vstupní objekt (`options.duration = undefined`) |
 | H4 | O | ✅ | `f269ccb` | tabulka `basicOptionRules` + jedna smyčka, pořadí klíčů zachováno; P2: `blinkText/fadeText: 0` se posílají, neplatná `color` se vynechá; `indicatorOptions` a fragmenty NEZMĚNĚNY. **Rozhodnutí bckp k `toText` (nad rámec P2):** JSON se parsuje jen u vstupu začínajícího `[`, ostatní text je literální – změna u `'null'`/`'true'`/`'{"a":1}'`/`'"abc"'`/`' 123 '`/`'1e3'` (3 aserce z H3 vědomě přepsané). **Changelog neřešen** (rozhodnutí bckp – text doplní při REL2, verze nebumpnuta). 309 pass |
-| H5 | O | ⬜ | | pak posoudit refreshAvailability |
+| H5 | O | ✅ | `e71ce74` | 7 source-parsing testů nahrazeno 8 behaviorálními (routovaný fake transport: onInit sync, listenery bez spojení, selhání init sync, builtin apps, kombinovaná změna, R7 fail-fast, validace neznámého klíče před requestem, pořadí probe→write→commit). Strukturní/compose/entrypoint testy PONECHÁNY. `refreshAvailability` ZŮSTÁVÁ (má testovací call-site v `awtrixng-device-availability`) + doplněn doc komentář proč. 310 pass |
 | H6 | S | ⬜ | | |
 | H7 | S | ⬜ | | |
 | H8 | S | ⬜ | | kandidát na skip po re-auditu |
