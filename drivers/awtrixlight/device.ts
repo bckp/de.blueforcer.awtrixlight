@@ -98,8 +98,10 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     // Test device if possible
     if (await this.testDevice() !== Status.Ok) {
       this.log('Device not available, trying to rediscover');
-      this.setUnavailable(this.homey.__('states.unavailable')).catch(this.error);
-      this.tryRediscover();
+      await this.setUnavailable(this.homey.__('states.unavailable')).catch(this.error);
+      // Awaited so polling never starts while rediscovery is still rewriting the address,
+      // the store and the availability state. A failure here only means "still offline".
+      await this.tryRediscover();
     } else {
       await this.setAvailable();
     }
@@ -276,7 +278,9 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     try {
       const result = this.driver.getDiscoveryStrategy().getDiscoveryResult(this.getData().id);
       if (result && result instanceof DiscoveryResultMDNSSD && result.address) {
-        return this.onDiscoveryAvailable(result);
+        // `return await` on purpose: without it a rejection from onDiscoveryAvailable()
+        // escapes the catch below and surfaces as an unhandled rejection.
+        return await this.onDiscoveryAvailable(result);
       }
     } catch (error: any) {
       this.log('Discovery error: ', error);

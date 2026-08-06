@@ -13,11 +13,12 @@ const {
   fakeAwtrix3Client,
 } = require('./helpers/fake-homey');
 
+function FakeDiscoveryResultMDNSSD() {}
+
 const loadAwtrixLightDevice = () => {
   const originalLoad = Module._load;
 
   function FakeHomeyDevice() {}
-  function FakeDiscoveryResultMDNSSD() {}
 
   Module._load = function load(request, parent, isMain) {
     if (request === 'homey') {
@@ -1077,4 +1078,102 @@ test('AWTRIX 3 refreshAll aggregates a failing effects store write', async () =>
       return true;
     },
   );
+});
+
+test('AWTRIX 3 tryRediscover contains a rejecting discovery hook instead of leaking it', async () => {
+  const hookError = new Error('reconnect rejected');
+  const logged = [];
+  const context = {
+    log(...args) {
+      logged.push(args[0]);
+    },
+    getData() {
+      return { id: 'awtrix-1' };
+    },
+    driver: {
+      getDiscoveryStrategy() {
+        return {
+          getDiscoveryResult() {
+            return Object.assign(Object.create(FakeDiscoveryResultMDNSSD.prototype), {
+              address: '192.0.2.10',
+            });
+          },
+        };
+      },
+    },
+    async onDiscoveryAvailable() {
+      throw hookError;
+    },
+  };
+
+  let result;
+  const unhandled = await countUnhandledRejections(async () => {
+    result = await AwtrixLightDevice.prototype.tryRediscover.call(context);
+  });
+
+  assert.equal(unhandled, 0, 'the rejection must not escape the catch');
+  assert.equal(result, false);
+  assert.deepEqual(logged, ['Discovery error: ']);
+});
+
+test('AWTRIX 3 initialization waits for rediscovery before starting the poll', async () => {
+  const rediscover = deferred();
+  const events = [];
+  const context = {
+    homey: createFakeHomey(),
+    api: {
+      setDebug() {},
+    },
+    async getSettings() {
+      return {};
+    },
+    async testDevice() {
+      return Status.Error;
+    },
+    async setUnavailable() {
+      events.push('unavailable');
+    },
+    poll: {
+      stop() {
+        events.push('poll.stop');
+      },
+      start() {
+        events.push('poll.start');
+      },
+    },
+    failsReset() {},
+    failsCritical(value) {
+      events.push(`critical:${value}`);
+    },
+    getAvailable() {
+      return false;
+    },
+    log() {},
+    error() {},
+    async tryRediscover() {
+      events.push('rediscover.start');
+      await rediscover.promise;
+      events.push('rediscover.end');
+      return false;
+    },
+    registerCapabilityListener() {},
+  };
+
+  const operation = AwtrixLightDevice.prototype.initializeDevice.call(context);
+  await flushTasks();
+
+  assert.deepEqual(events, ['unavailable', 'rediscover.start'], 'the poll has not started yet');
+
+  rediscover.resolve();
+  await operation;
+
+  assert.deepEqual(events, [
+    'unavailable',
+    'rediscover.start',
+    'rediscover.end',
+    'poll.stop',
+    'critical:true',
+    'poll.start',
+    'critical:false',
+  ]);
 });
