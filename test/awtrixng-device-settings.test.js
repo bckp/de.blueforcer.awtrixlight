@@ -49,6 +49,8 @@ test('AWTRIX NG device refreshes Homey settings from the device during init', ()
   assert.equal(onInitBody.includes('await this.refreshDisplayFromDevice();'), true);
   assert.equal(onInitBody.includes('await this.refreshAppsFromDevice();'), true);
   assert.equal(onInitBody.includes("deviceStateResult?.status === 'detected'"), true);
+  assert.equal(onInitBody.indexOf('this.initCapabilityListeners();') < onInitBody.indexOf('if (baseUrl === undefined)'), true);
+  assert.equal(onInitBody.indexOf('this.initializePoll();') < onInitBody.indexOf('if (baseUrl === undefined)'), true);
 });
 
 test('AWTRIX NG onSettings does not call setSettings while Homey settings are pending', () => {
@@ -58,7 +60,22 @@ test('AWTRIX NG onSettings does not call setSettings while Homey settings are pe
   assert.equal(onSettingsBody.includes('applyAwtrixNgBuiltinAppSettingsChange'), true);
   assert.equal(onSettingsBody.includes('applyAwtrixNgHomeySettingsChange'), true);
   assert.equal(onSettingsBody.includes('changedKeys.filter((key) => !isAwtrixNgBuiltinAppSetting(key))'), true);
+  assert.equal(onSettingsBody.includes('applySettingsChangesWithCandidateConnection'), true);
   assert.equal(onSettingsBody.includes('setSettings('), false);
+});
+
+test('AWTRIX NG connection settings use the verified candidate for writes before activation', () => {
+  const source = readSource('drivers/awtrixng/device.ts');
+  const candidateBody = getMethodBody(source, 'private async applySettingsChangesWithCandidateConnection(');
+
+  assert.equal(candidateBody.includes('createAwtrixNgSettingsPatchFromChangedSettings'), true);
+  assert.equal(candidateBody.includes('await this.verifyCandidateConnection'), true);
+  assert.equal(candidateBody.includes('await client.putAppsOrder(appsOrderPayload);'), true);
+  assert.equal(candidateBody.includes('await client.patchSettings(settingsPatch);'), true);
+  assert.equal(candidateBody.includes('await this.commitConnection(connection, client, false);'), true);
+  assert.equal(candidateBody.indexOf('await this.verifyCandidateConnection') < candidateBody.indexOf('await client.putAppsOrder'), true);
+  assert.equal(candidateBody.indexOf('await client.patchSettings') < candidateBody.indexOf('await this.commitConnection'), true);
+  assert.equal(candidateBody.includes('setSettings('), false);
 });
 
 test('AWTRIX NG device settings refresh uses GET settings and setSettings outside onSettings', () => {

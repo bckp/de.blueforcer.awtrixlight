@@ -21,6 +21,8 @@ import { AwtrixNgBasicAuthOptions } from '../../lib/awtrixng/Http/Transport';
 import AwtrixNgIcons from '../../lib/awtrixng/Services/Icons';
 import {
   applyAwtrixNgBuiltinAppSettingsChange,
+  createAwtrixNgAppsOrderPayloadFromBuiltinSettingsChange,
+  hasAwtrixNgBuiltinAppSettingsChange,
   isAwtrixNgBuiltinAppSetting,
   toAwtrixNgBuiltinAppSettingsUpdate,
 } from '../../lib/awtrixng/Services/Apps';
@@ -32,6 +34,7 @@ import AwtrixNgPoll from '../../lib/awtrixng/Device/Poll';
 import {
   AwtrixNgHomeySettings,
   applyAwtrixNgHomeySettingsChange,
+  createAwtrixNgSettingsPatchFromChangedSettings,
   hasAwtrixNgLocalSettingsChange,
   toAwtrixNgHomeySettingsUpdate,
 } from '../../lib/awtrixng/Services/Settings';
@@ -40,6 +43,7 @@ import { AwtrixDeviceType } from '../awtrix-device-type';
 
 const PollIntervalMs = 60000;
 const BundledIconsDirectory = path.join(__dirname, 'assets/images/icons');
+const ConnectionNotConfiguredMessage = 'Device address is not configured yet.';
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -51,11 +55,11 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
   return prototype === Object.prototype || prototype === null;
 };
 
-const toDiscoveryPort = (value: string | number): number => {
+const toConnectionPort = (value: unknown): number => {
   const port = Number(value);
 
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new RangeError('AWTRIX NG discovery result requires a valid TCP port.');
+    throw new RangeError('AWTRIX NG connection requires a valid TCP port.');
   }
 
   return port;
@@ -87,6 +91,8 @@ interface AwtrixNgDeviceStore {
 }
 
 interface AwtrixNgDeviceSettings extends AwtrixNgHomeySettings {
+  address?: string;
+  port?: number;
   authUser?: string;
   authPass?: string;
 }
@@ -95,6 +101,13 @@ interface AwtrixNgDeviceSettingsChange {
   oldSettings: AwtrixNgHomeySettings;
   newSettings: AwtrixNgHomeySettings;
   changedKeys: string[];
+}
+
+interface AwtrixNgConnectionCandidate {
+  address: string;
+  port: number;
+  baseUrl: string;
+  auth?: AwtrixNgBasicAuthOptions;
 }
 
 class AwtrixNgDevice extends Device {
@@ -111,20 +124,17 @@ class AwtrixNgDevice extends Device {
 
   async onInit(): Promise<void> {
     this.log('AwtrixNgDevice has been initialized');
+    this.initCapabilityListeners();
+    const poll = this.initializePoll();
 
     const baseUrl = this.getBaseUrlFromStore();
 
     if (baseUrl === undefined) {
-      await this.setUnavailable('Device address is not configured yet.');
+      await this.setUnavailable(ConnectionNotConfiguredMessage);
       return;
     }
 
     this.configureClient(baseUrl, await this.getSettings() as AwtrixNgDeviceSettings);
-    this.initCapabilityListeners();
-
-    this.poll = new AwtrixNgPoll(async () => {
-      await this.refreshDeviceState({ allowAddCapabilities: false });
-    }, this.homey, PollIntervalMs, (error: unknown) => this.error(error));
 
     try {
       const deviceStateResult = await this.refreshDeviceState({ allowAddCapabilities: true });
@@ -138,7 +148,7 @@ class AwtrixNgDevice extends Device {
       this.error(error);
       await this.setUnavailable(`Initial device synchronization failed. ${formatAwtrixNgErrorDetails(error)}`);
     } finally {
-      this.poll.start();
+      poll.start();
     }
   }
 
@@ -171,14 +181,12 @@ class AwtrixNgDevice extends Device {
   async onSettings({ oldSettings, newSettings, changedKeys }: AwtrixNgDeviceSettingsChange): Promise<void> {
     this.log('AwtrixNgDevice settings were changed', oldSettings, newSettings, changedKeys);
 
-    const baseUrl = this.getBaseUrlFromStore();
-
-    if (baseUrl === undefined) {
-      throw new Error('Device address is not configured yet.');
-    }
-
     if (hasAwtrixNgLocalSettingsChange(changedKeys)) {
-      this.configureClient(baseUrl, newSettings as AwtrixNgDeviceSettings);
+      await this.applySettingsChangesWithCandidateConnection(
+        newSettings as AwtrixNgDeviceSettings,
+        changedKeys,
+      );
+      return;
     }
 
     const client = this.getClient();
@@ -213,9 +221,19 @@ class AwtrixNgDevice extends Device {
     });
   }
 
+  private initializePoll(): AwtrixNgPoll {
+    const poll = new AwtrixNgPoll(async () => {
+      await this.refreshDeviceState({ allowAddCapabilities: false });
+    }, this.homey, PollIntervalMs, (error: unknown) => this.error(error));
+
+    this.poll = poll;
+
+    return poll;
+  }
+
   private getClient(): AwtrixNgClient {
     if (this.client === undefined) {
-      throw new Error('Device client is not initialized.');
+      throw new Error(ConnectionNotConfiguredMessage);
     }
 
     return this.client;
@@ -223,8 +241,7 @@ class AwtrixNgDevice extends Device {
 
   async refreshDeviceState(options: { allowAddCapabilities: boolean }): Promise<AwtrixNgDeviceProbeResult | undefined> {
     if (this.client === undefined) {
-      await this.setUnavailable('Device client is not initialized.');
-      return undefined;
+      throw new Error(ConnectionNotConfiguredMessage);
     }
 
     const result = await probeAwtrixNgDevice(this.client);
@@ -360,35 +377,122 @@ class AwtrixNgDevice extends Device {
     return client;
   }
 
+  private getConnectionCandidateFromSettings(settings: AwtrixNgDeviceSettings): AwtrixNgConnectionCandidate {
+    const address = typeof settings.address === 'string' ? settings.address.trim() : '';
+
+    if (address === '') {
+      throw new Error(ConnectionNotConfiguredMessage);
+    }
+
+    if (address.includes('://') || address.includes('/')) {
+      throw new Error('Device address must be a hostname or IP address without protocol or path.');
+    }
+
+    const port = toConnectionPort(settings.port);
+
+    return {
+      address,
+      port,
+      baseUrl: toAwtrixNgBaseUrl({ address, port }),
+      auth: this.getAuthFromSettingsSnapshot(settings),
+    };
+  }
+
+  private async applySettingsChangesWithCandidateConnection(
+    newSettings: AwtrixNgDeviceSettings,
+    changedKeys: readonly string[],
+  ): Promise<void> {
+    const remoteSettingsKeys = changedKeys.filter((key) => !isAwtrixNgBuiltinAppSetting(key));
+    const settingsPatch = createAwtrixNgSettingsPatchFromChangedSettings(newSettings, remoteSettingsKeys);
+    const connection = this.getConnectionCandidateFromSettings(newSettings);
+    const client = await this.verifyCandidateConnection(connection.baseUrl, connection.auth);
+    let appsOrderPayload: ReturnType<typeof createAwtrixNgAppsOrderPayloadFromBuiltinSettingsChange>;
+
+    if (hasAwtrixNgBuiltinAppSettingsChange(changedKeys)) {
+      const apps = await client.getApps();
+
+      if (!Array.isArray(apps)) {
+        throw new AwtrixNgInvalidResponseError({
+          endpoint: '/api/v1/apps',
+          expectedShape: 'an array',
+          actualValue: apps,
+        });
+      }
+
+      appsOrderPayload = createAwtrixNgAppsOrderPayloadFromBuiltinSettingsChange(
+        apps,
+        newSettings,
+        changedKeys,
+      );
+    }
+
+    if (appsOrderPayload !== undefined) {
+      await client.putAppsOrder(appsOrderPayload);
+    }
+
+    if (settingsPatch !== undefined) {
+      await client.patchSettings(settingsPatch);
+    }
+
+    await this.commitConnection(connection, client, false);
+    this.ensurePollingStarted();
+    await this.refreshDeviceState({ allowAddCapabilities: false });
+  }
+
   private async commitDiscoveredConnection(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {
-    const port = toDiscoveryPort(discoveryResult.port);
-    const baseUrl = toAwtrixNgBaseUrl({
+    const port = toConnectionPort(discoveryResult.port);
+    const connection: AwtrixNgConnectionCandidate = {
       address: discoveryResult.address,
       port,
-    });
+      baseUrl: toAwtrixNgBaseUrl({
+        address: discoveryResult.address,
+        port,
+      }),
+    };
     const settings = await this.getSettings() as AwtrixNgDeviceSettings;
     const client = await this.verifyCandidateConnection(
-      baseUrl,
+      connection.baseUrl,
       this.getAuthFromSettingsSnapshot(settings),
     );
 
-    await this.setStoreValue('baseUrl', baseUrl);
-    await this.setStoreValue('address', discoveryResult.address);
-    await this.setStoreValue('port', port);
-    await this.setSettings({
-      address: discoveryResult.address,
-      port,
-    });
-    this.activateClient(client);
+    await this.commitConnection(connection, client, true);
+    this.ensurePollingStarted();
 
     const result = await this.refreshDeviceState({ allowAddCapabilities: false });
 
     return result?.status === 'detected';
   }
 
+  private async commitConnection(
+    connection: AwtrixNgConnectionCandidate,
+    client: AwtrixNgClient,
+    syncHomeySettings: boolean,
+  ): Promise<void> {
+    await this.setStoreValue('baseUrl', connection.baseUrl);
+    await this.setStoreValue('address', connection.address);
+    await this.setStoreValue('port', connection.port);
+
+    if (syncHomeySettings) {
+      await this.setSettings({
+        address: connection.address,
+        port: connection.port,
+      });
+    }
+
+    this.activateClient(client);
+  }
+
+  private ensurePollingStarted(): void {
+    const poll = this.poll || this.initializePoll();
+
+    if (!poll.isActive()) {
+      poll.start();
+    }
+  }
+
   private async uploadBundledIcons(): Promise<void> {
     if (this.icons === undefined) {
-      throw new Error('Icon service is not initialized.');
+      throw new Error(ConnectionNotConfiguredMessage);
     }
 
     const iconFiles = fs.readdirSync(BundledIconsDirectory)

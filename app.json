@@ -1165,6 +1165,38 @@
         {
           "type": "group",
           "label": {
+            "en": "Connection"
+          },
+          "children": [
+            {
+              "id": "address",
+              "type": "text",
+              "label": {
+                "en": "Address or hostname"
+              },
+              "value": "",
+              "hint": {
+                "en": "Usually filled automatically during pairing or discovery. Enter an IP address or hostname without protocol or path."
+              }
+            },
+            {
+              "id": "port",
+              "type": "number",
+              "label": {
+                "en": "Port"
+              },
+              "value": 80,
+              "min": 1,
+              "max": 65535,
+              "hint": {
+                "en": "Usually filled automatically during pairing or discovery."
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
             "en": "Login details"
           },
           "children": [

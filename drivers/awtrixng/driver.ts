@@ -29,9 +29,14 @@ interface AwtrixNgPairDeviceStore {
   version: string;
 }
 
-interface AwtrixNgPairDeviceSettings {
+interface AwtrixNgPairDeviceCredentials {
   authUser: string;
   authPass: string;
+}
+
+interface AwtrixNgPairDeviceSettings extends AwtrixNgPairDeviceCredentials {
+  address: string;
+  port: number;
 }
 
 interface AwtrixNgPairDevice {
@@ -553,7 +558,7 @@ class AwtrixNgDriver extends Driver {
     baseUrl: string;
     hostname?: string;
     device: AwtrixNgApiDeviceStateResponse;
-    settings?: AwtrixNgPairDeviceSettings;
+    settings?: AwtrixNgPairDeviceCredentials;
   }): AwtrixNgPairDevice {
     return {
       name: input.name,
@@ -569,9 +574,11 @@ class AwtrixNgDriver extends Driver {
         hostname: input.hostname,
         version: input.device.version,
       },
-      settings: input.settings || {
-        authUser: '',
-        authPass: '',
+      settings: {
+        address: input.address,
+        port: input.port,
+        authUser: input.settings?.authUser || '',
+        authPass: input.settings?.authPass || '',
       },
       capabilities: getAwtrixNgInitialCapabilityIds(input.device),
     };

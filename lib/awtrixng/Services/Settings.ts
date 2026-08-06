@@ -14,7 +14,7 @@ export type AwtrixNgHomeySettings = Record<string, AwtrixNgHomeySettingValue>;
 
 export type AwtrixNgWritableSettingsField = 'autoBrightness' | 'autoTransition' | 'blockNavigation' | 'uppercase' | 'transitionEffect';
 
-export type AwtrixNgLocalSettingsField = 'authUser' | 'authPass';
+export type AwtrixNgLocalSettingsField = 'address' | 'port' | 'authUser' | 'authPass';
 
 export type AwtrixNgHomeySettingsPatch = Partial<Record<AwtrixNgWritableSettingsField, boolean | string>>;
 
@@ -37,8 +37,10 @@ const writableSettingsFields = new Set<string>([
 ]);
 
 const localSettingsFields = new Set<string>([
+  'address',
   'authPass',
   'authUser',
+  'port',
 ]);
 
 const isWritableSettingsField = (field: string): field is AwtrixNgWritableSettingsField => writableSettingsFields.has(field);

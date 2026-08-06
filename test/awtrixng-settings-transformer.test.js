@@ -153,26 +153,32 @@ test('AWTRIX NG settings transformer rejects non-object input', () => {
   assertSettingsError([], '<payload>', 'invalid-value');
 });
 
-test('AWTRIX NG settings change helper ignores local auth credentials and does not create a PATCH', () => {
+test('AWTRIX NG settings change helper ignores local connection/auth fields and does not create a PATCH', () => {
+  assert.equal(hasAwtrixNgLocalSettingsChange(['address']), true);
+  assert.equal(hasAwtrixNgLocalSettingsChange(['port']), true);
   assert.equal(hasAwtrixNgLocalSettingsChange(['authUser']), true);
   assert.equal(hasAwtrixNgLocalSettingsChange(['authPass']), true);
   assert.equal(hasAwtrixNgLocalSettingsChange(['autoBrightness']), false);
   assert.equal(createAwtrixNgSettingsPatchFromChangedSettings({
+    address: '192.0.2.60',
+    port: 8080,
     authUser: 'homey',
     authPass: 'secret',
-  }, ['authUser', 'authPass']), undefined);
+  }, ['address', 'port', 'authUser', 'authPass']), undefined);
 });
 
 test('AWTRIX NG settings change helper builds a patch only from changed supported NG settings', () => {
   assert.deepEqual(createAwtrixNgSettingsPatchFromChangedSettings({
     authUser: 'homey',
     authPass: 'secret',
+    address: '192.0.2.60',
+    port: 8080,
     autoBrightness: true,
     autoTransition: false,
     blockNavigation: true,
     uppercase: false,
     transitionEffect: 'Rain',
-  }, ['authUser', 'autoBrightness', 'uppercase']), {
+  }, ['address', 'port', 'authUser', 'autoBrightness', 'uppercase']), {
     autoBrightness: true,
     uppercase: false,
   });

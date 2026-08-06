@@ -59,11 +59,13 @@ const documentedBuiltinAppSettings = [
   ['showBuiltinBattery', 'Battery'],
 ];
 
-test('AWTRIX NG settings compose exposes only local auth and documented NG settings subset', () => {
+test('AWTRIX NG settings compose exposes only local connection/auth and documented NG settings subset', () => {
   const settings = readJson('drivers/awtrixng/driver.settings.compose.json');
   const ids = flattenSettingIds(settings);
 
   assert.deepEqual(ids, [
+    'address',
+    'port',
     'authUser',
     'authPass',
     'autoBrightness',
@@ -81,6 +83,23 @@ test('AWTRIX NG settings compose exposes only local auth and documented NG setti
   assert.equal(ids.includes('batteryPercent'), false);
   assert.equal(ids.includes('ABRI'), false);
   assert.equal(ids.includes('TEFF'), false);
+});
+
+test('AWTRIX NG settings compose exposes editable connection fields with safe port bounds', () => {
+  const settings = readJson('drivers/awtrixng/driver.settings.compose.json');
+  const connectionGroup = settings[0];
+  const address = findSetting(settings, 'address');
+  const port = findSetting(settings, 'port');
+
+  assert.equal(connectionGroup.label.en, 'Connection');
+  assert.equal(address.type, 'text');
+  assert.equal(address.value, '');
+  assert.match(address.hint.en, /filled automatically/);
+  assert.equal(port.type, 'number');
+  assert.equal(port.value, 80);
+  assert.equal(port.min, 1);
+  assert.equal(port.max, 65535);
+  assert.match(port.hint.en, /filled automatically/);
 });
 
 test('AWTRIX NG settings compose exposes transitionEffect as static dropdown', () => {
@@ -130,10 +149,16 @@ test('AWTRIX NG generated manifest keeps transitionEffect setting and weather ov
   assert.ok(awtrixNgDriver);
   assert.equal(app.compatibility, '>=12.9.0');
   const transitionEffect = findSetting(awtrixNgDriver.settings, 'transitionEffect');
+  const address = findSetting(awtrixNgDriver.settings, 'address');
+  const port = findSetting(awtrixNgDriver.settings, 'port');
   const weatherOverlaySetting = findSetting(awtrixNgDriver.settings, 'weatherOverlay');
   const weatherOverlayCapability = app.capabilities.awtrixng_weather_overlay;
 
   assert.ok(transitionEffect);
+  assert.equal(address.type, 'text');
+  assert.equal(port.type, 'number');
+  assert.equal(port.min, 1);
+  assert.equal(port.max, 65535);
   assert.equal(transitionEffect.type, 'dropdown');
   assert.equal(transitionEffect.value, 'Rain');
   assert.deepEqual(transitionEffect.values.map((value) => value.id), documentedTransitionEffects);

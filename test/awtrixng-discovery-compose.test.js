@@ -225,4 +225,5 @@ test('AWTRIX NG driver registers pairing selection and manual probe handlers', (
   assert.ok(driverSource.includes("kind: 'auth-required-discovery'"));
   assert.ok(driverSource.includes("await session.showView('credentials_placeholder')"));
   assert.ok(driverSource.includes('device: this.toPairDevice({'));
+  assert.equal(driverSource.match(/this\.toPairDevice\(\{/g)?.length, 3, 'manual, credentials and discovery paths use the same pair-device mapper');
 });
