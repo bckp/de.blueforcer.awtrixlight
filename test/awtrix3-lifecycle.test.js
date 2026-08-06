@@ -5,6 +5,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const Api = require('../.homeybuild/lib/awtrix3/Api/Api').default;
+const Poll = require('../.homeybuild/lib/awtrix3/Poll').default;
 const { Status } = require('../.homeybuild/lib/awtrix3/Api/Response');
 const {
   createFakeHomey,
@@ -793,4 +794,228 @@ test('AWTRIX 3 migration contains capability errors instead of failing onInit', 
   await harness.device.migrate();
 
   assert.deepEqual(harness.errors, [[failure]]);
+});
+
+test('AWTRIX 3 capability writes report every failure with its capability key', async () => {
+  const batteryError = new Error('battery rejected');
+  const rssiError = new Error('rssi rejected');
+  const written = [];
+  const context = {
+    async setCapabilityValue(key, value) {
+      written.push(key);
+
+      if (key === 'measure_battery') {
+        throw batteryError;
+      }
+
+      if (key === 'rssi') {
+        throw rssiError;
+      }
+
+      return value;
+    },
+  };
+
+  await assert.rejects(
+    () => AwtrixLightDevice.prototype.setCapabilityValues.call(context, {
+      measure_battery: 50,
+      measure_humidity: 40,
+      rssi: -70,
+    }),
+    (error) => {
+      assert.equal(error instanceof AggregateError, true);
+      assert.deepEqual(error.errors, [batteryError, rssiError]);
+      assert.match(error.message, /measure_battery, rssi/);
+      return true;
+    },
+  );
+
+  assert.deepEqual(written, ['measure_battery', 'measure_humidity', 'rssi'], 'every capability is still attempted');
+});
+
+test('AWTRIX 3 capability writes resolve when all of them succeed', async () => {
+  const context = {
+    async setCapabilityValue() {
+      return undefined;
+    },
+  };
+
+  await AwtrixLightDevice.prototype.setCapabilityValues.call(context, { rssi: -70 });
+});
+
+test('AWTRIX 3 refreshCapabilities and refreshSettings propagate failures to refreshAll', async () => {
+  const capabilityError = new Error('capability rejected');
+  const settingsError = new Error('settings rejected');
+  const capabilitiesContext = {
+    log() {},
+    async cmdGetStats() {
+      return { bat: 50 };
+    },
+    async setCapabilityValues() {
+      throw capabilityError;
+    },
+    async setStoreValue() {
+      return undefined;
+    },
+  };
+  const settingsContext = {
+    log() {},
+    async cmdGetSettings() {
+      return { TIM: true };
+    },
+    async setSettings() {
+      throw settingsError;
+    },
+  };
+
+  await assert.rejects(
+    () => AwtrixLightDevice.prototype.refreshCapabilities.call(capabilitiesContext),
+    capabilityError,
+    'refreshCapabilities no longer swallows the error',
+  );
+  await assert.rejects(
+    () => AwtrixLightDevice.prototype.refreshSettings.call(settingsContext),
+    settingsError,
+    'refreshSettings no longer swallows the error',
+  );
+});
+
+test('AWTRIX 3 refresh keeps returning early when an endpoint reports no payload', async () => {
+  const logged = [];
+  const context = {
+    log(...args) {
+      logged.push(args[0]);
+    },
+    async cmdGetStats() {
+      return null;
+    },
+    async cmdGetSettings() {
+      return null;
+    },
+    async setCapabilityValues() {
+      throw new Error('must not be called');
+    },
+    async setSettings() {
+      throw new Error('must not be called');
+    },
+  };
+
+  await AwtrixLightDevice.prototype.refreshCapabilities.call(context);
+  await AwtrixLightDevice.prototype.refreshSettings.call(context);
+
+  assert.deepEqual(logged.filter((message) => typeof message === 'string' && message.endsWith('endpoint failed')), [
+    'status endpoint failed',
+    'settings endpoint failed',
+  ]);
+});
+
+test('AWTRIX 3 initialization survives a failing refresh and still starts polling', async () => {
+  const refreshError = new Error('refresh rejected');
+  const events = [];
+  const errors = [];
+  const context = {
+    api: {
+      setDebug() {},
+    },
+    async getSettings() {
+      return {};
+    },
+    async testDevice() {
+      return Status.Ok;
+    },
+    setAvailable: asyncNoop,
+    poll: {
+      stop() {
+        events.push('poll.stop');
+      },
+      start() {
+        events.push('poll.start');
+      },
+    },
+    failsReset() {},
+    failsCritical(value) {
+      events.push(`critical:${value}`);
+    },
+    getAvailable() {
+      return true;
+    },
+    log() {},
+    error(...args) {
+      errors.push(args);
+    },
+    async refreshAll() {
+      throw refreshError;
+    },
+    connected() {
+      events.push('connected');
+    },
+    registerCapabilityListener() {},
+  };
+
+  const unhandled = await countUnhandledRejections(
+    () => AwtrixLightDevice.prototype.initializeDevice.call(context),
+  );
+
+  assert.equal(unhandled, 0);
+  assert.deepEqual(errors, [[refreshError]], 'the refresh failure is logged');
+  assert.deepEqual(events, [
+    'poll.stop',
+    'critical:true',
+    'connected',
+    'poll.start',
+    'critical:false',
+  ], 'the welcome notification and polling still happen');
+});
+
+test('AWTRIX 3 poll reports a failing capability refresh through onError', async () => {
+  const refreshError = new Error('capability refresh rejected');
+  const errors = [];
+  const context = {
+    error(...args) {
+      errors.push(args);
+    },
+    log() {},
+    getAvailable() {
+      return true;
+    },
+    async refreshCapabilities() {
+      throw refreshError;
+    },
+    async tryRediscover() {
+      return false;
+    },
+  };
+  const captured = [];
+  const fakeHomey = createFakeHomey();
+  let pollCallback;
+
+  fakeHomey.setInterval = (callback) => {
+    pollCallback = callback;
+    return 1;
+  };
+  fakeHomey.clearInterval = () => undefined;
+
+  const poll = new Poll(
+    async () => {
+      await context.refreshCapabilities();
+
+      if (!context.getAvailable()) {
+        await context.tryRediscover();
+      }
+    },
+    fakeHomey,
+    (error) => captured.push(error),
+    60000,
+    300000,
+  );
+
+  poll.start();
+
+  const unhandled = await countUnhandledRejections(() => pollCallback());
+
+  assert.equal(unhandled, 0, 'the poll callback never leaks a rejection');
+  assert.deepEqual(captured, [refreshError]);
+  assert.deepEqual(errors, []);
+
+  poll.stop();
 });

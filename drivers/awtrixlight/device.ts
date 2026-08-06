@@ -111,7 +111,13 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       this.failsCritical(true);
       if (this.getAvailable()) {
         this.log('Device availalible');
-        await this.refreshAll();
+        // Availability is governed by the fail counter, not by a single refresh hiccup,
+        // so a refresh failure is reported but must not abort initialization.
+        try {
+          await this.refreshAll();
+        } catch (error: unknown) {
+          this.error(error);
+        }
         await this.connected();
       } else {
         this.log('Polling set to extended mode, device is not available');
@@ -284,64 +290,56 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
 
   // Refresh device capabilities, this is expensive so we do not want to poll too often
   async refreshCapabilities(): Promise<void> {
-    try {
-      const stats = await this.cmdGetStats();
-      this.log('refreshCapabilities', stats);
-      if (!stats) {
-        this.log('status endpoint failed');
-        return;
-      }
-
-      await this.setCapabilityValues({
-        // Battery
-        measure_battery: stats.bat,
-
-        // Measurements
-        measure_humidity: stats.hum,
-        measure_luminance: stats.lux,
-        measure_temperature: stats.temp,
-
-        // Indicators
-        'alarm_generic.indicator1': !!stats.indicator1,
-        'alarm_generic.indicator2': !!stats.indicator2,
-        'alarm_generic.indicator3': !!stats.indicator3,
-
-        // Display
-        awtrix_matrix: !!stats.matrix,
-
-        // RSSI
-        rssi: stats.wifi_signal,
-      });
-
-      await this.setStoreValue('uptime', stats.uptime);
-    } catch (error: any) {
-      this.log(error.message || error);
+    const stats = await this.cmdGetStats();
+    this.log('refreshCapabilities', stats);
+    if (!stats) {
+      this.log('status endpoint failed');
+      return;
     }
+
+    await this.setCapabilityValues({
+      // Battery
+      measure_battery: stats.bat,
+
+      // Measurements
+      measure_humidity: stats.hum,
+      measure_luminance: stats.lux,
+      measure_temperature: stats.temp,
+
+      // Indicators
+      'alarm_generic.indicator1': !!stats.indicator1,
+      'alarm_generic.indicator2': !!stats.indicator2,
+      'alarm_generic.indicator3': !!stats.indicator3,
+
+      // Display
+      awtrix_matrix: !!stats.matrix,
+
+      // RSSI
+      rssi: stats.wifi_signal,
+    });
+
+    await this.setStoreValue('uptime', stats.uptime);
   }
 
   async refreshSettings(): Promise<void> {
-    try {
-      const settings = await this.cmdGetSettings();
-      if (!settings) {
-        this.log('settings endpoint failed');
-        return;
-      }
-
-      await this.setSettings({
-        TIM: !!settings.TIM,
-        DAT: !!settings.DAT,
-        HUM: !!settings.HUM,
-        TEMP: !!settings.TEMP,
-        BAT: !!settings.BAT,
-        ABRI: !!settings.ABRI,
-        ATRANS: !!settings.ATRANS,
-        BLOCKN: !!settings.BLOCKN,
-        UPPERCASE: !!settings.UPPERCASE,
-        TEFF: settings?.TEFF?.toString(),
-      });
-    } catch (error: any) {
-      this.log(error.message || error);
+    const settings = await this.cmdGetSettings();
+    if (!settings) {
+      this.log('settings endpoint failed');
+      return;
     }
+
+    await this.setSettings({
+      TIM: !!settings.TIM,
+      DAT: !!settings.DAT,
+      HUM: !!settings.HUM,
+      TEMP: !!settings.TEMP,
+      BAT: !!settings.BAT,
+      ABRI: !!settings.ABRI,
+      ATRANS: !!settings.ATRANS,
+      BLOCKN: !!settings.BLOCKN,
+      UPPERCASE: !!settings.UPPERCASE,
+      TEFF: settings?.TEFF?.toString(),
+    });
   }
 
   async connected(): Promise<void> {
@@ -480,9 +478,28 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     }
   }
 
+  /**
+   * Writes every capability even when some fail, then reports all failures at once.
+   *
+   * A single rejected write must not hide the remaining ones, and it must not be
+   * swallowed either: the caller decides what a partially refreshed device means.
+   */
   async setCapabilityValues(values: { [key: string]: any }): Promise<void> {
-    await Promise.all(
-      Object.entries(values).map(([key, value]) => this.setCapabilityValue(key, value)),
+    const entries = Object.entries(values);
+    const results = await Promise.allSettled(
+      entries.map(([key, value]) => this.setCapabilityValue(key, value)),
+    );
+    const failures = results
+      .map((result, index) => ({ result, key: entries[index][0] }))
+      .filter((entry): entry is { result: PromiseRejectedResult, key: string } => entry.result.status === 'rejected');
+
+    if (failures.length === 0) {
+      return;
+    }
+
+    throw new AggregateError(
+      failures.map(({ result }) => result.reason),
+      `Failed to write AWTRIX 3 capabilities: ${failures.map(({ key }) => key).join(', ')}`,
     );
   }
 
