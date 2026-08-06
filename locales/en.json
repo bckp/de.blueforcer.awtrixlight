@@ -26,6 +26,7 @@
       "loginRequired": "Authentication required!",
       "loginFailed": "Authentication failed!",
       "commandFailed": "Device command failed!",
+      "iconsUnavailable": "Unable to load icons from the device!",
       "unknownError": "Device did not respond!"
     }
   },

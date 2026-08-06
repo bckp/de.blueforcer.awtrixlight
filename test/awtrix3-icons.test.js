@@ -1,7 +1,13 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
+const Api = require('../.homeybuild/lib/awtrix3/Api/Api').default;
 const Icons = require('../.homeybuild/lib/awtrix3/List/Icons').default;
+const { Status } = require('../.homeybuild/lib/awtrix3/Api/Response');
+const {
+  createFakeAwtrix3Device,
+  fakeAwtrix3Client,
+} = require('./helpers/fake-homey');
 
 const deferred = () => {
   let resolve;
@@ -113,4 +119,57 @@ test('AWTRIX 3 icon cache can be invalidated explicitly', async () => {
     { name: 'icon-2', id: 'icon-2' },
   ]);
   assert.equal(harness.api.getImagesCalls, 2);
+});
+
+// Real Api on top of a fake transport, so the icon list sees production error handling.
+const createApiHarness = () => {
+  let nextTimer = 0;
+  const homey = {
+    __: (key) => key,
+    setTimeout: () => {
+      nextTimer += 1;
+      return nextTimer;
+    },
+    clearTimeout: () => undefined,
+  };
+  const device = createFakeAwtrix3Device({ homey, available: true });
+  const client = fakeAwtrix3Client({ status: Status.Ok });
+  const api = new Api(client, device);
+
+  return {
+    api,
+    client,
+    icons: new Icons(api, device),
+  };
+};
+
+test('AWTRIX 3 image listing rejects with a translated message when the device returns no data', async () => {
+  const harness = createApiHarness();
+  harness.client.response = { status: Status.Ok };
+
+  await assert.rejects(() => harness.api.getImages(), {
+    name: 'Error',
+    message: 'api.error.iconsUnavailable',
+  });
+
+  harness.client.response = { status: Status.Ok, data: [{ name: 'homey.jpg' }] };
+  assert.deepEqual(await harness.api.getImages(), [{ name: 'homey.jpg' }]);
+});
+
+test('AWTRIX 3 icon autocomplete surfaces an unreachable device instead of crashing and retries afterwards', async () => {
+  const harness = createApiHarness();
+  harness.client.error = new Error('device unreachable');
+
+  await assert.rejects(() => harness.icons.find('ho'), {
+    name: 'Error',
+    message: 'api.error.iconsUnavailable',
+  });
+  assert.equal(harness.client.calls.length, 1);
+  assert.equal(harness.client.calls[0].endpoint, 'list?dir=/ICONS/');
+
+  harness.client.error = undefined;
+  harness.client.response = { status: Status.Ok, data: [{ name: 'homey.jpg' }] };
+
+  assert.deepEqual(await harness.icons.find('ho'), [{ name: 'homey', id: 'homey' }]);
+  assert.equal(harness.client.calls.length, 2);
 });

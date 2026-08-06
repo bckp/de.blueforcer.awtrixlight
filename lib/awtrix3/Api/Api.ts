@@ -107,7 +107,12 @@ export default class Api {
   }
 
   async getImages(): Promise<AwtrixImage[]> {
-    return this.clientGetDirect('list?dir=/ICONS/');
+    const images = await this.clientGetDirect('list?dir=/ICONS/');
+    if (images === null) {
+      throw new Error(this.device.homey.__('api.error.iconsUnavailable'));
+    }
+
+    return images;
   }
 
   /** bckp ******* NETWORK LAYER  ******* */
