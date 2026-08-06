@@ -3,6 +3,7 @@ import path from 'path';
 import { AwtrixNgFileDirectory, AwtrixNgFileUploadRequest } from '../Api/Client';
 import { AwtrixNgInvalidResponseError } from '../Api/InvalidResponseError';
 import { AwtrixNgApiFilesResponse, AwtrixNgApiOkResponse } from '../Api/Types';
+import { isPlainObject } from '../Support/Guards';
 
 const IconsDirectory: AwtrixNgFileDirectory = '/ICONS';
 const FilesEndpoint = '/api/v1/files';
@@ -40,10 +41,6 @@ export interface AwtrixNgIconsOptions {
   timerHost?: AwtrixNgIconTimerHost;
   cacheTtlMs?: number;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object'
-  && value !== null
-  && !Array.isArray(value);
 
 export const toAwtrixNgIconAutocompleteItems = (
   response: AwtrixNgApiFilesResponse,
@@ -115,7 +112,7 @@ export default class AwtrixNgIcons {
   async loadIcons(): Promise<void> {
     const response = await this.#client.listFiles(IconsDirectory);
 
-    if (!isRecord(response) || !Array.isArray(response.files)) {
+    if (!isPlainObject(response) || !Array.isArray(response.files)) {
       throw new AwtrixNgInvalidResponseError({
         endpoint: FilesEndpoint,
         expectedShape: 'an object with a files array',

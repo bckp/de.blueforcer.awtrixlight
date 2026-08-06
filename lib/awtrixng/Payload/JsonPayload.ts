@@ -2,8 +2,7 @@ import {
   AwtrixNgTransformTarget,
   UnsupportedAwtrixNgPayloadFieldError,
 } from './Transformers';
-
-const isJsonObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+import { isPlainObject } from '../Support/Guards';
 
 const parseAwtrixNgJsonObjectPayload = (source: string | undefined, target: AwtrixNgTransformTarget): Record<string, unknown> => {
   let parsed: unknown;
@@ -19,7 +18,7 @@ const parseAwtrixNgJsonObjectPayload = (source: string | undefined, target: Awtr
     });
   }
 
-  if (!isJsonObject(parsed)) {
+  if (!isPlainObject(parsed)) {
     throw new UnsupportedAwtrixNgPayloadFieldError({
       field: '<payload>',
       target,

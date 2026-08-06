@@ -12,6 +12,7 @@ const expectedModuleDirectories = [
   'Http',
   'Payload',
   'Services',
+  'Support',
 ];
 
 test('AWTRIX NG lib root contains only module directories', () => {

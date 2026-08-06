@@ -16,6 +16,7 @@ import {
   AwtrixNgApiSoundPlayPayload,
   AwtrixNgApiTextCases,
 } from '../Api/Types';
+import { isPlainObject } from '../Support/Guards';
 
 export {
   AwtrixNgHomeyPushedAppName,
@@ -225,14 +226,12 @@ const scrollFieldMap: Record<keyof AwtrixNgApiScrollPayload, true> = {
 
 const scrollFields = new Set<string>(Object.keys(scrollFieldMap));
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
-
 const isOneOf = <TValue extends string>(value: unknown, allowedValues: readonly TValue[]): value is TValue => (
   typeof value === 'string' && allowedValues.includes(value as TValue)
 );
 
 const assertObjectInput = (input: unknown, target: AwtrixNgTransformTarget): Record<string, unknown> => {
-  if (isRecord(input)) {
+  if (isPlainObject(input)) {
     return input;
   }
 
@@ -330,7 +329,7 @@ const assertTextValue = (input: Record<string, unknown>, target: AwtrixNgTransfo
   value.forEach((fragment, index) => {
     const field = `text[${index}]`;
 
-    if (!isRecord(fragment)) {
+    if (!isPlainObject(fragment)) {
       throw new UnsupportedAwtrixNgPayloadFieldError({
         field,
         target,
@@ -378,7 +377,7 @@ const assertScrollValue = (input: Record<string, unknown>, target: AwtrixNgTrans
     return;
   }
 
-  if (!isRecord(value)) {
+  if (!isPlainObject(value)) {
     throw new UnsupportedAwtrixNgPayloadFieldError({
       field: 'scroll',
       target,

@@ -1,6 +1,7 @@
 import AwtrixNgClient from '../Api/Client';
 import { AwtrixNgApiError } from '../Api/ErrorParser';
 import { AwtrixNgApiDeviceStateResponse, AwtrixNgApiIndicatorState } from '../Api/Types';
+import { isRecord } from '../Support/Guards';
 
 export const AwtrixNgMdnsTxtType = 'awtrixng';
 
@@ -36,8 +37,6 @@ export type AwtrixNgDeviceProbeResult =
     reason: 'wrong-shape';
     rawResponse: unknown;
   };
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
 const hasStringField = (value: Record<string, unknown>, field: string): boolean => typeof value[field] === 'string';
 

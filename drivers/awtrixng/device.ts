@@ -39,25 +39,17 @@ import {
   AwtrixNgApiDeviceStateResponse,
   AwtrixNgApiSettingsPatch,
 } from '../../lib/awtrixng/Api/Types';
+import { isPlainObject, toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
 import { AwtrixDeviceType } from '../awtrix-device-type';
 
 const PollIntervalMs = 60000;
 const BundledIconsDirectory = path.join(__dirname, 'assets/images/icons');
 
-const isPlainObject = (value: unknown): value is Record<string, unknown> => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return false;
-  }
-
-  const prototype = Object.getPrototypeOf(value);
-
-  return prototype === Object.prototype || prototype === null;
-};
-
+// Hard-failing wrapper: the connection cannot be built without a usable port.
 const toConnectionPort = (value: unknown): number => {
-  const port = Number(value);
+  const port = toValidTcpPort(value);
 
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  if (port === undefined) {
     throw new RangeError('AWTRIX NG connection requires a valid TCP port.');
   }
 

@@ -11,6 +11,7 @@ import {
   probeAwtrixNgDevice,
   toAwtrixNgBaseUrl,
 } from '../../lib/awtrixng/Discovery/Detection';
+import { isRecord, toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
 
 const AwtrixNgManualPairingOptionId = '__awtrixng_manual_pairing__' as const;
 const AwtrixNgAuthRequiredPairingOptionPrefix = '__awtrixng_auth_required__:' as const;
@@ -131,24 +132,12 @@ interface AwtrixNgDiscoveryResult {
   host?: string;
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
-
 const toTxtRecord = (value: unknown): Record<string, unknown> => {
   if (isRecord(value)) {
     return value;
   }
 
   return {};
-};
-
-const toPort = (value: string | number): number | undefined => {
-  const port = Number(value);
-
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    return undefined;
-  }
-
-  return port;
 };
 
 class AwtrixNgDriver extends Driver {
@@ -421,7 +410,7 @@ class AwtrixNgDriver extends Driver {
 
     const rawPort = payload.port;
     const portInput = typeof rawPort === 'string' || typeof rawPort === 'number' ? rawPort : undefined;
-    const port = portInput === undefined ? undefined : toPort(typeof portInput === 'string' ? portInput.trim() : portInput);
+    const port = portInput === undefined ? undefined : toValidTcpPort(typeof portInput === 'string' ? portInput.trim() : portInput);
 
     if (port === undefined) {
       throw new Error(this.homey.__('pair.manual.errors.invalidPort'));
@@ -502,7 +491,7 @@ class AwtrixNgDriver extends Driver {
   }
 
   private async probeDiscoveryResult(discoveryResult: AwtrixNgDiscoveryResult): Promise<AwtrixNgDiscoveredPairListItem | undefined> {
-    const port = toPort(discoveryResult.port);
+    const port = toValidTcpPort(discoveryResult.port);
 
     if (port === undefined) {
       this.log(`Ignoring AWTRIX NG discovery result with invalid port: ${discoveryResult.port}`);

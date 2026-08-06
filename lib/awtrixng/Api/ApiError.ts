@@ -1,4 +1,5 @@
 import { AwtrixNgHeaders, AwtrixNgHttpError, AwtrixNgHttpMethod } from '../Http/Transport';
+import { isRecord } from '../Support/Guards';
 
 export type AwtrixNgErrorCode =
   | 'invalidJson'
@@ -77,8 +78,6 @@ export class AwtrixNgApiError extends Error {
   }
 
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
 export const isAwtrixNgErrorEnvelope = (value: unknown): value is AwtrixNgErrorEnvelope => {
   if (!isRecord(value)) {

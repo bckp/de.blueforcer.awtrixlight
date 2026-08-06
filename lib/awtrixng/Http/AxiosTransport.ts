@@ -9,6 +9,7 @@ import {
   AwtrixNgHttpTransport,
   AwtrixNgHttpTransportOptions,
 } from './Transport';
+import { isRecord } from '../Support/Guards';
 
 const DefaultTimeoutMs = 10000;
 const UserAgent = 'Homey/1.0';
@@ -21,8 +22,6 @@ interface HeaderProviderBody {
 interface AxiosRequestExecutor {
   request<TResponse = unknown, TBody = unknown>(config: AxiosRequestConfig<TBody>): Promise<AxiosResponse<TResponse, TBody>>;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
 const hasHeaderProvider = (body: unknown): body is HeaderProviderBody => (
   isRecord(body) && typeof body.getHeaders === 'function'
