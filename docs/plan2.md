@@ -421,7 +421,7 @@ Pořadí uvnitř fáze respektuj: H3 → H4 (testy před refaktorem), H5 po H3/H
 | H8 | S | ⏭️ vynecháno | – | **Vynecháno po re-auditu.** `activateClient` se volá jen z `configureClient` (onInit) a `commitConnection`. NG icon cache má TTL 5 s (R8), takže její zachování přes uložení nastavení nemá měřitelnou hodnotu; naopak ponechat starou `icons` instanci (držící referenci na STARÝ klient) vedle právě ověřeného kandidáta je netriviální riziko. Porovnání tedy není „triviální" ve smyslu podmínky balíčku |
 | H9 | O | ✅ | `24fe43b` | `setCapabilityValues`: `allSettled` + `AggregateError` s klíči v message; odstraněn polykající `try/catch` z `refreshCapabilities`/`refreshSettings` (V6 – agregace v `refreshAll` už není mrtvá větev); `initializeDevice` obaluje `refreshAll` do `try/catch → this.error` (init i uvítací notifikace doběhnou, poll startuje); 6 nových testů vč. `unhandledRejection` čítačů. 322 pass |
 | H10 | S | ✅ | `2d35da3` | 4 nové testy vstupních cest `bar`/`line` (16 bez ikony / 11 s ikonou / přes limit zahodit / nečíselné zahodit / `barBC` jen s bar nebo line) PŘED záměnou typu; 16řádkový union → `number[]` s odkazem na `isBarLineValues`. 326 pass |
-| H11 | S | ⬜ | | |
+| H11 | S | ✅ | `c810d66` | fixture `documentedTransitionEffects` doplněn komentářem odkud (tabulka `GET /api/v1/capabilities` v `docs/vendor/awtrixng-http-api.md`); nový test parsuje řádek `transitions` z dokumentace a hlídá drift fixture (i počet 22); druhý nový test: každé `id` dropdownu ⊆ dokumentovaný seznam + default hodnota. Hodnoty dropdownu nezměněny. 328 pass |
 | H12 | S | ⬜ | | R9 zachovat |
 | H13 | O | ⬜ | | samostatná větev |
 | H14 | S | ⬜ | | P3: audit jen report |
