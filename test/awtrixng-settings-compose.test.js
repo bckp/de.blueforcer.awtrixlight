@@ -9,6 +9,9 @@ const flattenSettingIds = (settings) => settings.flatMap((group) => group.childr
 const findSetting = (settings, id) => settings
   .flatMap((group) => group.children)
   .find((child) => child.id === id);
+// Copied from docs/vendor/awtrixng-http-api.md, table under "GET /api/v1/capabilities",
+// row `transitions` (22 values, firmware's own fixed order). The test below re-reads that
+// table so the fixture cannot silently drift away from the vendored documentation.
 const documentedTransitionEffects = [
   'Random',
   'Slide',
@@ -114,6 +117,37 @@ test('AWTRIX NG settings compose exposes transitionEffect as static dropdown', (
   assert.equal(transitionEffect.hint.en, 'Static list from the documented capabilities.');
   assert.deepEqual(valueIds, documentedTransitionEffects);
   assert.deepEqual(transitionEffect.values.map((value) => value.label.en), valueIds);
+});
+
+test('AWTRIX NG documented transitions fixture matches the vendored API documentation', () => {
+  const documentation = fs.readFileSync(path.join(root, 'docs/vendor/awtrixng-http-api.md'), 'utf8');
+  const row = documentation
+    .split('\n')
+    .find((line) => line.startsWith('| `transitions` |'));
+
+  assert.ok(row, 'the capabilities table must document a transitions row');
+
+  const cells = row.split('|').map((cell) => cell.trim());
+  const documentedCount = Number(cells[2]);
+  const documentedNames = [...cells[3].matchAll(/`([^`]+)`/g)].map((match) => match[1]);
+
+  assert.deepEqual(documentedNames, documentedTransitionEffects, 'fixture drifted from the documentation');
+  assert.equal(documentedCount, documentedTransitionEffects.length, 'the documented count must match the list');
+});
+
+test('AWTRIX NG transitionEffect dropdown only offers documented transitions', () => {
+  const settings = readJson('drivers/awtrixng/driver.settings.compose.json');
+  const transitionEffect = findSetting(settings, 'transitionEffect');
+
+  assert.ok(transitionEffect);
+
+  const documented = new Set(documentedTransitionEffects);
+  const undocumented = transitionEffect.values
+    .map((value) => value.id)
+    .filter((id) => !documented.has(id));
+
+  assert.deepEqual(undocumented, [], 'every dropdown value must exist in the documented capabilities');
+  assert.ok(documented.has(transitionEffect.value), 'the default value must be documented too');
 });
 
 test('AWTRIX NG settings compose exposes built-in app visibility checkboxes', () => {
