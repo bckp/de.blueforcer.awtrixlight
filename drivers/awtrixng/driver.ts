@@ -6,7 +6,6 @@ import { AwtrixNgApiError, AwtrixNgApiErrorCode } from '../../lib/awtrixng/Api/E
 import { AwtrixNgApiDeviceStateResponse } from '../../lib/awtrixng/Api/Types';
 import { AwtrixNgHomeyCapabilityId, getAwtrixNgInitialCapabilityIds } from '../../lib/awtrixng/Device/State';
 import {
-  AwtrixNgMdnsServiceName,
   isAwtrixNgMdnsCandidate,
   probeAwtrixNgDevice,
   toAwtrixNgBaseUrl,
@@ -484,7 +483,6 @@ class AwtrixNgDriver extends Driver {
     }
 
     return isAwtrixNgMdnsCandidate({
-      serviceName: AwtrixNgMdnsServiceName,
       txt: toTxtRecord(discoveryResult.txt),
     });
   }

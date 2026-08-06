@@ -144,6 +144,9 @@ const createAwtrixNgDevice = () => {
           return [{ id: 'ng-icon', name: 'ng icon' }];
         },
       },
+      hasCapability(capabilityId) {
+        return capabilityId === 'awtrixng_weather_overlay';
+      },
       async setCapabilityValue(capabilityId, value) {
         calls.push({ method: 'setCapabilityValue', capabilityId, value });
       },

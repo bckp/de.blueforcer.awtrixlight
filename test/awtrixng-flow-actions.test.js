@@ -20,13 +20,16 @@ const { AwtrixNgWeatherOverlayCapabilityId } = require('../.homeybuild/lib/awtri
 
 const ok = { ok: true };
 
-const createFakeDevice = (client) => {
+const createFakeDevice = (client, capabilities = [AwtrixNgWeatherOverlayCapabilityId]) => {
   const calls = [];
 
   return {
     calls,
     device: {
       client,
+      hasCapability(capabilityId) {
+        return capabilities.includes(capabilityId);
+      },
       async setCapabilityValue(capabilityId, value) {
         calls.push({ method: 'setCapabilityValue', capabilityId, value });
       },
@@ -342,6 +345,18 @@ test('AWTRIX NG weather overlay flow maps overlay values and syncs capability af
     { method: 'setCapabilityValue', capabilityId: AwtrixNgWeatherOverlayCapabilityId, value: 'none' },
     { method: 'setCapabilityValue', capabilityId: AwtrixNgWeatherOverlayCapabilityId, value: 'rain' },
   ]);
+});
+
+test('AWTRIX NG weather overlay flow skips capability sync when the device does not expose it', async () => {
+  const fake = createFakeClient();
+  const fakeDevice = createFakeDevice(fake.client, []);
+
+  await runAwtrixNgWeatherOverlayAction({ device: fakeDevice.device, overlay: 'rain' });
+
+  assert.deepEqual(fake.calls, [
+    { method: 'patchDisplay', patch: { overlay: 'rain' } },
+  ]);
+  assert.deepEqual(fakeDevice.calls, []);
 });
 
 test('AWTRIX NG weather overlay flow rejects unsupported values before HTTP', async () => {

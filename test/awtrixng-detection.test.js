@@ -122,27 +122,16 @@ const createProbeClient = () => {
   };
 };
 
-test('AWTRIX NG mDNS candidate requires _awtrixng._tcp and txt type awtrixng', () => {
+test('AWTRIX NG mDNS candidate relies on the txt type after Homey discovery filtering', () => {
   assert.equal(isAwtrixNgMdnsCandidate({
-    serviceName: '_awtrixng._tcp',
     txt: { type: 'awtrixng' },
   }), true);
 
   assert.equal(isAwtrixNgMdnsCandidate({
-    name: 'awtrixng',
-    protocol: 'tcp',
-    txt: { type: 'awtrixng' },
-  }), true);
-
-  assert.equal(isAwtrixNgMdnsCandidate({
-    serviceName: '_awtrix._tcp',
     txt: { type: 'awtrix3' },
   }), false);
 
-  assert.equal(isAwtrixNgMdnsCandidate({
-    serviceName: '_awtrixng._tcp',
-    txt: { type: 'awtrix3' },
-  }), false);
+  assert.equal(isAwtrixNgMdnsCandidate({}), false);
 });
 
 test('AWTRIX NG base URL includes discovered port', () => {

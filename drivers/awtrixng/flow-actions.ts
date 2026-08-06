@@ -36,6 +36,7 @@ export interface AwtrixNgFlowActionClient {
 
 export interface AwtrixNgFlowActionDevice {
   client?: AwtrixNgFlowActionClient;
+  hasCapability(capabilityId: string): boolean;
   setCapabilityValue(capabilityId: string, value: string): Promise<void>;
 }
 
@@ -218,7 +219,10 @@ export const runAwtrixNgDisplaySetAction = async (args: AwtrixNgDisplaySetAction
 
 export const runAwtrixNgWeatherOverlayAction = async (args: AwtrixNgWeatherOverlayActionArgs): Promise<void> => {
   await getClient(args.device).patchDisplay(toAwtrixNgWeatherOverlayPatch(args.overlay));
-  await args.device.setCapabilityValue(AwtrixNgWeatherOverlayCapabilityId, args.overlay);
+
+  if (args.device.hasCapability(AwtrixNgWeatherOverlayCapabilityId)) {
+    await args.device.setCapabilityValue(AwtrixNgWeatherOverlayCapabilityId, args.overlay);
+  }
 };
 
 export const runAwtrixNgRtttlAction = async (args: AwtrixNgRtttlActionArgs): Promise<void> => {

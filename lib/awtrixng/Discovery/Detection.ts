@@ -2,15 +2,9 @@ import AwtrixNgClient from '../Api/Client';
 import { AwtrixNgApiError } from '../Api/ErrorParser';
 import { AwtrixNgApiDeviceStateResponse, AwtrixNgApiIndicatorState } from '../Api/Types';
 
-export const AwtrixNgMdnsServiceName = '_awtrixng._tcp';
-export const AwtrixNgMdnsName = 'awtrixng';
-export const AwtrixNgMdnsProtocol = 'tcp';
 export const AwtrixNgMdnsTxtType = 'awtrixng';
 
 export interface AwtrixNgMdnsCandidate {
-  serviceName?: string;
-  name?: string;
-  protocol?: string;
   txt?: Record<string, unknown>;
 }
 
@@ -103,12 +97,7 @@ const normalizeAddressForUrl = (address: string): string => {
   return address;
 };
 
-export const isAwtrixNgMdnsCandidate = (candidate: AwtrixNgMdnsCandidate): boolean => {
-  const serviceNameMatches = candidate.serviceName === AwtrixNgMdnsServiceName;
-  const nameAndProtocolMatch = candidate.name === AwtrixNgMdnsName && candidate.protocol === AwtrixNgMdnsProtocol;
-
-  return (serviceNameMatches || nameAndProtocolMatch) && candidate.txt?.type === AwtrixNgMdnsTxtType;
-};
+export const isAwtrixNgMdnsCandidate = (candidate: AwtrixNgMdnsCandidate): boolean => candidate.txt?.type === AwtrixNgMdnsTxtType;
 
 export const toAwtrixNgBaseUrl = (input: AwtrixNgBaseUrlInput): string => {
   if (!Number.isInteger(input.port) || input.port < 1 || input.port > 65535) {

@@ -105,6 +105,7 @@ export default class AxiosAwtrixNgHttpTransport implements AwtrixNgHttpTransport
       params: request.query,
       data: request.body,
       timeout,
+      maxRedirects: 0,
       responseType: toAxiosResponseType(request.responseType),
     };
 

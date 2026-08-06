@@ -755,7 +755,7 @@ Nízkoprioritní backlog fáze F není součástí tohoto provedení; je v `docs
 | D5 | ✅ | guardy settings/apps tvarů, strukturovaná chyba a filtrování undefined hodnot |
 | D6 | ✅ | R6-1 zdokumentováno; discovery probe a kontrola UID proběhnou před přepnutím spojení |
 | D7 | ✅ | R4: address/port/auth se ověřují kandidátním klientem; pairing a settings jsou synchronizované |
-| D8 | ⬜ | credential verification už řeší D7 |
+| D8 | ✅ | overlay capability má guard; NG transport nepovoluje redirecty; mDNS runtime kontroluje TXT typ |
 | D9 | ⬜ | R7: validate-all, potom sequential fail-fast |
 | D10 | ⬜ | sdílet factory, ne output mapper |
 | D11 | ⬜ | žádné nedokumentované rozsahy |
