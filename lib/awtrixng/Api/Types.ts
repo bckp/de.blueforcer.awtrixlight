@@ -117,13 +117,21 @@ export type AwtrixNgApiDateSeparator = 'dot' | 'slash' | 'dash';
 
 export type AwtrixNgApiDateYearMode = 'none' | 'twoDigit' | 'fourDigit';
 
-export type AwtrixNgApiScrollMode = 'static' | 'wrap' | 'loop' | 'bounce';
+export const AwtrixNgApiScrollModes = ['static', 'wrap', 'loop', 'bounce'] as const;
 
-export type AwtrixNgApiScrollDirection = 'left' | 'right';
+export type AwtrixNgApiScrollMode = typeof AwtrixNgApiScrollModes[number];
 
-export type AwtrixNgApiScrollEntry = 'inline' | 'offscreen';
+export const AwtrixNgApiScrollDirections = ['left', 'right'] as const;
 
-export type AwtrixNgApiScrollWhenFits = 'static' | 'scroll';
+export type AwtrixNgApiScrollDirection = typeof AwtrixNgApiScrollDirections[number];
+
+export const AwtrixNgApiScrollEntries = ['inline', 'offscreen'] as const;
+
+export type AwtrixNgApiScrollEntry = typeof AwtrixNgApiScrollEntries[number];
+
+export const AwtrixNgApiScrollWhenFitsValues = ['static', 'scroll'] as const;
+
+export type AwtrixNgApiScrollWhenFits = typeof AwtrixNgApiScrollWhenFitsValues[number];
 
 export type AwtrixNgApiWeekday = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
@@ -255,9 +263,13 @@ export interface AwtrixNgApiAppsOrderPayload {
   disabled: string[];
 }
 
-export type AwtrixNgApiTextCase = 'inherit' | 'upper' | 'asTyped';
+export const AwtrixNgApiTextCases = ['inherit', 'upper', 'asTyped'] as const;
 
-export type AwtrixNgApiIconMode = 'fixed' | 'pushOnce' | 'push';
+export type AwtrixNgApiTextCase = typeof AwtrixNgApiTextCases[number];
+
+export const AwtrixNgApiIconModes = ['fixed', 'pushOnce', 'push'] as const;
+
+export type AwtrixNgApiIconMode = typeof AwtrixNgApiIconModes[number];
 
 export interface AwtrixNgApiTextFragment {
   text: string;
@@ -274,7 +286,9 @@ export interface AwtrixNgApiScrollPayload {
   holdMs?: number;
 }
 
-export type AwtrixNgApiFont = 'small' | 'large';
+export const AwtrixNgApiFonts = ['small', 'large'] as const;
+
+export type AwtrixNgApiFont = typeof AwtrixNgApiFonts[number];
 
 export type AwtrixNgApiDrawPixelCommand = ['pixel', number, number, AwtrixNgApiColorInput?];
 
@@ -356,7 +370,9 @@ export interface AwtrixNgApiNotificationPayload extends AwtrixNgApiPagePayload {
   soundLoop?: boolean;
 }
 
-export type AwtrixNgApiPushedAppLifetimeExpiry = 'remove' | 'mark';
+export const AwtrixNgApiPushedAppLifetimeExpiries = ['remove', 'mark'] as const;
+
+export type AwtrixNgApiPushedAppLifetimeExpiry = typeof AwtrixNgApiPushedAppLifetimeExpiries[number];
 
 export interface AwtrixNgApiPushedAppPayload extends AwtrixNgApiPagePayload {
   lifetimeMs?: number;

@@ -1,12 +1,20 @@
 import {
   AwtrixNgApiDisplayPatch,
+  AwtrixNgApiFonts,
+  AwtrixNgApiIconModes,
   AwtrixNgApiIndicatorPayload,
   AwtrixNgApiNotificationPayload,
   AwtrixNgApiPagePayload,
+  AwtrixNgApiPushedAppLifetimeExpiries,
   AwtrixNgApiPushedAppPayload,
+  AwtrixNgApiScrollDirections,
+  AwtrixNgApiScrollEntries,
+  AwtrixNgApiScrollModes,
   AwtrixNgApiScrollPayload,
+  AwtrixNgApiScrollWhenFitsValues,
   AwtrixNgApiSettingsPatch,
   AwtrixNgApiSoundPlayPayload,
+  AwtrixNgApiTextCases,
 } from '../Api/Types';
 
 export {
@@ -204,22 +212,6 @@ const scrollFields = new Set<string>([
   'whenFits',
 ]);
 
-const scrollModes = ['static', 'wrap', 'loop', 'bounce'] as const;
-
-const scrollDirections = ['left', 'right'] as const;
-
-const scrollEntries = ['inline', 'offscreen'] as const;
-
-const scrollWhenFits = ['static', 'scroll'] as const;
-
-const textCases = ['inherit', 'upper', 'asTyped'] as const;
-
-const fonts = ['small', 'large'] as const;
-
-const iconModes = ['fixed', 'pushOnce', 'push'] as const;
-
-const lifetimeExpiries = ['remove', 'mark'] as const;
-
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const isOneOf = <TValue extends string>(value: unknown, allowedValues: readonly TValue[]): value is TValue => (
@@ -393,39 +385,39 @@ const assertScrollValue = (input: Record<string, unknown>, target: AwtrixNgTrans
     }
   }
 
-  if (value.mode !== undefined && !isOneOf(value.mode, scrollModes)) {
+  if (value.mode !== undefined && !isOneOf(value.mode, AwtrixNgApiScrollModes)) {
     throw new UnsupportedAwtrixNgPayloadFieldError({
       field: 'scroll.mode',
       target,
       reason: 'invalid-value',
-      details: `Expected one of: ${scrollModes.join(', ')}.`,
+      details: `Expected one of: ${AwtrixNgApiScrollModes.join(', ')}.`,
     });
   }
 
-  if (value.direction !== undefined && !isOneOf(value.direction, scrollDirections)) {
+  if (value.direction !== undefined && !isOneOf(value.direction, AwtrixNgApiScrollDirections)) {
     throw new UnsupportedAwtrixNgPayloadFieldError({
       field: 'scroll.direction',
       target,
       reason: 'invalid-value',
-      details: `Expected one of: ${scrollDirections.join(', ')}.`,
+      details: `Expected one of: ${AwtrixNgApiScrollDirections.join(', ')}.`,
     });
   }
 
-  if (value.entry !== undefined && !isOneOf(value.entry, scrollEntries)) {
+  if (value.entry !== undefined && !isOneOf(value.entry, AwtrixNgApiScrollEntries)) {
     throw new UnsupportedAwtrixNgPayloadFieldError({
       field: 'scroll.entry',
       target,
       reason: 'invalid-value',
-      details: `Expected one of: ${scrollEntries.join(', ')}.`,
+      details: `Expected one of: ${AwtrixNgApiScrollEntries.join(', ')}.`,
     });
   }
 
-  if (value.whenFits !== undefined && !isOneOf(value.whenFits, scrollWhenFits)) {
+  if (value.whenFits !== undefined && !isOneOf(value.whenFits, AwtrixNgApiScrollWhenFitsValues)) {
     throw new UnsupportedAwtrixNgPayloadFieldError({
       field: 'scroll.whenFits',
       target,
       reason: 'invalid-value',
-      details: `Expected one of: ${scrollWhenFits.join(', ')}.`,
+      details: `Expected one of: ${AwtrixNgApiScrollWhenFitsValues.join(', ')}.`,
     });
   }
 
@@ -615,9 +607,9 @@ const assertPagePayload = (input: Record<string, unknown>, target: 'notification
   assertScrollValue(input, target);
   assertDrawValue(input, target);
   assertPaletteValue(input, target);
-  assertStringEnumField(input, 'textCase', textCases, target);
-  assertStringEnumField(input, 'font', fonts, target);
-  assertStringEnumField(input, 'iconMode', iconModes, target);
+  assertStringEnumField(input, 'textCase', AwtrixNgApiTextCases, target);
+  assertStringEnumField(input, 'font', AwtrixNgApiFonts, target);
+  assertStringEnumField(input, 'iconMode', AwtrixNgApiIconModes, target);
   // UNKNOWN: range not documented (durationMs).
   assertFiniteNumberField(input, 'durationMs', target);
   // UNKNOWN: range not documented (repeat).
@@ -697,7 +689,7 @@ export const toAwtrixNgPushedAppPayload = (input: AwtrixNgPushedAppInput): Awtri
   assertNoTargetOnlyFields(inputRecord, notificationOnlyFields, 'pushedApp');
   assertKnownFields(inputRecord, pushedAppFields, 'pushedApp');
   assertPagePayload(inputRecord, 'pushedApp');
-  assertStringEnumField(inputRecord, 'lifetimeExpiry', lifetimeExpiries, 'pushedApp');
+  assertStringEnumField(inputRecord, 'lifetimeExpiry', AwtrixNgApiPushedAppLifetimeExpiries, 'pushedApp');
   // UNKNOWN: range not documented (lifetimeMs).
   assertFiniteNumberField(inputRecord, 'lifetimeMs', 'pushedApp');
 
