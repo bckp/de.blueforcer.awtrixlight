@@ -229,6 +229,12 @@ class AwtrixNgDevice extends Device {
     await this.writePreparedSettingsChanges(client, preparedChanges);
   }
 
+  /**
+   * Read-only availability probe: refreshes the device state without ever adding capabilities.
+   *
+   * Kept even though no production code calls it (H5): it is the public, side-effect-free entry
+   * point the availability tests drive, which keeps them off the private refreshDeviceState().
+   */
   async refreshAvailability(): Promise<AwtrixNgDeviceProbeResult | undefined> {
     return this.refreshDeviceState({ allowAddCapabilities: false });
   }

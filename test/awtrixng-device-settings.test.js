@@ -1,126 +1,8 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
 const Module = require('node:module');
-const path = require('node:path');
 const test = require('node:test');
 
 const { createFakeHomey } = require('./helpers/fake-homey');
-
-const root = path.resolve(__dirname, '..');
-const readSource = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
-
-const getMethodBody = (source, methodName) => {
-  const methodStart = source.indexOf(methodName);
-
-  assert.notEqual(methodStart, -1, `${methodName} must exist`);
-
-  const bodyStart = source.indexOf('{', methodStart);
-  let depth = 0;
-
-  for (let index = bodyStart; index < source.length; index += 1) {
-    if (source[index] === '{') {
-      depth += 1;
-    }
-
-    if (source[index] === '}') {
-      depth -= 1;
-    }
-
-    if (depth === 0) {
-      return source.slice(bodyStart, index + 1);
-    }
-  }
-
-  throw new Error(`Could not parse ${methodName} body`);
-};
-
-const getSourceBetween = (source, startText, endText) => {
-  const start = source.indexOf(startText);
-  const end = source.indexOf(endText, start);
-
-  assert.notEqual(start, -1, `${startText} must exist`);
-  assert.notEqual(end, -1, `${endText} must exist after ${startText}`);
-
-  return source.slice(start, end);
-};
-
-test('AWTRIX NG device refreshes Homey settings from the device during init', () => {
-  const source = readSource('drivers/awtrixng/device.ts');
-  const onInitBody = getMethodBody(source, 'async onInit()');
-
-  assert.equal(onInitBody.includes('await this.refreshSettingsFromDevice();'), true);
-  assert.equal(onInitBody.includes('await this.refreshDisplayFromDevice();'), true);
-  assert.equal(onInitBody.includes('await this.refreshAppsFromDevice();'), true);
-  assert.equal(onInitBody.includes("deviceStateResult?.status === 'detected'"), true);
-  assert.equal(onInitBody.indexOf('this.initCapabilityListeners();') < onInitBody.indexOf('if (baseUrl === undefined)'), true);
-  assert.equal(onInitBody.indexOf('this.initializePoll();') < onInitBody.indexOf('if (baseUrl === undefined)'), true);
-});
-
-test('AWTRIX NG onSettings does not call setSettings while Homey settings are pending', () => {
-  const source = readSource('drivers/awtrixng/device.ts');
-  const onSettingsBody = getSourceBetween(source, 'async onSettings({', 'async refreshAvailability');
-
-  assert.equal(onSettingsBody.includes('prepareLocalSettingsChanges'), true);
-  assert.equal(onSettingsBody.includes('prepareSettingsChanges'), true);
-  assert.equal(onSettingsBody.includes('writePreparedSettingsChanges'), true);
-  assert.equal(onSettingsBody.includes('applySettingsChangesWithCandidateConnection'), true);
-  assert.equal(onSettingsBody.includes('setSettings('), false);
-});
-
-test('AWTRIX NG connection settings use the verified candidate for writes before activation', () => {
-  const source = readSource('drivers/awtrixng/device.ts');
-  const candidateBody = getMethodBody(source, 'private async applySettingsChangesWithCandidateConnection(');
-
-  assert.equal(candidateBody.includes('await this.verifyCandidateConnection'), true);
-  assert.equal(candidateBody.includes('await this.prepareSettingsChanges'), true);
-  assert.equal(candidateBody.includes('await this.writePreparedSettingsChanges'), true);
-  assert.equal(candidateBody.includes('await this.commitConnection(connection, client, false);'), true);
-  assert.equal(candidateBody.indexOf('await this.verifyCandidateConnection') < candidateBody.indexOf('await this.prepareSettingsChanges'), true);
-  assert.equal(candidateBody.indexOf('await this.writePreparedSettingsChanges') < candidateBody.indexOf('await this.commitConnection'), true);
-  assert.equal(candidateBody.includes('setSettings('), false);
-});
-
-test('AWTRIX NG settings validate locally before reads and write sequentially without claiming a transaction', () => {
-  const source = readSource('drivers/awtrixng/device.ts');
-  const localPrepareBody = getMethodBody(source, 'private prepareLocalSettingsChanges(');
-  const writeBody = getMethodBody(source, 'private async writePreparedSettingsChanges(');
-
-  assert.equal(localPrepareBody.includes('createAwtrixNgSettingsPatchFromChangedSettings'), true);
-  assert.equal(localPrepareBody.includes('validateAwtrixNgBuiltinAppSettingsChange'), true);
-  assert.equal(writeBody.includes('do not provide a transaction'), true);
-  assert.equal(writeBody.includes('sequential and fail-fast'), true);
-  assert.equal(writeBody.indexOf('await writeAwtrixNgAppsOrder') < writeBody.indexOf('await writeAwtrixNgSettingsPatch'), true);
-  assert.equal(writeBody.includes('catch'), false);
-  assert.equal(writeBody.includes('allSettled'), false);
-});
-
-test('AWTRIX NG device settings refresh uses GET settings and setSettings outside onSettings', () => {
-  const source = readSource('drivers/awtrixng/device.ts');
-  const refreshBody = getMethodBody(source, 'private async refreshSettingsFromDevice()');
-
-  assert.equal(refreshBody.includes('await this.getClient().getSettings();'), true);
-  assert.equal(refreshBody.includes('toAwtrixNgHomeySettingsUpdate'), true);
-  assert.equal(refreshBody.includes('await this.setSettings(homeySettingsUpdate);'), true);
-});
-
-test('AWTRIX NG device display refresh syncs weather overlay capability from GET display', () => {
-  const source = readSource('drivers/awtrixng/device.ts');
-  const refreshBody = getMethodBody(source, 'private async refreshDisplayFromDevice()');
-
-  assert.equal(refreshBody.includes('await this.getClient().getDisplay();'), true);
-  assert.equal(refreshBody.includes('toAwtrixNgHomeyWeatherOverlayValue(display.overlay)'), true);
-  assert.equal(refreshBody.includes('await this.setCapabilityValue(AwtrixNgWeatherOverlayCapabilityId, weatherOverlay);'), true);
-  assert.equal(refreshBody.includes('setSettings('), false);
-});
-
-test('AWTRIX NG device apps refresh syncs built-in app settings from GET apps outside onSettings', () => {
-  const source = readSource('drivers/awtrixng/device.ts');
-  const refreshBody = getMethodBody(source, 'private async refreshAppsFromDevice()');
-
-  assert.equal(refreshBody.includes('await this.getClient().getApps();'), true);
-  assert.equal(refreshBody.includes('toAwtrixNgBuiltinAppSettingsUpdate'), true);
-  assert.equal(refreshBody.includes('await this.setSettings(homeySettingsUpdate);'), true);
-});
 
 const expectedUid = '48e7291211d8';
 
@@ -169,24 +51,65 @@ const loadAwtrixNgDevice = (transport, clientCreations) => {
   }
 };
 
-const createSettingsHarness = ({ storeEntries, settings: initialSettings }) => {
+const jsonResponse = (data) => ({
+  status: 200,
+  headers: { 'content-type': 'application/json' },
+  data,
+});
+
+/**
+ * Default API responses keyed by `METHOD path`. Individual tests override single
+ * entries; a function value is invoked with the request so it can throw or record.
+ */
+const createDefaultResponses = () => ({
+  'GET /api/v1/device': () => jsonResponse(createDeviceState()),
+  'GET /api/v1/settings': () => jsonResponse({
+    autoBrightness: true,
+    autoTransition: false,
+    blockNavigation: false,
+    transitionEffect: 'fade',
+    uppercase: true,
+  }),
+  'GET /api/v1/display': () => jsonResponse({ overlay: 'snow' }),
+  'GET /api/v1/apps': () => jsonResponse([
+    {
+      name: 'Time', origin: 'builtin', present: true, enabled: true, slot: 0,
+    },
+    {
+      name: 'Date', origin: 'builtin', present: true, enabled: false, slot: null,
+    },
+  ]),
+  'PATCH /api/v1/settings': () => jsonResponse({
+    autoBrightness: true,
+    autoTransition: false,
+    blockNavigation: false,
+    transitionEffect: 'fade',
+    uppercase: true,
+  }),
+  'PUT /api/v1/apps/order': () => jsonResponse({ ok: true }),
+});
+
+const createSettingsHarness = ({ storeEntries, settings: initialSettings, responses: responseOverrides = {} }) => {
   const events = [];
   const clientCreations = [];
   const store = new Map(storeEntries);
   const settings = { ...initialSettings };
   const setSettingsCalls = [];
   const errors = [];
+  const capabilityListeners = [];
+  const capabilityValues = [];
+  const responses = { ...createDefaultResponses(), ...responseOverrides };
   const transport = {
     calls: [],
     async request(httpRequest) {
       this.calls.push(httpRequest);
       events.push({ type: 'request', method: httpRequest.method, path: httpRequest.path });
 
-      return {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-        data: createDeviceState(),
-      };
+      const responder = responses[`${httpRequest.method} ${httpRequest.path}`];
+
+      assert.notEqual(responder, undefined, `unexpected request ${httpRequest.method} ${httpRequest.path}`);
+
+      return responder(httpRequest);
     },
   };
   const AwtrixNgDevice = loadAwtrixNgDevice(transport, clientCreations);
@@ -240,17 +163,24 @@ const createSettingsHarness = ({ storeEntries, settings: initialSettings }) => {
     async addCapability() {
       return undefined;
     },
-    async setCapabilityValue() {
+    async setCapabilityValue(capabilityId, value) {
+      capabilityValues.push({ capabilityId, value });
       return undefined;
+    },
+    registerCapabilityListener(capabilityId, listener) {
+      capabilityListeners.push({ capabilityId, listener });
     },
   });
 
   return {
+    capabilityListeners,
+    capabilityValues,
     clientCreations,
     device,
     errors,
     events,
     oldClient,
+    requestLog: () => transport.calls.map(({ method, path }) => `${method} ${path}`),
     setSettingsCalls,
     settings,
     store,
@@ -384,4 +314,233 @@ test('AWTRIX NG local settings change with an explicit address does not schedule
   assert.equal(harness.store.get('baseUrl'), 'http://192.0.2.20:8080');
   assert.equal(harness.device.pendingSettingsSync, undefined);
   assert.deepEqual(harness.setSettingsCalls, []);
+});
+
+/**
+ * H5: the assertions below used to parse device.ts as text. They now exercise the real
+ * onInit/onSettings code paths against a fake transport, so they fail on behaviour
+ * changes rather than on renamed helpers.
+ */
+
+test('AWTRIX NG onInit synchronises settings, display and built-in apps from the device', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'],
+      ['address', '192.0.2.10'],
+      ['port', 80],
+    ],
+    settings: {
+      address: '192.0.2.10',
+      port: 80,
+      autoBrightness: false,
+      uppercase: false,
+      showBuiltinTime: false,
+      showBuiltinDate: true,
+    },
+  });
+
+  harness.device.hasCapability = () => true;
+
+  await harness.device.onInit();
+
+  assert.deepEqual(harness.requestLog(), [
+    'GET /api/v1/device',
+    'GET /api/v1/settings',
+    'GET /api/v1/display',
+    'GET /api/v1/apps',
+  ], 'the device state is probed first, then settings, display and apps are read');
+
+  assert.deepEqual(harness.setSettingsCalls, [
+    {
+      autoBrightness: true,
+      autoTransition: false,
+      blockNavigation: false,
+      transitionEffect: 'fade',
+      uppercase: true,
+    },
+    {
+      showBuiltinTime: true,
+      showBuiltinDate: false,
+      showBuiltinTemperature: false,
+      showBuiltinHumidity: false,
+      showBuiltinBattery: false,
+    },
+  ], 'settings and built-in app state are written back to Homey');
+
+  assert.deepEqual(
+    harness.capabilityValues.filter(({ capabilityId }) => capabilityId === 'awtrixng_weather_overlay'),
+    [{ capabilityId: 'awtrixng_weather_overlay', value: 'snow' }],
+    'the weather overlay capability mirrors GET display',
+  );
+  assert.equal(harness.device.available, true);
+  assert.equal(harness.device.poll.isActive(), true);
+  assert.deepEqual(harness.errors, []);
+});
+
+test('AWTRIX NG onInit registers capability listeners and polls even without a stored connection', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [],
+    settings: {},
+  });
+
+  await harness.device.onInit();
+
+  assert.deepEqual(harness.capabilityListeners.map(({ capabilityId }) => capabilityId), [
+    'awtrix_matrix',
+    'button_next',
+    'button_prev',
+    'awtrixng_weather_overlay',
+  ], 'listeners are registered before the connection is checked');
+  assert.equal(harness.device.poll !== undefined, true);
+  assert.deepEqual(harness.transport.calls, [], 'no request is made without a connection');
+  assert.equal(harness.device.available, false);
+});
+
+test('AWTRIX NG onInit stays available-driven when the initial synchronisation fails', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80 },
+    responses: {
+      'GET /api/v1/settings': () => jsonResponse('not-an-object'),
+    },
+  });
+
+  await harness.device.onInit();
+
+  assert.deepEqual(harness.requestLog(), ['GET /api/v1/device', 'GET /api/v1/settings']);
+  assert.equal(harness.errors.length, 1, 'the invalid response is logged');
+  assert.equal(harness.device.available, false);
+  assert.equal(harness.device.poll.isActive(), true, 'polling still starts so the device can recover');
+});
+
+test('AWTRIX NG built-in app change reads the inventory and writes the app order only', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80 },
+  });
+
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+  harness.setSettingsCalls.length = 0;
+
+  await harness.device.onSettings({
+    oldSettings: { showBuiltinDate: false },
+    newSettings: { showBuiltinDate: true },
+    changedKeys: ['showBuiltinDate'],
+  });
+
+  assert.deepEqual(harness.requestLog(), [
+    'GET /api/v1/apps',
+    'PUT /api/v1/apps/order',
+  ], 'no settings PATCH is issued for a pure built-in app change');
+  assert.deepEqual(harness.setSettingsCalls, [], 'onSettings never calls setSettings');
+  assert.deepEqual(harness.clientCreations.length, 1, 'the existing connection is reused');
+});
+
+test('AWTRIX NG combined change writes the app order before the settings patch', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80 },
+  });
+
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+  harness.setSettingsCalls.length = 0;
+
+  await harness.device.onSettings({
+    oldSettings: { showBuiltinDate: false, uppercase: false },
+    newSettings: { showBuiltinDate: true, uppercase: true },
+    changedKeys: ['showBuiltinDate', 'uppercase'],
+  });
+
+  assert.deepEqual(harness.requestLog(), [
+    'GET /api/v1/apps',
+    'PUT /api/v1/apps/order',
+    'PATCH /api/v1/settings',
+  ]);
+  assert.deepEqual(harness.setSettingsCalls, []);
+});
+
+test('AWTRIX NG settings writes are sequential and fail fast (R7)', async () => {
+  const orderFailure = new Error('apps order rejected');
+  const harness = createSettingsHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80 },
+    responses: {
+      'PUT /api/v1/apps/order': () => {
+        throw orderFailure;
+      },
+    },
+  });
+
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+
+  await assert.rejects(
+    () => harness.device.onSettings({
+      oldSettings: { showBuiltinDate: false, uppercase: false },
+      newSettings: { showBuiltinDate: true, uppercase: true },
+      changedKeys: ['showBuiltinDate', 'uppercase'],
+    }),
+    orderFailure,
+    'the first failing write rejects onSettings',
+  );
+
+  assert.deepEqual(harness.requestLog(), [
+    'GET /api/v1/apps',
+    'PUT /api/v1/apps/order',
+  ], 'the settings patch is never attempted after the app order failed');
+});
+
+test('AWTRIX NG local settings change validates unknown keys before touching the device', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80 },
+  });
+
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+
+  await assert.rejects(
+    () => harness.device.onSettings({
+      oldSettings: { address: '192.0.2.10', port: 80 },
+      newSettings: { address: '192.0.2.11', port: 80, somethingUnknown: true },
+      changedKeys: ['address', 'somethingUnknown'],
+    }),
+    /somethingUnknown/,
+  );
+
+  assert.deepEqual(harness.transport.calls, [], 'local validation happens before any request');
+});
+
+test('AWTRIX NG local settings change verifies the candidate before writing and activates it afterwards', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'],
+      ['address', '192.0.2.10'],
+      ['port', 80],
+    ],
+    settings: { address: '192.0.2.10', port: 80 },
+  });
+
+  await harness.device.onInit();
+  const clientAfterInit = harness.device.client;
+  harness.transport.calls.length = 0;
+  harness.setSettingsCalls.length = 0;
+
+  await harness.device.onSettings({
+    oldSettings: { address: '192.0.2.10', port: 80, uppercase: false },
+    newSettings: { address: '192.0.2.11', port: 80, uppercase: true },
+    changedKeys: ['address', 'uppercase'],
+  });
+
+  assert.deepEqual(harness.requestLog(), [
+    'GET /api/v1/device',
+    'PATCH /api/v1/settings',
+    'GET /api/v1/device',
+  ], 'the candidate is probed, then written to, then re-read after activation');
+  assert.equal(harness.store.get('baseUrl'), 'http://192.0.2.11:80');
+  assert.notEqual(harness.device.client, clientAfterInit, 'the verified candidate becomes the active client');
+  assert.deepEqual(harness.setSettingsCalls, [], 'onSettings never calls setSettings');
+  assert.equal(harness.device.pendingSettingsSync, undefined);
 });
