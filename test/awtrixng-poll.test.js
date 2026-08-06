@@ -3,7 +3,9 @@ const test = require('node:test');
 
 const AwtrixNgPoll = require('../.homeybuild/lib/awtrixng/Device/Poll').default;
 
-const flushTasks = () => new Promise((resolve) => setImmediate(resolve));
+const flushTasks = () => new Promise((resolve) => {
+  setImmediate(resolve);
+});
 
 const deferred = () => {
   let resolve;

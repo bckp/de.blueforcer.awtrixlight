@@ -41,7 +41,9 @@ const loadAwtrixLightDevice = () => {
 
 const AwtrixLightDevice = loadAwtrixLightDevice();
 const asyncNoop = async () => undefined;
-const flushTasks = () => new Promise((resolve) => setImmediate(resolve));
+const flushTasks = () => new Promise((resolve) => {
+  setImmediate(resolve);
+});
 
 const deferred = () => {
   let resolve;
@@ -520,7 +522,9 @@ const countUnhandledRejections = async (operation) => {
   try {
     await operation();
     // Unhandled rejections are reported on a later macrotask tick.
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 10);
+    });
   } finally {
     process.off('unhandledRejection', listener);
   }

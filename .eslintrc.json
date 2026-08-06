@@ -5,6 +5,10 @@
     "plugin:import/typescript"
   ],
   "rules": {
+    // Off: the offending signatures put optional parameters after a defaulted one
+    // (Api.clientVerify, AxiosTransport constructor options). Reordering them would
+    // change public call signatures, which a lint upgrade must not do.
+    "default-param-last": "off",
     "node/no-unsupported-features/es-syntax": [
       "error",
       {
@@ -30,6 +34,15 @@
             "ts": "never"
           }
         ]
+      }
+    },
+    {
+      // Homey requires driver/device/app entrypoints to assign module.exports next to the
+      // ES export (enforced by test/awtrixng-homey-entrypoints.test.js), which is exactly
+      // what import/no-import-module-exports forbids.
+      "files": ["app.ts", "drivers/*/device.ts", "drivers/*/driver.ts"],
+      "rules": {
+        "import/no-import-module-exports": "off"
       }
     },
     {

@@ -241,7 +241,9 @@ test('AWTRIX NG discovery filters synchronously, probes at most four candidates 
     async request(options) {
       activeProbes += 1;
       maximumActiveProbes = Math.max(maximumActiveProbes, activeProbes);
-      await new Promise((resolve) => setImmediate(resolve));
+      await new Promise((resolve) => {
+        setImmediate(resolve);
+      });
       activeProbes -= 1;
 
       return {
