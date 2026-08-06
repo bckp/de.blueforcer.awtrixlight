@@ -1,12 +1,12 @@
 import { Driver } from 'homey';
 import PairSession from 'homey/lib/PairSession';
 import AxiosAwtrixNgHttpTransport from '../../lib/awtrixng/Http/AxiosTransport';
+import { AwtrixNgBasicAuthOptions } from '../../lib/awtrixng/Http/Transport';
 import AwtrixNgClient from '../../lib/awtrixng/Api/Client';
 import { AwtrixNgApiError, AwtrixNgApiErrorCode } from '../../lib/awtrixng/Api/ErrorParser';
 import { AwtrixNgApiDeviceStateResponse } from '../../lib/awtrixng/Api/Types';
 import { AwtrixNgHomeyCapabilityId, getAwtrixNgInitialCapabilityIds } from '../../lib/awtrixng/Device/State';
 import {
-  AwtrixNgMdnsServiceName,
   isAwtrixNgMdnsCandidate,
   probeAwtrixNgDevice,
   toAwtrixNgBaseUrl,
@@ -14,6 +14,7 @@ import {
 
 const AwtrixNgManualPairingOptionId = '__awtrixng_manual_pairing__' as const;
 const AwtrixNgAuthRequiredPairingOptionPrefix = '__awtrixng_auth_required__:' as const;
+const MaxConcurrentDiscoveryProbes = 4;
 
 interface AwtrixNgPairDeviceData {
   id: string;
@@ -29,9 +30,14 @@ interface AwtrixNgPairDeviceStore {
   version: string;
 }
 
-interface AwtrixNgPairDeviceSettings {
+interface AwtrixNgPairDeviceCredentials {
   authUser: string;
   authPass: string;
+}
+
+interface AwtrixNgPairDeviceSettings extends AwtrixNgPairDeviceCredentials {
+  address: string;
+  port: number;
 }
 
 interface AwtrixNgPairDevice {
@@ -224,7 +230,7 @@ class AwtrixNgDriver extends Driver {
 
   private createManualPairingOption(): AwtrixNgManualPairingOption {
     return {
-      name: 'Add manually',
+      name: this.homey.__('pair.manual.title'),
       data: {
         id: AwtrixNgManualPairingOptionId,
       },
@@ -285,13 +291,23 @@ class AwtrixNgDriver extends Driver {
     };
   }
 
-  private async probeManualPairingInput(input: AwtrixNgManualPairingProbeInput): Promise<AwtrixNgManualPairingProbeResponse> {
-    const baseUrl = toAwtrixNgBaseUrl(input);
-    const client = new AwtrixNgClient(new AxiosAwtrixNgHttpTransport({
-      baseUrl,
+  #createProbeClient(input: {
+    baseUrl: string;
+    auth?: AwtrixNgBasicAuthOptions;
+  }): AwtrixNgClient {
+    return new AwtrixNgClient(new AxiosAwtrixNgHttpTransport({
+      baseUrl: input.baseUrl,
+      ...(input.auth === undefined ? {} : { auth: input.auth }),
       debug: process.env.DEBUG === '1',
       log: this.log.bind(this),
     }));
+  }
+
+  private async probeManualPairingInput(input: AwtrixNgManualPairingProbeInput): Promise<AwtrixNgManualPairingProbeResponse> {
+    const baseUrl = toAwtrixNgBaseUrl(input);
+    const client = this.#createProbeClient({
+      baseUrl,
+    });
     const result = await probeAwtrixNgDevice(client);
 
     if (result.status === 'detected') {
@@ -340,15 +356,13 @@ class AwtrixNgDriver extends Driver {
     target: AwtrixNgPendingAuthPairTarget,
     credentials: AwtrixNgCredentialsPairingInput,
   ): Promise<AwtrixNgCredentialsPairingResponse> {
-    const client = new AwtrixNgClient(new AxiosAwtrixNgHttpTransport({
+    const client = this.#createProbeClient({
       baseUrl: target.baseUrl,
       auth: {
         username: credentials.username,
         password: credentials.password,
       },
-      debug: process.env.DEBUG === '1',
-      log: this.log.bind(this),
-    }));
+    });
     const result = await probeAwtrixNgDevice(client);
 
     if (result.status === 'detected') {
@@ -448,21 +462,25 @@ class AwtrixNgDriver extends Driver {
 
   private async findDiscoveredDevices(): Promise<AwtrixNgDiscoveredPairListItem[]> {
     const discoveryResults = this.getDiscoveryStrategy().getDiscoveryResults();
-    const devices: AwtrixNgDiscoveredPairListItem[] = [];
+    const candidates = (Object.values(discoveryResults) as unknown[])
+      .filter((discoveryResult): discoveryResult is AwtrixNgDiscoveryResult => this.isAwtrixNgDiscoveryResult(discoveryResult));
+    const devices: Array<AwtrixNgDiscoveredPairListItem | undefined> = new Array(candidates.length);
+    let nextCandidateIndex = 0;
 
-    for (const discoveryResult of Object.values(discoveryResults)) {
-      if (!this.isAwtrixNgDiscoveryResult(discoveryResult)) {
-        continue;
+    const probeNextCandidate = async (): Promise<void> => {
+      while (nextCandidateIndex < candidates.length) {
+        const candidateIndex = nextCandidateIndex;
+        nextCandidateIndex += 1;
+        devices[candidateIndex] = await this.probeDiscoveryResult(candidates[candidateIndex]);
       }
+    };
 
-      const device = await this.probeDiscoveryResult(discoveryResult);
+    const concurrency = Math.min(MaxConcurrentDiscoveryProbes, candidates.length);
+    await Promise.all(Array.from({ length: concurrency }, () => probeNextCandidate()));
 
-      if (device !== undefined) {
-        devices.push(device);
-      }
-    }
-
-    return devices;
+    return devices
+      .filter((device): device is AwtrixNgDiscoveredPairListItem => device !== undefined)
+      .sort((left, right) => left.name.localeCompare(right.name));
   }
 
   private isAwtrixNgDiscoveryResult(discoveryResult: unknown): discoveryResult is AwtrixNgDiscoveryResult {
@@ -479,7 +497,6 @@ class AwtrixNgDriver extends Driver {
     }
 
     return isAwtrixNgMdnsCandidate({
-      serviceName: AwtrixNgMdnsServiceName,
       txt: toTxtRecord(discoveryResult.txt),
     });
   }
@@ -496,11 +513,9 @@ class AwtrixNgDriver extends Driver {
       address: discoveryResult.address,
       port,
     });
-    const client = new AwtrixNgClient(new AxiosAwtrixNgHttpTransport({
+    const client = this.#createProbeClient({
       baseUrl,
-      debug: process.env.DEBUG === '1',
-      log: this.log.bind(this),
-    }));
+    });
     const result = await probeAwtrixNgDevice(client);
 
     if (result.status === 'detected') {
@@ -553,7 +568,7 @@ class AwtrixNgDriver extends Driver {
     baseUrl: string;
     hostname?: string;
     device: AwtrixNgApiDeviceStateResponse;
-    settings?: AwtrixNgPairDeviceSettings;
+    settings?: AwtrixNgPairDeviceCredentials;
   }): AwtrixNgPairDevice {
     return {
       name: input.name,
@@ -569,9 +584,11 @@ class AwtrixNgDriver extends Driver {
         hostname: input.hostname,
         version: input.device.version,
       },
-      settings: input.settings || {
-        authUser: '',
-        authPass: '',
+      settings: {
+        address: input.address,
+        port: input.port,
+        authUser: input.settings?.authUser || '',
+        authPass: input.settings?.authPass || '',
       },
       capabilities: getAwtrixNgInitialCapabilityIds(input.device),
     };

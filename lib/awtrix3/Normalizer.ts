@@ -121,11 +121,21 @@ export const toTextFragments = (fragments: any): TextFragment[] => {
 };
 
 export const indicatorNumber = (id: number | string): number => {
-  return minMaxNumber(1, 3, toNumber(id));
+  const indicator = Number(id);
+  if (!Number.isInteger(indicator) || indicator < 1 || indicator > 3) {
+    throw new RangeError('Indicator id must be an integer from 1 to 3');
+  }
+
+  return indicator;
 };
 
 export const appName = (id: string): string => {
-  return `${appPrefix}${id.replace(/[^a-z0-9]+/g, '').toLowerCase()}`;
+  const normalized = id.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  if (normalized.length === 0) {
+    throw new RangeError('App name must contain at least one alphanumeric character');
+  }
+
+  return `${appPrefix}${normalized}`;
 };
 
 export const powerOptions = (options: Record<'power', any>): PowerOptions => {
@@ -294,14 +304,13 @@ export const appOptions = (options: any, effects: string[]): AppOptions => {
   return opt;
 };
 
-const defaultSettingsOptions: SettingOptions = {
+const defaultSettingsOptions: Omit<SettingOptions, 'TEFF'> = {
   ABRI: false,
   ATRANS: false,
   BAT: false,
   BLOCKN: false,
   DAT: false,
   HUM: false,
-  TEFF: undefined,
   TEMP: false,
   TIM: false,
   UPPERCASE: false,
@@ -311,12 +320,11 @@ type OptionalSettingOptions = keyof Omit<SettingOptions, 'TEFF'>
 
 export const settingOptions = (options: Record<string, any>): SettingOptions => {
   const opt: SettingOptions = {};
-  const { TEFF, ...optionalOptions } = { ...defaultSettingsOptions, ...options };
-  if (isNumeric(TEFF)) {
-    opt.TEFF = toTransitionEffect(TEFF);
+  if (isNumeric(options.TEFF)) {
+    opt.TEFF = toTransitionEffect(options.TEFF);
   }
 
-  Object.keys(optionalOptions).forEach((key) => {
+  Object.keys(defaultSettingsOptions).forEach((key) => {
     if (key in options) {
       opt[key as OptionalSettingOptions] = !!options[key];
     }

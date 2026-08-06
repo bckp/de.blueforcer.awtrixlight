@@ -122,27 +122,16 @@ const createProbeClient = () => {
   };
 };
 
-test('AWTRIX NG mDNS candidate requires _awtrixng._tcp and txt type awtrixng', () => {
+test('AWTRIX NG mDNS candidate relies on the txt type after Homey discovery filtering', () => {
   assert.equal(isAwtrixNgMdnsCandidate({
-    serviceName: '_awtrixng._tcp',
     txt: { type: 'awtrixng' },
   }), true);
 
   assert.equal(isAwtrixNgMdnsCandidate({
-    name: 'awtrixng',
-    protocol: 'tcp',
-    txt: { type: 'awtrixng' },
-  }), true);
-
-  assert.equal(isAwtrixNgMdnsCandidate({
-    serviceName: '_awtrix._tcp',
     txt: { type: 'awtrix3' },
   }), false);
 
-  assert.equal(isAwtrixNgMdnsCandidate({
-    serviceName: '_awtrixng._tcp',
-    txt: { type: 'awtrix3' },
-  }), false);
+  assert.equal(isAwtrixNgMdnsCandidate({}), false);
 });
 
 test('AWTRIX NG base URL includes discovered port', () => {
@@ -213,6 +202,100 @@ test('AWTRIX NG probe reports auth-required for 401 unauthorized envelope', asyn
     method: 'GET',
     path: '/api/v1/device',
   }]);
+});
+
+test('AWTRIX NG probe reports auth-required for 401 without an error envelope', async () => {
+  const { client, transport } = createProbeClient();
+  const rawBody = 'authentication required';
+
+  transport.error = new AwtrixNgHttpError({
+    method: 'GET',
+    url: 'http://192.168.1.44:8080/api/v1/device',
+    message: 'Request failed with status code 401',
+    status: 401,
+    headers: {
+      'content-type': 'text/plain',
+    },
+    rawBody,
+  });
+
+  const result = await probeAwtrixNgDevice(client);
+
+  assert.equal(result.status, 'auth-required');
+  assert.equal(result.error instanceof AwtrixNgApiError, true);
+  assert.equal(result.error.httpStatus, 401);
+  assert.equal(result.error.code, 'unknownErrorEnvelope');
+  assert.equal(result.error.message, 'Request failed with status code 401');
+  assert.equal(result.error.rawBody, rawBody);
+});
+
+test('AWTRIX NG probe preserves an unknown 401 envelope while classifying it as auth-required', async () => {
+  const { client, transport } = createProbeClient();
+  const rawBody = {
+    error: {
+      code: 'unknownErrorEnvelope',
+      message: 'credentials rejected',
+      field: 'authorization',
+    },
+  };
+
+  transport.error = new AwtrixNgHttpError({
+    method: 'GET',
+    url: 'http://192.168.1.44:8080/api/v1/device',
+    message: 'Request failed with status code 401',
+    status: 401,
+    headers: {
+      'content-type': 'application/json',
+    },
+    rawBody,
+  });
+
+  const result = await probeAwtrixNgDevice(client);
+
+  assert.equal(result.status, 'auth-required');
+  assert.equal(result.error instanceof AwtrixNgApiError, true);
+  assert.equal(result.error.httpStatus, 401);
+  assert.equal(result.error.code, 'unknownErrorEnvelope');
+  assert.equal(result.error.message, 'credentials rejected');
+  assert.equal(result.error.field, 'authorization');
+  assert.equal(result.error.rawBody, rawBody);
+});
+
+test('AWTRIX NG probe keeps HTTP 403 and 500 errors offline', async () => {
+  for (const errorCase of [
+    { status: 403, code: 'forbidden' },
+    { status: 500, code: 'internalError' },
+  ]) {
+    const { client, transport } = createProbeClient();
+    const rawBody = {
+      error: {
+        code: errorCase.code,
+        message: `HTTP ${errorCase.status}`,
+        field: 'device',
+      },
+    };
+
+    transport.error = new AwtrixNgHttpError({
+      method: 'GET',
+      url: 'http://192.168.1.44:8080/api/v1/device',
+      message: `Request failed with status code ${errorCase.status}`,
+      status: errorCase.status,
+      headers: {
+        'content-type': 'application/json',
+      },
+      rawBody,
+    });
+
+    const result = await probeAwtrixNgDevice(client);
+
+    assert.equal(result.status, 'offline');
+    assert.equal(result.error instanceof AwtrixNgApiError, true);
+    assert.equal(result.error.httpStatus, errorCase.status);
+    assert.equal(result.error.code, errorCase.code);
+    assert.equal(result.error.message, `HTTP ${errorCase.status}`);
+    assert.equal(result.error.field, 'device');
+    assert.equal(result.error.rawBody, rawBody);
+  }
 });
 
 test('AWTRIX NG probe reports offline for timeout or network errors', async () => {

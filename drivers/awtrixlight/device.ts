@@ -3,7 +3,7 @@ import { Device, DiscoveryResultMDNSSD } from 'homey';
 import ApiClient from '../../lib/awtrix3/Api/Client';
 import { Status } from '../../lib/awtrix3/Api/Response';
 import Api from '../../lib/awtrix3/Api/Api';
-import { AwtrixImage, AwtrixStats, SettingOptions } from '../../lib/awtrix3/Types';
+import { AwtrixStats, SettingOptions } from '../../lib/awtrix3/Types';
 import { DeviceFailer, DevicePoll } from './interfaces';
 import Icons from '../../lib/awtrix3/List/Icons';
 import Poll from '../../lib/awtrix3/Poll';
@@ -58,19 +58,20 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     this.poll = new Poll(
       async () => {
         this.log('polling...');
-        this.refreshCapabilities();
+        await this.refreshCapabilities();
 
         if (!this.getAvailable()) {
-          this.tryRediscover();
+          await this.tryRediscover();
         }
       },
       this.homey,
+      (error: unknown) => this.error(error),
       PollInterval,
       PollIntervalLong,
     );
 
     // Initialize API etc
-    this.initializeDevice();
+    await this.initializeDevice();
   }
 
   async initializeDevice(): Promise<void> {
@@ -84,7 +85,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     this.api.setDebug(process.env.DEBUG === '1');
 
     // Test device if possible
-    if (!await this.testDevice()) {
+    if (await this.testDevice() !== Status.Ok) {
       this.log('Device not available, trying to rediscover');
       this.setUnavailable(this.homey.__('states.unavailable')).catch(this.error);
       this.tryRediscover();
@@ -99,7 +100,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       this.failsCritical(true);
       if (this.getAvailable()) {
         this.log('Device availalible');
-        this.refreshAll();
+        await this.refreshAll();
         this.connected();
       } else {
         this.log('Polling set to extended mode, device is not available');
@@ -113,7 +114,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       this.log('Rediscover button pressed');
       try {
         // Device is OK, no need to rediscover
-        if (await this.api.clientVerify() === Status.Ok) {
+        if (await this.api.clientVerify(true) === Status.Ok) {
           return;
         }
 
@@ -140,15 +141,30 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     this.setCapabilityValue('ip', this.getStoreValue('address'));
 
     // Upload files
-    fs.readdir(`${__dirname}/assets/images/icons`, (err, files) => {
-      if (files) {
-        files.forEach((file) => this.api.uploadImage(fs.readFileSync(`${__dirname}/assets/images/icons/${file}`), file));
-      }
+    const directory = `${__dirname}/assets/images/icons`;
+    let files: string[];
+    try {
+      files = await fs.promises.readdir(directory);
+    } catch (cause) {
+      this.error(new AggregateError([
+        new Error('Failed to read bundled icon directory', { cause }),
+      ], 'Failed to upload bundled AWTRIX 3 icons'));
+      return;
+    }
 
-      if (err) {
-        this.log(err);
+    const uploadErrors: Error[] = [];
+    for (const file of files) {
+      try {
+        await this.api.uploadImage(fs.readFileSync(`${directory}/${file}`), file);
+        this.icons.invalidate();
+      } catch (cause) {
+        uploadErrors.push(new Error(`Failed to upload bundled icon: ${file}`, { cause }));
       }
-    });
+    }
+
+    if (uploadErrors.length > 0) {
+      this.error(new AggregateError(uploadErrors, 'Failed to upload bundled AWTRIX 3 icons'));
+    }
   }
 
   async onSettings({ oldSettings, newSettings, changedKeys }: {
@@ -159,13 +175,19 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     this.log('AwtrixLightDevice settings where changed', oldSettings, newSettings, changedKeys);
 
     // If user or pass changed, update credentials
-    if (typeof newSettings.user === 'string' && typeof newSettings.pass === 'string') {
-      if (!await this.testDevice(newSettings.user, newSettings.pass)) {
+    const credentialsChanged = changedKeys.includes('user') || changedKeys.includes('pass');
+    if (credentialsChanged && typeof newSettings.user === 'string' && typeof newSettings.pass === 'string') {
+      const status = await this.testDevice(newSettings.user, newSettings.pass);
+      if (status !== Status.Ok) {
         this.api.setCredentials(
           typeof oldSettings.user === 'string' ? oldSettings.user : '',
           typeof oldSettings.pass === 'string' ? oldSettings.pass : '',
         );
-        throw new Error(this.homey.__('states.invalidCredentials'));
+
+        const messageKey = status === Status.AuthRequired || status === Status.AuthFailed
+          ? 'states.invalidCredentials'
+          : 'states.deviceUnreachable';
+        throw new Error(this.homey.__(messageKey));
       }
 
       // Enable pooling if not
@@ -174,7 +196,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       }
     }
 
-    this.api.setSettings(newSettings).catch(this.error);
+    await this.api.setSettings(newSettings);
     if (RebootFields.some((key: string) => changedKeys.includes(key))) {
       this.log('rebooting device');
       await this.api.reboot().catch(this.error);
@@ -206,22 +228,31 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   async onDiscoveryAddressChanged(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {
     // Set IP
     this.api.setIp(discoveryResult.address);
-    this.setStoreValue('address', discoveryResult.address).catch((error) => this.error(error));
-    this.setCapabilityValue('ip', discoveryResult.address);
+    await this.setStoreValue('address', discoveryResult.address);
+    await this.setCapabilityValue('ip', discoveryResult.address);
 
     // Verify
     try {
-      return await this.testDevice();
+      return await this.testDevice() === Status.Ok;
     } catch (error) {
       this.error(error);
     }
     return false;
   }
 
-  refreshAll() {
-    this.refreshCapabilities();
-    this.refreshSettings();
-    this.refreshEffects();
+  async refreshAll(): Promise<void> {
+    const results = await Promise.allSettled([
+      this.refreshCapabilities(),
+      this.refreshSettings(),
+      this.refreshEffects(),
+    ]);
+    const errors = results
+      .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+      .map((result) => result.reason);
+
+    if (errors.length > 0) {
+      throw new AggregateError(errors, 'Failed to refresh AWTRIX 3 device state');
+    }
   }
 
   async tryRediscover(): Promise<boolean> {
@@ -271,10 +302,6 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
         rssi: stats.wifi_signal,
       });
 
-      if (stats.uptime <= this.getStoreValue('uptime')) {
-        this.log('reboot detected');
-      }
-
       await this.setStoreValue('uptime', stats.uptime);
     } catch (error: any) {
       this.log(error.message || error);
@@ -289,7 +316,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
         return;
       }
 
-      this.setSettings({
+      await this.setSettings({
         TIM: !!settings.TIM,
         DAT: !!settings.DAT,
         HUM: !!settings.HUM,
@@ -319,13 +346,13 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     this.registerCapabilityListener('button_prev', async () => this.cmdAppPrev());
   }
 
-  async testDevice(user?: string, pass?: string) {
-    const status = await this.api.clientVerify(true, user, pass).catch(this.error);
-    if (status === Status.Ok) {
-      return true;
+  async testDevice(user?: string, pass?: string): Promise<Status> {
+    try {
+      return await this.api.clientVerify(true, user, pass);
+    } catch (error) {
+      this.error(error);
+      return Status.Error;
     }
-
-    return false;
   }
 
   async migrate() {
@@ -419,14 +446,6 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     await this.api.appPrev();
   }
 
-  async cmdReboot(): Promise<void> {
-    await this.api.reboot();
-  }
-
-  async cmdSetSettings(options: any): Promise<void> {
-    await this.api.setSettings(options);
-  }
-
   async cmdGetSettings(): Promise<SettingOptions|null> {
     try {
       return await this.api.getSettings();
@@ -448,15 +467,6 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   async cmdGetEffects(): Promise<string[]|null> {
     try {
       return await this.api.getEffects();
-    } catch (error: any) {
-      this.error(error);
-      return null;
-    }
-  }
-
-  async cmdGetImages(): Promise<AwtrixImage[]|null> {
-    try {
-      return await this.api.getImages();
     } catch (error: any) {
       this.error(error);
       return null;

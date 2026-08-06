@@ -26,7 +26,7 @@ const formatApiErrorDetails = (error: AwtrixNgApiError): string => {
   return details.join(' | ');
 };
 
-const formatUnknownError = (error: unknown): string => {
+export const formatAwtrixNgErrorDetails = (error: unknown): string => {
   if (error instanceof AwtrixNgApiError) {
     return formatApiErrorDetails(error);
   }
@@ -48,7 +48,7 @@ export const toAwtrixNgAvailabilityState = (result: AwtrixNgDeviceProbeResult): 
   if (result.status === 'auth-required') {
     return {
       available: false,
-      message: `Authentication is required. ${formatApiErrorDetails(result.error)}`,
+      message: `Authentication is required. ${formatAwtrixNgErrorDetails(result.error)}`,
     };
   }
 
@@ -61,6 +61,6 @@ export const toAwtrixNgAvailabilityState = (result: AwtrixNgDeviceProbeResult): 
 
   return {
     available: false,
-    message: `Device is offline. ${formatUnknownError(result.error)}`,
+    message: `Device is offline. ${formatAwtrixNgErrorDetails(result.error)}`,
   };
 };

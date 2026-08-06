@@ -7,6 +7,7 @@ import {
   notifyOptions,
   powerOptions,
   settingOptions,
+  appName,
   appOptions,
 } from '../Normalizer';
 import { Status } from './Response';
@@ -35,53 +36,55 @@ export default class Api {
     this.client.setDebug(debug);
   }
 
-  async isAvaible(): Promise<boolean> {
-    return await this.clientVerify() === Status.Ok;
+  async #requireOk(promise: Promise<boolean>): Promise<void> {
+    if (!await promise) {
+      throw new Error(this.device.homey.__('api.error.commandFailed'));
+    }
   }
 
   /** bckp ******* Commands ******* */
-  async dismiss() {
-    return this.clientPost('notify/dismiss');
+  async dismiss(): Promise<void> {
+    await this.#requireOk(this.clientPost('notify/dismiss'));
   }
 
-  async rtttl(melody: string): Promise<boolean> {
-    return this.clientPost('rtttl', melody, { 'Content-Type': 'text/plain' });
+  async rtttl(melody: string): Promise<void> {
+    await this.#requireOk(this.clientPost('rtttl', melody, { 'Content-Type': 'text/plain' }));
   }
 
-  async power(power: boolean): Promise<boolean> {
-    return this.clientPost('power', powerOptions({ power }));
+  async power(power: boolean): Promise<void> {
+    await this.#requireOk(this.clientPost('power', powerOptions({ power })));
   }
 
-  async indicator(id: number | string, options: any): Promise<boolean> {
-    return this.clientPost(`indicator${indicatorNumber(id)}`, indicatorOptions(options));
+  async indicator(id: number | string, options: any): Promise<void> {
+    await this.#requireOk(this.clientPost(`indicator${indicatorNumber(id)}`, indicatorOptions(options)));
   }
 
-  async appNext(): Promise<boolean> {
-    return this.clientPost('nextapp');
+  async appNext(): Promise<void> {
+    await this.#requireOk(this.clientPost('nextapp'));
   }
 
-  async appPrev(): Promise<boolean> {
-    return this.clientPost('previousapp');
+  async appPrev(): Promise<void> {
+    await this.#requireOk(this.clientPost('previousapp'));
   }
 
-  async reboot(): Promise<boolean> {
-    return this.clientPost('reboot');
+  async reboot(): Promise<void> {
+    await this.#requireOk(this.clientPost('reboot'));
   }
 
-  async notify(msg: string, options: any): Promise<boolean> {
-    return this.clientPost('notify', notifyOptions({ text: msg, ...options }, this.device.getStoreValue('effects') || []));
+  async notify(msg: string, options: any): Promise<void> {
+    await this.#requireOk(this.clientPost('notify', notifyOptions({ text: msg, ...options }, this.device.getStoreValue('effects') || [])));
   }
 
-  async customApp(name: string, options: any): Promise<boolean> {
-    return this.clientPost(`custom?name=homey:${name}`, appOptions(options, this.device.getStoreValue('effects') || []));
+  async customApp(name: string, options: any): Promise<void> {
+    await this.#requireOk(this.clientPost(`custom?name=${encodeURIComponent(appName(name))}`, appOptions(options, this.device.getStoreValue('effects') || [])));
   }
 
-  async removeCustomApp(name: string): Promise<boolean> {
-    return this.clientPost(`custom?name=homey:${name}`, {});
+  async removeCustomApp(name: string): Promise<void> {
+    await this.#requireOk(this.clientPost(`custom?name=${encodeURIComponent(appName(name))}`, {}));
   }
 
-  async setSettings(options: any): Promise<boolean> {
-    return this.clientPost('settings', settingOptions(options));
+  async setSettings(options: any): Promise<void> {
+    await this.#requireOk(this.clientPost('settings', settingOptions(options)));
   }
 
   async getSettings(): Promise<SettingOptions|null> {
@@ -96,11 +99,11 @@ export default class Api {
     return this.clientGet('effects');
   }
 
-  async uploadImage(data: any, name: string): Promise<boolean> {
+  async uploadImage(data: any, name: string): Promise<void> {
     const form = new FormData();
     form.append('image', data, { filepath: `/ICONS/${name}` });
 
-    return this.clientUpload('edit', form);
+    await this.#requireOk(this.clientUpload('edit', form));
   }
 
   async getImages(): Promise<AwtrixImage[]> {
@@ -111,7 +114,7 @@ export default class Api {
   async clientGet<T>(endpoint: string): Promise<T|null> {
     try {
       const response = await this.client.get(endpoint);
-      this.processResponseCode(response.status, response.message);
+      await this.processResponseCode(response.status, response.message);
 
       return response.data ?? null;
     } catch (error: any) {
@@ -123,7 +126,7 @@ export default class Api {
   async clientGetDirect(endpoint: string): Promise<any> {
     try {
       const response = await this.client.getDirect(endpoint);
-      this.processResponseCode(response.status, response.message);
+      await this.processResponseCode(response.status, response.message);
 
       return response.data ?? null;
     } catch (error: any) {
@@ -134,14 +137,14 @@ export default class Api {
 
   async clientPost(endpoint: string, options?: any, headers?: RequestHeaders): Promise<boolean> {
     const response = await this.client.post(endpoint, options, headers);
-    this.processResponseCode(response.status, response.message);
+    await this.processResponseCode(response.status, response.message);
 
     return response?.status === Status.Ok;
   }
 
   async clientUpload(endpoint: string, data: FormData): Promise<boolean> {
     const response = await this.client.upload(endpoint, data);
-    this.processResponseCode(response.status, response.message);
+    await this.processResponseCode(response.status, response.message);
 
     return response?.status === Status.Ok;
   }
@@ -153,44 +156,45 @@ export default class Api {
     const response = await this.client.get('stats');
 
     if (verify) {
-      this.processResponseCode(response.status, response.message);
+      await this.processResponseCode(response.status, response.message);
     }
 
     return response.status;
   }
 
-  processResponseCode(status: Status, message?: string): void {
+  async processResponseCode(status: Status, message?: string): Promise<void> {
     switch (status) {
       case Status.Ok:
+        this.device.failsReset();
         if (this.device.getAvailable()) {
           return;
         }
 
-        this.device.setAvailable().catch((error: any) => this.device.log(error.message ?? error));
-        this.device.failsReset();
+        await this.device.setAvailable();
         this.device.poll.start();
         return;
 
       case Status.AuthRequired:
-        this.processUnavailability(this.device.homey.__('api.error.loginRequired'));
+        await this.processUnavailability(this.device.homey.__('api.error.loginRequired'));
         return;
 
       case Status.AuthFailed:
-        this.processUnavailability(this.device.homey.__('api.error.loginFailed'));
+        await this.processUnavailability(this.device.homey.__('api.error.loginFailed'));
         return;
 
       default:
-        this.processUnavailability(message ?? this.device.homey.__('api.error.unknownError'));
+        await this.processUnavailability(message ?? this.device.homey.__('api.error.unknownError'));
     }
   }
 
-  processUnavailability(message: string): void {
-    if (this.device.failsExceeded()) {
-      this.device.setUnavailable(message).catch((error: any) => this.device.log(error));
-      this.device.poll.extend();
-    } else {
-      this.device.failsAdd();
+  async processUnavailability(message: string): Promise<void> {
+    this.device.failsAdd();
+    if (!this.device.failsExceeded() || this.device.poll.isExtended()) {
+      return;
     }
+
+    this.device.poll.extend();
+    await this.device.setUnavailable(message);
   }
 
 }

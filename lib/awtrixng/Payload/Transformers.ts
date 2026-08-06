@@ -1,12 +1,20 @@
 import {
   AwtrixNgApiDisplayPatch,
+  AwtrixNgApiFonts,
+  AwtrixNgApiIconModes,
   AwtrixNgApiIndicatorPayload,
   AwtrixNgApiNotificationPayload,
   AwtrixNgApiPagePayload,
+  AwtrixNgApiPushedAppLifetimeExpiries,
   AwtrixNgApiPushedAppPayload,
+  AwtrixNgApiScrollDirections,
+  AwtrixNgApiScrollEntries,
+  AwtrixNgApiScrollModes,
   AwtrixNgApiScrollPayload,
+  AwtrixNgApiScrollWhenFitsValues,
   AwtrixNgApiSettingsPatch,
   AwtrixNgApiSoundPlayPayload,
+  AwtrixNgApiTextCases,
 } from '../Api/Types';
 
 export {
@@ -80,70 +88,96 @@ export interface AwtrixNgSettingsPatchInput {
   transitionEffect?: string;
 }
 
-const pageFields = [
-  'backgroundColor',
-  'barChart',
-  'chartAutoscale',
-  'chartColor',
-  'draw',
-  'durationMs',
-  'effect',
-  'effectSpeed',
-  'font',
-  'icon',
-  'iconMode',
-  'iconOffsetX',
-  'lineChart',
-  'overlay',
-  'palette',
-  'paletteBlend',
-  'paletteSpan',
-  'paletteSpeed',
-  'progress',
-  'progressColor',
-  'progressTrackColor',
-  'repeat',
-  'scroll',
-  'text',
-  'textBlinkMs',
-  'textCase',
-  'textCenter',
-  'textColor',
-  'textFadeMs',
-  'textInFront',
-  'textOffsetX',
-] as const;
+const pageFieldMap: Record<keyof AwtrixNgApiPagePayload, true> = {
+  backgroundColor: true,
+  barChart: true,
+  chartAutoscale: true,
+  chartColor: true,
+  draw: true,
+  durationMs: true,
+  effect: true,
+  effectSpeed: true,
+  font: true,
+  icon: true,
+  iconMode: true,
+  iconOffsetX: true,
+  lineChart: true,
+  overlay: true,
+  palette: true,
+  paletteBlend: true,
+  paletteSpan: true,
+  paletteSpeed: true,
+  progress: true,
+  progressColor: true,
+  progressTrackColor: true,
+  repeat: true,
+  scroll: true,
+  text: true,
+  textBlinkMs: true,
+  textCase: true,
+  textCenter: true,
+  textColor: true,
+  textFadeMs: true,
+  textInFront: true,
+  textOffsetX: true,
+};
+
+const pageFields = Object.keys(pageFieldMap);
+
+const notificationOnlyFieldMap: Record<
+  Exclude<keyof AwtrixNgApiNotificationPayload, keyof AwtrixNgApiPagePayload>,
+  true
+> = {
+  hold: true,
+  name: true,
+  sound: true,
+  soundLoop: true,
+  soundRtttl: true,
+  stack: true,
+  wakeup: true,
+};
+
+const notificationOnlyFields = new Set<string>(Object.keys(notificationOnlyFieldMap));
 
 const notificationFields = new Set<string>([
   ...pageFields,
-  'hold',
-  'name',
-  'sound',
-  'soundLoop',
-  'soundRtttl',
-  'stack',
-  'wakeup',
+  ...notificationOnlyFields,
 ]);
+
+const pushedAppOnlyFieldMap: Record<
+  Exclude<keyof AwtrixNgApiPushedAppPayload, keyof AwtrixNgApiPagePayload>,
+  true
+> = {
+  lifetimeExpiry: true,
+  lifetimeMs: true,
+};
+
+const pushedAppOnlyFields = new Set<string>(Object.keys(pushedAppOnlyFieldMap));
 
 const pushedAppFields = new Set<string>([
   ...pageFields,
-  'lifetimeExpiry',
-  'lifetimeMs',
+  ...pushedAppOnlyFields,
 ]);
 
-const indicatorFields = new Set<string>([
-  'blinkMs',
-  'color',
-  'fadeMs',
-]);
+const indicatorFieldMap: Record<keyof AwtrixNgApiIndicatorPayload, true> = {
+  blinkMs: true,
+  color: true,
+  fadeMs: true,
+};
 
-const settingsFields = new Set<string>([
-  'autoBrightness',
-  'autoTransition',
-  'blockNavigation',
-  'transitionEffect',
-  'uppercase',
-]);
+const indicatorFields = new Set<string>(Object.keys(indicatorFieldMap));
+
+const settingsFieldMap: Record<keyof AwtrixNgSettingsPatchInput, true> = {
+  autoBrightness: true,
+  autoTransition: true,
+  blockNavigation: true,
+  transitionEffect: true,
+  uppercase: true,
+};
+
+export const AwtrixNgWritableSettingsFields = Object.keys(settingsFieldMap);
+
+const settingsFields = new Set<string>(AwtrixNgWritableSettingsFields);
 
 const awtrix3FieldReplacements: Readonly<Record<string, string>> = {
   background: 'backgroundColor',
@@ -179,46 +213,17 @@ const unsupportedAwtrix3Fields = new Set<string>([
   'save',
 ]);
 
-const notificationOnlyFields = new Set<string>([
-  'hold',
-  'name',
-  'sound',
-  'soundLoop',
-  'soundRtttl',
-  'stack',
-  'wakeup',
-]);
+const scrollFieldMap: Record<keyof AwtrixNgApiScrollPayload, true> = {
+  direction: true,
+  entry: true,
+  gap: true,
+  holdMs: true,
+  mode: true,
+  speed: true,
+  whenFits: true,
+};
 
-const pushedAppOnlyFields = new Set<string>([
-  'lifetimeExpiry',
-  'lifetimeMs',
-]);
-
-const scrollFields = new Set<string>([
-  'direction',
-  'entry',
-  'gap',
-  'holdMs',
-  'mode',
-  'speed',
-  'whenFits',
-]);
-
-const scrollModes = ['static', 'wrap', 'loop', 'bounce'] as const;
-
-const scrollDirections = ['left', 'right'] as const;
-
-const scrollEntries = ['inline', 'offscreen'] as const;
-
-const scrollWhenFits = ['static', 'scroll'] as const;
-
-const textCases = ['inherit', 'upper', 'asTyped'] as const;
-
-const fonts = ['small', 'large'] as const;
-
-const iconModes = ['fixed', 'pushOnce', 'push'] as const;
-
-const lifetimeExpiries = ['remove', 'mark'] as const;
+const scrollFields = new Set<string>(Object.keys(scrollFieldMap));
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -264,14 +269,12 @@ const assertKnownFields = (input: Record<string, unknown>, allowedFields: Set<st
       });
     }
 
-    if (!allowedFields.has(field)) {
-      throw new UnsupportedAwtrixNgPayloadFieldError({
-        field,
-        target,
-        reason: 'unknown-field',
-        details: 'Unknown fields are rejected so they cannot be silently dropped before sending a request.',
-      });
-    }
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field,
+      target,
+      reason: 'unknown-field',
+      details: 'Unknown fields are rejected so they cannot be silently dropped before sending a request.',
+    });
   }
 };
 
@@ -395,39 +398,39 @@ const assertScrollValue = (input: Record<string, unknown>, target: AwtrixNgTrans
     }
   }
 
-  if (value.mode !== undefined && !isOneOf(value.mode, scrollModes)) {
+  if (value.mode !== undefined && !isOneOf(value.mode, AwtrixNgApiScrollModes)) {
     throw new UnsupportedAwtrixNgPayloadFieldError({
       field: 'scroll.mode',
       target,
       reason: 'invalid-value',
-      details: `Expected one of: ${scrollModes.join(', ')}.`,
+      details: `Expected one of: ${AwtrixNgApiScrollModes.join(', ')}.`,
     });
   }
 
-  if (value.direction !== undefined && !isOneOf(value.direction, scrollDirections)) {
+  if (value.direction !== undefined && !isOneOf(value.direction, AwtrixNgApiScrollDirections)) {
     throw new UnsupportedAwtrixNgPayloadFieldError({
       field: 'scroll.direction',
       target,
       reason: 'invalid-value',
-      details: `Expected one of: ${scrollDirections.join(', ')}.`,
+      details: `Expected one of: ${AwtrixNgApiScrollDirections.join(', ')}.`,
     });
   }
 
-  if (value.entry !== undefined && !isOneOf(value.entry, scrollEntries)) {
+  if (value.entry !== undefined && !isOneOf(value.entry, AwtrixNgApiScrollEntries)) {
     throw new UnsupportedAwtrixNgPayloadFieldError({
       field: 'scroll.entry',
       target,
       reason: 'invalid-value',
-      details: `Expected one of: ${scrollEntries.join(', ')}.`,
+      details: `Expected one of: ${AwtrixNgApiScrollEntries.join(', ')}.`,
     });
   }
 
-  if (value.whenFits !== undefined && !isOneOf(value.whenFits, scrollWhenFits)) {
+  if (value.whenFits !== undefined && !isOneOf(value.whenFits, AwtrixNgApiScrollWhenFitsValues)) {
     throw new UnsupportedAwtrixNgPayloadFieldError({
       field: 'scroll.whenFits',
       target,
       reason: 'invalid-value',
-      details: `Expected one of: ${scrollWhenFits.join(', ')}.`,
+      details: `Expected one of: ${AwtrixNgApiScrollWhenFitsValues.join(', ')}.`,
     });
   }
 
@@ -576,14 +579,25 @@ const assertPaletteValue = (input: Record<string, unknown>, target: AwtrixNgTran
   });
 };
 
-const assertPagePayload = (input: Record<string, unknown>, target: 'notification' | 'pushedApp'): void => {
-  assertTextValue(input, target);
-  assertScrollValue(input, target);
-  assertDrawValue(input, target);
-  assertPaletteValue(input, target);
-  assertStringEnumField(input, 'textCase', textCases, target);
-  assertStringEnumField(input, 'font', fonts, target);
-  assertStringEnumField(input, 'iconMode', iconModes, target);
+const assertFiniteNumberField = (
+  input: Record<string, unknown>,
+  field: string,
+  target: AwtrixNgTransformTarget,
+  requireInteger = false,
+): void => {
+  const value = input[field];
+
+  if (value === undefined
+    || (typeof value === 'number' && Number.isFinite(value) && (!requireInteger || Number.isInteger(value)))) {
+    return;
+  }
+
+  throw new UnsupportedAwtrixNgPayloadFieldError({
+    field,
+    target,
+    reason: 'invalid-value',
+    details: requireInteger ? 'Expected a finite integer.' : 'Expected a finite number.',
+  });
 };
 
 const assertBooleanField = (input: Record<string, unknown>, field: string, target: AwtrixNgTransformTarget): void => {
@@ -599,6 +613,40 @@ const assertBooleanField = (input: Record<string, unknown>, field: string, targe
     reason: 'invalid-value',
     details: 'Expected a boolean value.',
   });
+};
+
+const assertPagePayload = (input: Record<string, unknown>, target: 'notification' | 'pushedApp'): void => {
+  assertTextValue(input, target);
+  assertScrollValue(input, target);
+  assertDrawValue(input, target);
+  assertPaletteValue(input, target);
+  assertStringEnumField(input, 'textCase', AwtrixNgApiTextCases, target);
+  assertStringEnumField(input, 'font', AwtrixNgApiFonts, target);
+  assertStringEnumField(input, 'iconMode', AwtrixNgApiIconModes, target);
+  // UNKNOWN: range not documented (durationMs).
+  assertFiniteNumberField(input, 'durationMs', target);
+  // UNKNOWN: range not documented (repeat).
+  assertFiniteNumberField(input, 'repeat', target);
+  // UNKNOWN: range not documented (textBlinkMs).
+  assertFiniteNumberField(input, 'textBlinkMs', target);
+  // UNKNOWN: range not documented (textFadeMs).
+  assertFiniteNumberField(input, 'textFadeMs', target);
+  // UNKNOWN: range not documented (textOffsetX); flat pushed-app OpenAPI requires an integer.
+  assertFiniteNumberField(input, 'textOffsetX', target, target === 'pushedApp');
+  // UNKNOWN: range not documented (iconOffsetX).
+  assertFiniteNumberField(input, 'iconOffsetX', target);
+  // UNKNOWN: range not documented (effectSpeed).
+  assertFiniteNumberField(input, 'effectSpeed', target);
+  // UNKNOWN: range not documented (paletteSpan).
+  assertFiniteNumberField(input, 'paletteSpan', target);
+  // UNKNOWN: range not documented (paletteSpeed).
+  assertFiniteNumberField(input, 'paletteSpeed', target);
+  // UNKNOWN: range not documented (progress).
+  assertFiniteNumberField(input, 'progress', target);
+  assertBooleanField(input, 'textCenter', target);
+  assertBooleanField(input, 'textInFront', target);
+  assertBooleanField(input, 'chartAutoscale', target);
+  assertBooleanField(input, 'paletteBlend', target);
 };
 
 const assertSettingsPatch = (input: Record<string, unknown>): void => {
@@ -639,6 +687,10 @@ export const toAwtrixNgNotificationPayload = (input: AwtrixNgNotificationInput):
   assertNoTargetOnlyFields(inputRecord, pushedAppOnlyFields, 'notification');
   assertKnownFields(inputRecord, notificationFields, 'notification');
   assertPagePayload(inputRecord, 'notification');
+  assertBooleanField(inputRecord, 'hold', 'notification');
+  assertBooleanField(inputRecord, 'stack', 'notification');
+  assertBooleanField(inputRecord, 'wakeup', 'notification');
+  assertBooleanField(inputRecord, 'soundLoop', 'notification');
 
   return {
     ...input,
@@ -650,7 +702,9 @@ export const toAwtrixNgPushedAppPayload = (input: AwtrixNgPushedAppInput): Awtri
   assertNoTargetOnlyFields(inputRecord, notificationOnlyFields, 'pushedApp');
   assertKnownFields(inputRecord, pushedAppFields, 'pushedApp');
   assertPagePayload(inputRecord, 'pushedApp');
-  assertStringEnumField(inputRecord, 'lifetimeExpiry', lifetimeExpiries, 'pushedApp');
+  assertStringEnumField(inputRecord, 'lifetimeExpiry', AwtrixNgApiPushedAppLifetimeExpiries, 'pushedApp');
+  // UNKNOWN: range not documented (lifetimeMs).
+  assertFiniteNumberField(inputRecord, 'lifetimeMs', 'pushedApp');
 
   return {
     ...input,

@@ -1,13 +1,7 @@
 {
   "extends": "@tsconfig/node22/tsconfig.json",
   "compilerOptions": {
-    "allowJs": true,
-    "outDir": ".homeybuild/",
-    "baseUrl": ".",
-    "paths": {
-      "drivers/*": ["drivers/*"],
-      "lib/*": ["lib/*"]
-    }
+    "outDir": ".homeybuild/"
   },
   "exclude": [".homeybuild", "node_modules", "test"]
 }

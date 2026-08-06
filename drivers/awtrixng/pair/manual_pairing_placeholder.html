@@ -36,7 +36,6 @@
   </fieldset>
 
   <button id="test-connection" class="homey-button-primary-full" type="submit"></button>
-  <!-- <button id="back-to-list" class="homey-button-transparent" type="button"></button> -->
 </form>
 
 <section id="manual-pairing-result" hidden="hidden">
@@ -192,11 +191,4 @@
       });
   });
 
-  var backButton = document.getElementById('back-to-list');
-
-  if (backButton) {
-    backButton.addEventListener('click', function () {
-      Homey.showView('list_my_devices');
-    });
-  }
 </script>

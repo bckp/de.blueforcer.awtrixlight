@@ -10,7 +10,7 @@ import {
 } from './Types';
 
 export const isColor = (color: any): color is string => {
-  if (typeof color === 'number' || typeof color === 'string') {
+  if (typeof color === 'string') {
     return /^#[0-9A-F]{6}$/i.test(color.toString());
   }
   return false;

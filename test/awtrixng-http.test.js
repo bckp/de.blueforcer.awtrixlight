@@ -169,6 +169,7 @@ test('axios AWTRIX NG transport applies auth, JSON content type, query and timeo
   assert.equal(recordingAxios.calls.length, 1);
   assert.equal(recordingAxios.calls[0].url, 'http://awtrix-ng.local:8081/api/v1/display');
   assert.equal(recordingAxios.calls[0].timeout, 2500);
+  assert.equal(recordingAxios.calls[0].maxRedirects, 0);
   assert.deepEqual(recordingAxios.calls[0].params, {
     dryRun: false,
     retry: 1,
@@ -447,4 +448,41 @@ test('axios AWTRIX NG transport preserves non-2xx status, headers and raw body',
     });
     assert.equal(error.rawBody, rawBody);
   }
+});
+
+test('axios AWTRIX NG transport disables redirects and preserves the redirect response', async () => {
+  const rawBody = '<a href="http://other-device.local/">Moved</a>';
+  const recordingAxios = createRecordingAxios(() => {
+    const error = new Error('Request failed with status code 302');
+    error.isAxiosError = true;
+    error.response = {
+      status: 302,
+      headers: {
+        location: 'http://other-device.local/',
+        'content-type': 'text/html',
+      },
+      data: rawBody,
+    };
+    throw error;
+  });
+  const transport = new AxiosAwtrixNgHttpTransport({
+    baseUrl: 'http://awtrix-ng.local',
+  }, recordingAxios.client);
+
+  await assert.rejects(
+    () => transport.request({ method: 'GET', path: '/api/v1/device' }),
+    (error) => {
+      assert.equal(error instanceof AwtrixNgHttpError, true);
+      assert.equal(error.status, 302);
+      assert.equal(error.method, 'GET');
+      assert.equal(error.url, 'http://awtrix-ng.local/api/v1/device');
+      assert.deepEqual(error.headers, {
+        location: 'http://other-device.local/',
+        'content-type': 'text/html',
+      });
+      assert.equal(error.rawBody, rawBody);
+      return true;
+    },
+  );
+  assert.equal(recordingAxios.calls[0].maxRedirects, 0);
 });

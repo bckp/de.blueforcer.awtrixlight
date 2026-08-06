@@ -109,5 +109,8 @@
   },
   "2.0.1": {
     "en": "Fixed small issues with API"
+  },
+  "2.1.0": {
+    "en": "Improved AWTRIX 3 reliability, added safe AWTRIX NG connection editing and rediscovery, and preserved detailed AWTRIX NG API errors."
   }
 }

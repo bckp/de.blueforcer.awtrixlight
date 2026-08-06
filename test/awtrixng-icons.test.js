@@ -13,6 +13,14 @@ const labels = {
   emptyDescription: 'Without icon',
 };
 
+const deferred = () => {
+  let resolve;
+  const promise = new Promise((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+};
+
 class FakeIconClient {
 
   listResponses = [{
@@ -23,10 +31,16 @@ class FakeIconClient {
 
   calls = [];
 
+  listError = null;
+
   uploadError = null;
 
   async listFiles(dir) {
     this.calls.push({ method: 'listFiles', dir });
+
+    if (this.listError !== null) {
+      throw this.listError;
+    }
 
     return this.listResponses.shift();
   }
@@ -47,12 +61,28 @@ class FakeIconClient {
 
 }
 
-const createIcons = (client) => new AwtrixNgIcons(client, {
+const createFakeTimerHost = () => ({
+  nextTimer: 1,
+  setCalls: [],
+  clearCalls: [],
+  setTimeout(callback, ms) {
+    const timer = this.nextTimer;
+    this.nextTimer += 1;
+    this.setCalls.push({ callback, ms, timer });
+    return timer;
+  },
+  clearTimeout(timer) {
+    this.clearCalls.push(timer);
+  },
+});
+
+const createIcons = (client, options = {}) => new AwtrixNgIcons(client, {
   emptyIcon: {
     name: labels.emptyName,
     id: '-',
     description: labels.emptyDescription,
   },
+  ...options,
 });
 
 test('AWTRIX NG icon mapper converts /api/v1/files response files to Homey autocomplete items', () => {
@@ -124,6 +154,94 @@ test('AWTRIX NG icons list uses GET /api/v1/files semantics via /ICONS directory
   }]);
 });
 
+test('AWTRIX NG icon list coalesces concurrent loads', async () => {
+  const client = new FakeIconClient();
+  const load = deferred();
+  client.listFiles = async (dir) => {
+    client.calls.push({ method: 'listFiles', dir });
+    return load.promise;
+  };
+  const icons = createIcons(client);
+
+  const first = icons.all();
+  const second = icons.all();
+  await Promise.resolve();
+
+  assert.equal(client.calls.length, 1);
+
+  load.resolve({
+    files: [{ name: 'homey.gif', size: 123 }],
+    usedBytes: 123,
+    totalBytes: 1048576,
+  });
+
+  const expected = [
+    { name: 'Empty', id: '-', description: 'Without icon' },
+    { name: 'homey', id: 'homey' },
+  ];
+  assert.deepEqual(await first, expected);
+  assert.deepEqual(await second, expected);
+});
+
+test('AWTRIX NG icon list clears rejected in-flight load and retries with the original error preserved', async () => {
+  const client = new FakeIconClient();
+  const apiError = new AwtrixNgApiError({
+    method: 'GET',
+    url: 'http://awtrix-ng.local/api/v1/files?dir=/ICONS',
+    httpStatus: 503,
+    code: 'serviceBusy',
+    message: 'icon storage is busy',
+    field: 'dir',
+  });
+  client.listError = apiError;
+  const icons = createIcons(client);
+
+  const results = await Promise.allSettled([icons.all(), icons.all()]);
+  assert.equal(client.calls.length, 1);
+  assert.deepEqual(results.map((result) => result.status), ['rejected', 'rejected']);
+  assert.equal(results[0].reason, apiError);
+  assert.equal(results[1].reason, apiError);
+
+  client.listError = null;
+  client.listResponses = [{
+    files: [{ name: 'retry.gif', size: 42 }],
+    usedBytes: 42,
+    totalBytes: 1048576,
+  }];
+
+  assert.deepEqual(await icons.all(), [
+    { name: 'Empty', id: '-', description: 'Without icon' },
+    { name: 'retry', id: 'retry' },
+  ]);
+  assert.equal(client.calls.length, 2);
+});
+
+test('AWTRIX NG icon cache keeps its 5 second TTL and supports explicit invalidation', async () => {
+  const client = new FakeIconClient();
+  client.listResponses = [{
+    files: [{ name: 'first.gif', size: 1 }],
+    usedBytes: 1,
+    totalBytes: 1048576,
+  }, {
+    files: [{ name: 'second.gif', size: 2 }],
+    usedBytes: 2,
+    totalBytes: 1048576,
+  }];
+  const timerHost = createFakeTimerHost();
+  const icons = createIcons(client, { timerHost });
+
+  await icons.all();
+  assert.equal(timerHost.setCalls[0].ms, 5000);
+
+  icons.invalidate();
+  assert.deepEqual(timerHost.clearCalls, [1]);
+  assert.deepEqual(await icons.all(), [
+    { name: 'Empty', id: '-', description: 'Without icon' },
+    { name: 'second', id: 'second' },
+  ]);
+  assert.deepEqual(client.calls.map((call) => call.method), ['listFiles', 'listFiles']);
+});
+
 test('AWTRIX NG icon upload creates multipart form data and posts to /ICONS', async () => {
   const client = new FakeIconClient();
   const icons = createIcons(client);
@@ -191,6 +309,11 @@ test('AWTRIX NG icon upload clears cached list after successful upload', async (
 
 test('AWTRIX NG icon upload propagates NG API errors with details', async () => {
   const client = new FakeIconClient();
+  client.listResponses = [{
+    files: [{ name: 'cached.gif', size: 123 }],
+    usedBytes: 123,
+    totalBytes: 1048576,
+  }];
   const icons = createIcons(client);
   const apiError = new AwtrixNgApiError({
     method: 'POST',
@@ -207,6 +330,8 @@ test('AWTRIX NG icon upload propagates NG API errors with details', async () => 
   });
   client.uploadError = apiError;
 
+  const cachedIcons = await icons.all();
+
   await assert.rejects(
     () => icons.upload({
       fileName: 'homey.gif',
@@ -220,6 +345,9 @@ test('AWTRIX NG icon upload propagates NG API errors with details', async () => 
       return true;
     },
   );
+
+  assert.equal(await icons.all(), cachedIcons);
+  assert.deepEqual(client.calls.map((call) => call.method), ['listFiles', 'uploadFile']);
 });
 
 test('AWTRIX NG icon upload form exposes multipart headers for transport', () => {

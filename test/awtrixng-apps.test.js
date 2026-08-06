@@ -10,9 +10,11 @@ const {
   createAwtrixNgAppsOrderPayloadFromBuiltinSettingsChange,
   hasAwtrixNgBuiltinAppSettingsChange,
   isAwtrixNgBuiltinAppSetting,
+  validateAwtrixNgBuiltinAppSettingsChange,
   toAwtrixNgBuiltinAppSettingsFromApps,
   toAwtrixNgBuiltinAppSettingsUpdate,
 } = require('../.homeybuild/lib/awtrixng/Services/Apps');
+const { AwtrixNgInvalidResponseError } = require('../.homeybuild/lib/awtrixng/Api/InvalidResponseError');
 
 const createAppsInventory = (overrides = []) => [
   {
@@ -133,6 +135,19 @@ test('AWTRIX NG built-in app setting guards detect relevant settings only', () =
   assert.equal(isAwtrixNgBuiltinAppSetting('transitionEffect'), false);
   assert.equal(hasAwtrixNgBuiltinAppSettingsChange(['authUser', 'showBuiltinDate']), true);
   assert.equal(hasAwtrixNgBuiltinAppSettingsChange(['authUser', 'transitionEffect']), false);
+});
+
+test('AWTRIX NG built-in app changes validate switch types before reading inventory', () => {
+  assert.doesNotThrow(() => validateAwtrixNgBuiltinAppSettingsChange({
+    showBuiltinDate: 'invalid but unrelated',
+  }, ['transitionEffect']));
+  assert.throws(
+    () => validateAwtrixNgBuiltinAppSettingsChange({
+      ...allBuiltinSettings,
+      showBuiltinDate: 'false',
+    }, ['showBuiltinDate']),
+    /showBuiltinDate must be a boolean/,
+  );
 });
 
 test('AWTRIX NG built-in app settings sync maps inventory to Homey settings', () => {
@@ -337,6 +352,27 @@ test('AWTRIX NG app settings apply helper rejects unavailable app without an ord
       'showBuiltinBattery',
     ]),
     AwtrixNgBuiltinAppUnavailableError,
+  );
+  assert.deepEqual(fake.calls, [{
+    method: 'getApps',
+  }]);
+});
+
+test('AWTRIX NG app settings apply helper rejects a non-array apps response before consuming it', async () => {
+  const fake = createFakeAppsClient({ secret: 'must-not-appear-in-error' });
+
+  await assert.rejects(
+    () => applyAwtrixNgBuiltinAppSettingsChange(fake.client, allBuiltinSettings, [
+      'showBuiltinTime',
+    ]),
+    (error) => {
+      assert.equal(error instanceof AwtrixNgInvalidResponseError, true);
+      assert.equal(error.endpoint, '/api/v1/apps');
+      assert.equal(error.expectedShape, 'an array');
+      assert.equal(error.actualType, 'object');
+      assert.equal(error.message.includes('must-not-appear-in-error'), false);
+      return true;
+    },
   );
   assert.deepEqual(fake.calls, [{
     method: 'getApps',

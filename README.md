@@ -10,7 +10,7 @@ This app also contains an AWTRIX NG driver as a separate implementation. AWTRIX 
 
 - existing AWTRIX 3 devices and flows are not migrated automatically,
 - AWTRIX NG devices must be added as **Awtrix NG** devices,
-- AWTRIX NG flows use separate `awtrixng*` flow cards,
+- supported AWTRIX NG actions use shared flow cards where behavior is safely equivalent; NG-only actions are `applicationRaw` and `weatherOverlay`,
 - AWTRIX NG JSON flow cards accept AWTRIX NG-shaped payloads only,
 - AWTRIX 3 JSON options such as `duration`, `noScroll`, `clients`, `barBC`, `pos` and `save` are not silently translated for AWTRIX NG.
 

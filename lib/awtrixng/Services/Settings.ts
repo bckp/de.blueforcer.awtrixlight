@@ -1,5 +1,6 @@
 import {
   AwtrixNgSettingsPatchInput,
+  AwtrixNgWritableSettingsFields,
   UnsupportedAwtrixNgPayloadFieldError,
   toAwtrixNgSettingsPatch,
 } from '../Payload/Transformers';
@@ -12,9 +13,9 @@ export type AwtrixNgHomeySettingValue = boolean | string | number | undefined | 
 
 export type AwtrixNgHomeySettings = Record<string, AwtrixNgHomeySettingValue>;
 
-export type AwtrixNgWritableSettingsField = 'autoBrightness' | 'autoTransition' | 'blockNavigation' | 'uppercase' | 'transitionEffect';
+export type AwtrixNgWritableSettingsField = keyof AwtrixNgSettingsPatchInput;
 
-export type AwtrixNgLocalSettingsField = 'authUser' | 'authPass';
+export type AwtrixNgLocalSettingsField = 'address' | 'port' | 'authUser' | 'authPass';
 
 export type AwtrixNgHomeySettingsPatch = Partial<Record<AwtrixNgWritableSettingsField, boolean | string>>;
 
@@ -28,17 +29,13 @@ export interface AwtrixNgHomeySettingsApplyResult {
   homeySettingsUpdate: AwtrixNgHomeySettingsPatch;
 }
 
-const writableSettingsFields = new Set<string>([
-  'autoBrightness',
-  'autoTransition',
-  'blockNavigation',
-  'transitionEffect',
-  'uppercase',
-]);
+const writableSettingsFields = new Set<string>(AwtrixNgWritableSettingsFields);
 
 const localSettingsFields = new Set<string>([
+  'address',
   'authPass',
   'authUser',
+  'port',
 ]);
 
 const isWritableSettingsField = (field: string): field is AwtrixNgWritableSettingsField => writableSettingsFields.has(field);
@@ -79,6 +76,11 @@ export const createAwtrixNgSettingsPatchFromChangedSettings = (
   return toAwtrixNgSettingsPatch(patchInput as AwtrixNgSettingsPatchInput);
 };
 
+export const writeAwtrixNgSettingsPatch = (
+  client: AwtrixNgSettingsClient,
+  patch: AwtrixNgApiSettingsPatch,
+): Promise<AwtrixNgApiSettingsResponse> => client.patchSettings(patch);
+
 export const toAwtrixNgHomeySettingsFromApiSettings = (settings: AwtrixNgApiSettingsResponse): AwtrixNgHomeySettingsPatch => ({
   autoBrightness: settings.autoBrightness,
   autoTransition: settings.autoTransition,
@@ -95,7 +97,7 @@ export const toAwtrixNgHomeySettingsUpdate = (
   const update: AwtrixNgHomeySettingsPatch = {};
 
   for (const [key, value] of Object.entries(nextSettings)) {
-    if (currentSettings[key] !== value) {
+    if (value !== undefined && currentSettings[key] !== value) {
       update[key as AwtrixNgWritableSettingsField] = value;
     }
   }
@@ -116,7 +118,7 @@ export const applyAwtrixNgHomeySettingsChange = async (
     };
   }
 
-  const apiSettings = await client.patchSettings(patch);
+  const apiSettings = await writeAwtrixNgSettingsPatch(client, patch);
 
   return {
     patch,

@@ -296,6 +296,67 @@ test('AWTRIX NG notification transformer accepts repeat as a shared page field',
   assert.deepEqual(toAwtrixNgNotificationPayload(input), input);
 });
 
+test('AWTRIX NG transformer rejects non-finite and non-number numeric fields', () => {
+  const numericFields = [
+    ['durationMs', 'notification', toAwtrixNgNotificationPayload],
+    ['repeat', 'notification', toAwtrixNgNotificationPayload],
+    ['textBlinkMs', 'notification', toAwtrixNgNotificationPayload],
+    ['textFadeMs', 'notification', toAwtrixNgNotificationPayload],
+    ['textOffsetX', 'notification', toAwtrixNgNotificationPayload],
+    ['iconOffsetX', 'notification', toAwtrixNgNotificationPayload],
+    ['effectSpeed', 'notification', toAwtrixNgNotificationPayload],
+    ['paletteSpan', 'notification', toAwtrixNgNotificationPayload],
+    ['paletteSpeed', 'notification', toAwtrixNgNotificationPayload],
+    ['progress', 'notification', toAwtrixNgNotificationPayload],
+    ['lifetimeMs', 'pushedApp', toAwtrixNgPushedAppPayload],
+  ];
+
+  for (const [field, target, transform] of numericFields) {
+    for (const value of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, '1']) {
+      assertUnsupportedField(() => transform({ [field]: value }), field, target, 'invalid-value');
+    }
+  }
+});
+
+test('AWTRIX NG pushed app requires integer textOffsetX exactly where OpenAPI documents it', () => {
+  assertUnsupportedField(
+    () => toAwtrixNgPushedAppPayload({ textOffsetX: 1.5 }),
+    'textOffsetX',
+    'pushedApp',
+    'invalid-value',
+  );
+  assert.equal(toAwtrixNgNotificationPayload({ textOffsetX: 1.5 }).textOffsetX, 1.5);
+});
+
+test('AWTRIX NG transformer leaves undocumented numeric ranges to the device', () => {
+  const input = {
+    textOffsetX: -3,
+    iconOffsetX: -2,
+    effectSpeed: 1.5,
+    progress: 150,
+  };
+
+  assert.deepEqual(toAwtrixNgNotificationPayload(input), input);
+  assert.equal(toAwtrixNgPushedAppPayload({ textOffsetX: -3 }).textOffsetX, -3);
+});
+
+test('AWTRIX NG transformer rejects non-boolean values for boolean payload fields', () => {
+  const booleanFields = [
+    ['hold', 'notification', toAwtrixNgNotificationPayload],
+    ['stack', 'notification', toAwtrixNgNotificationPayload],
+    ['wakeup', 'notification', toAwtrixNgNotificationPayload],
+    ['soundLoop', 'notification', toAwtrixNgNotificationPayload],
+    ['textCenter', 'notification', toAwtrixNgNotificationPayload],
+    ['textInFront', 'notification', toAwtrixNgNotificationPayload],
+    ['chartAutoscale', 'notification', toAwtrixNgNotificationPayload],
+    ['paletteBlend', 'notification', toAwtrixNgNotificationPayload],
+  ];
+
+  for (const [field, target, transform] of booleanFields) {
+    assertUnsupportedField(() => transform({ [field]: 'true' }), field, target, 'invalid-value');
+  }
+});
+
 test('AWTRIX NG notification transformer keeps pushed-app lifetime fields unsupported', () => {
   assertUnsupportedField(
     () => toAwtrixNgNotificationPayload({ lifetimeMs: 5000 }),

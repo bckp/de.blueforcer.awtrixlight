@@ -49,16 +49,46 @@ test('AWTRIX NG device refreshes Homey settings from the device during init', ()
   assert.equal(onInitBody.includes('await this.refreshDisplayFromDevice();'), true);
   assert.equal(onInitBody.includes('await this.refreshAppsFromDevice();'), true);
   assert.equal(onInitBody.includes("deviceStateResult?.status === 'detected'"), true);
+  assert.equal(onInitBody.indexOf('this.initCapabilityListeners();') < onInitBody.indexOf('if (baseUrl === undefined)'), true);
+  assert.equal(onInitBody.indexOf('this.initializePoll();') < onInitBody.indexOf('if (baseUrl === undefined)'), true);
 });
 
 test('AWTRIX NG onSettings does not call setSettings while Homey settings are pending', () => {
   const source = readSource('drivers/awtrixng/device.ts');
   const onSettingsBody = getSourceBetween(source, 'async onSettings({', 'async refreshAvailability');
 
-  assert.equal(onSettingsBody.includes('applyAwtrixNgBuiltinAppSettingsChange'), true);
-  assert.equal(onSettingsBody.includes('applyAwtrixNgHomeySettingsChange'), true);
-  assert.equal(onSettingsBody.includes('changedKeys.filter((key) => !isAwtrixNgBuiltinAppSetting(key))'), true);
+  assert.equal(onSettingsBody.includes('prepareLocalSettingsChanges'), true);
+  assert.equal(onSettingsBody.includes('prepareSettingsChanges'), true);
+  assert.equal(onSettingsBody.includes('writePreparedSettingsChanges'), true);
+  assert.equal(onSettingsBody.includes('applySettingsChangesWithCandidateConnection'), true);
   assert.equal(onSettingsBody.includes('setSettings('), false);
+});
+
+test('AWTRIX NG connection settings use the verified candidate for writes before activation', () => {
+  const source = readSource('drivers/awtrixng/device.ts');
+  const candidateBody = getMethodBody(source, 'private async applySettingsChangesWithCandidateConnection(');
+
+  assert.equal(candidateBody.includes('await this.verifyCandidateConnection'), true);
+  assert.equal(candidateBody.includes('await this.prepareSettingsChanges'), true);
+  assert.equal(candidateBody.includes('await this.writePreparedSettingsChanges'), true);
+  assert.equal(candidateBody.includes('await this.commitConnection(connection, client, false);'), true);
+  assert.equal(candidateBody.indexOf('await this.verifyCandidateConnection') < candidateBody.indexOf('await this.prepareSettingsChanges'), true);
+  assert.equal(candidateBody.indexOf('await this.writePreparedSettingsChanges') < candidateBody.indexOf('await this.commitConnection'), true);
+  assert.equal(candidateBody.includes('setSettings('), false);
+});
+
+test('AWTRIX NG settings validate locally before reads and write sequentially without claiming a transaction', () => {
+  const source = readSource('drivers/awtrixng/device.ts');
+  const localPrepareBody = getMethodBody(source, 'private prepareLocalSettingsChanges(');
+  const writeBody = getMethodBody(source, 'private async writePreparedSettingsChanges(');
+
+  assert.equal(localPrepareBody.includes('createAwtrixNgSettingsPatchFromChangedSettings'), true);
+  assert.equal(localPrepareBody.includes('validateAwtrixNgBuiltinAppSettingsChange'), true);
+  assert.equal(writeBody.includes('do not provide a transaction'), true);
+  assert.equal(writeBody.includes('sequential and fail-fast'), true);
+  assert.equal(writeBody.indexOf('await writeAwtrixNgAppsOrder') < writeBody.indexOf('await writeAwtrixNgSettingsPatch'), true);
+  assert.equal(writeBody.includes('catch'), false);
+  assert.equal(writeBody.includes('allSettled'), false);
 });
 
 test('AWTRIX NG device settings refresh uses GET settings and setSettings outside onSettings', () => {
