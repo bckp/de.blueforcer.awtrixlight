@@ -112,5 +112,8 @@
   },
   "2.1.0": {
     "en": "Improved AWTRIX 3 reliability, added safe AWTRIX NG connection editing and rediscovery, and preserved detailed AWTRIX NG API errors. Custom app names are now normalized to lowercase letters and digits, so apps created by older versions under a non-normalized name have to be deleted once directly on the device."
+  },
+  "2.2.0": {
+    "en": "Custom app names are now normalized to lowercase letters and digits, so apps created by older versions under a non-normalized name have to be deleted once directly on the device. Text is now shown exactly as entered, a blink or fade interval of 0 is sent to the device, and unrecognized colors are left out instead of turning black. Also improves AWTRIX 3 reliability, AWTRIX NG connection editing and rediscovery, and AWTRIX NG error detail."
   }
 }
