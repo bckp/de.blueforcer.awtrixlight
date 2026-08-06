@@ -111,6 +111,6 @@
     "en": "Fixed small issues with API"
   },
   "2.1.0": {
-    "en": "Improved AWTRIX 3 reliability, added safe AWTRIX NG connection editing and rediscovery, and preserved detailed AWTRIX NG API errors."
+    "en": "Improved AWTRIX 3 reliability, added safe AWTRIX NG connection editing and rediscovery, and preserved detailed AWTRIX NG API errors. Custom app names are now normalized to lowercase letters and digits, so apps created by older versions under a non-normalized name have to be deleted once directly on the device."
   }
 }
