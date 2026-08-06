@@ -13,6 +13,17 @@ const RebootFields: ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'] = ['TIM', 'DAT', 'HUM',
 const PollInterval: number = 60000; // 1 minute
 const PollIntervalLong: number = 300000; // 5 minutes
 
+/** Capabilities whose relative order is part of the UI; rebuilt as a group when it drifts. */
+const desiredCapabilityOrder: string[] = ['button_prev', 'button_next', 'awtrix_matrix'];
+
+/** Capabilities that are only ever added when missing. */
+const additionalCapabilities: string[] = ['rssi', 'ip', 'button.rediscover'];
+
+/** True when every listed capability exists and appears in exactly the given order. */
+const isInDesiredOrder = (capabilities: string[], desiredOrder: string[]): boolean => desiredOrder.every(
+  (capability, index) => index === 0 || capabilities.indexOf(desiredOrder[index - 1]) < capabilities.indexOf(capability),
+);
+
 export default class AwtrixLightDevice extends Device implements DeviceFailer, DevicePoll {
 
   api!: Api;
@@ -367,48 +378,38 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     this.log('onInit', capabilities);
 
     try {
-      // Only reset capabilities if they are in bad order
-      if (!(
-        capabilities.indexOf('awtrix_matrix') > capabilities.indexOf('button_next')
-        && capabilities.indexOf('button_next') > capabilities.indexOf('button_prev')
-      )) {
+      // Homey renders capabilities in the order they were added, so a drifted order can only be
+      // fixed by removing and re-adding the whole group.
+      if (!isInDesiredOrder(capabilities, desiredCapabilityOrder)) {
         this.log('Capabilities are in bad order, resetting...');
-        if (capabilities.includes('button_prev')) {
-          await this.removeCapability('button_prev');
-          this.log('removed capability button_prev');
-        }
-        if (capabilities.includes('button_next')) {
-          await this.removeCapability('button_next');
-          this.log('removed capability button_next');
-        }
-        if (capabilities.includes('awtrix_matrix')) {
-          await this.removeCapability('awtrix_matrix');
-          this.log('removed capability awtrix_matrix');
+
+        for (const capability of desiredCapabilityOrder) {
+          if (capabilities.includes(capability)) {
+            await this.removeCapability(capability);
+            this.log(`removed capability ${capability}`);
+          }
         }
 
-        // Re/add in correct order
         this.log('re-add capabilities');
-        await this.addCapability('button_prev');
-        await this.addCapability('button_next');
-        await this.addCapability('awtrix_matrix');
+
+        for (const capability of desiredCapabilityOrder) {
+          await this.addCapability(capability);
+        }
       }
 
-      // Add rssi capability if not exists
-      if (!capabilities.includes('rssi')) {
-        await this.addCapability('rssi');
-        this.log('added capability rssi');
-      }
+      // These are add-only: their position does not matter, they just have to exist.
+      for (const capability of additionalCapabilities) {
+        if (capabilities.includes(capability)) {
+          continue;
+        }
 
-      // Add rssi capability if not exists
-      if (!capabilities.includes('ip')) {
-        await this.addCapability('ip');
-        await this.setCapabilityValue('ip', this.getStoreValue('address'));
-        this.log('added capability ip');
-      }
+        await this.addCapability(capability);
 
-      // Add rediscover
-      if (!capabilities.includes('button.rediscover')) {
-        await this.addCapability('button.rediscover');
+        if (capability === 'ip') {
+          await this.setCapabilityValue('ip', this.getStoreValue('address'));
+        }
+
+        this.log(`added capability ${capability}`);
       }
     } catch (error: any) {
       this.error(error);

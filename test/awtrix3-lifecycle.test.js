@@ -663,3 +663,134 @@ test('AWTRIX 3 discovery address change persists state before verification', asy
   assert.equal(await operation, true);
   assert.equal(events.at(-1), 'verify');
 });
+
+const createMigrationHarness = (capabilities) => {
+  const device = new AwtrixLightDevice();
+  const calls = [];
+  const capabilityValues = [];
+  const errors = [];
+
+  Object.assign(device, {
+    homey: createFakeHomey(),
+    log() {},
+    error(...args) {
+      errors.push(args);
+    },
+    getCapabilities() {
+      return [...capabilities];
+    },
+    getStoreValue(key) {
+      return key === 'address' ? '192.0.2.10' : undefined;
+    },
+    async removeCapability(capabilityId) {
+      calls.push({ type: 'remove', capabilityId });
+    },
+    async addCapability(capabilityId) {
+      calls.push({ type: 'add', capabilityId });
+    },
+    async setCapabilityValue(capabilityId, value) {
+      capabilityValues.push({ capabilityId, value });
+    },
+  });
+
+  return {
+    calls,
+    capabilityValues,
+    device,
+    errors,
+  };
+};
+
+const allCapabilities = [
+  'button_prev',
+  'button_next',
+  'awtrix_matrix',
+  'rssi',
+  'ip',
+  'button.rediscover',
+];
+
+test('AWTRIX 3 migration is a no-op when every capability is present in the right order', async () => {
+  const harness = createMigrationHarness(allCapabilities);
+
+  await harness.device.migrate();
+
+  assert.deepEqual(harness.calls, []);
+  assert.deepEqual(harness.capabilityValues, []);
+  assert.deepEqual(harness.errors, []);
+});
+
+test('AWTRIX 3 migration rebuilds the button and matrix capabilities when their order drifted', async () => {
+  const harness = createMigrationHarness([
+    'awtrix_matrix',
+    'button_next',
+    'button_prev',
+    'rssi',
+    'ip',
+    'button.rediscover',
+  ]);
+
+  await harness.device.migrate();
+
+  assert.deepEqual(harness.calls, [
+    { type: 'remove', capabilityId: 'button_prev' },
+    { type: 'remove', capabilityId: 'button_next' },
+    { type: 'remove', capabilityId: 'awtrix_matrix' },
+    { type: 'add', capabilityId: 'button_prev' },
+    { type: 'add', capabilityId: 'button_next' },
+    { type: 'add', capabilityId: 'awtrix_matrix' },
+  ]);
+  assert.deepEqual(harness.capabilityValues, []);
+});
+
+test('AWTRIX 3 migration adds the ordered capabilities that are missing entirely', async () => {
+  const harness = createMigrationHarness(['rssi', 'ip', 'button.rediscover']);
+
+  await harness.device.migrate();
+
+  assert.deepEqual(harness.calls, [
+    { type: 'add', capabilityId: 'button_prev' },
+    { type: 'add', capabilityId: 'button_next' },
+    { type: 'add', capabilityId: 'awtrix_matrix' },
+  ], 'nothing is removed because nothing is there');
+});
+
+test('AWTRIX 3 migration adds rssi, ip and rediscover when missing and seeds the ip value', async () => {
+  const harness = createMigrationHarness(['button_prev', 'button_next', 'awtrix_matrix']);
+
+  await harness.device.migrate();
+
+  assert.deepEqual(harness.calls, [
+    { type: 'add', capabilityId: 'rssi' },
+    { type: 'add', capabilityId: 'ip' },
+    { type: 'add', capabilityId: 'button.rediscover' },
+  ]);
+  assert.deepEqual(harness.capabilityValues, [
+    { capabilityId: 'ip', value: '192.0.2.10' },
+  ], 'the ip capability is seeded from the stored address');
+});
+
+test('AWTRIX 3 migration adds only the individually missing capability', async () => {
+  for (const missing of ['rssi', 'ip', 'button.rediscover']) {
+    const harness = createMigrationHarness(allCapabilities.filter((id) => id !== missing));
+
+    await harness.device.migrate();
+
+    assert.deepEqual(harness.calls, [
+      { type: 'add', capabilityId: missing },
+    ], missing);
+  }
+});
+
+test('AWTRIX 3 migration contains capability errors instead of failing onInit', async () => {
+  const harness = createMigrationHarness(['rssi', 'ip', 'button.rediscover']);
+  const failure = new Error('capability rejected');
+
+  harness.device.addCapability = async () => {
+    throw failure;
+  };
+
+  await harness.device.migrate();
+
+  assert.deepEqual(harness.errors, [[failure]]);
+});
