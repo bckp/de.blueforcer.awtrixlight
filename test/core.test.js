@@ -217,3 +217,87 @@ test('AWTRIX 3 Poll reports rejection and continues polling', async () => {
   await intervalCallback();
   assert.equal(callbackCalls, 2);
 });
+
+/**
+ * H3 characterization tests: these pin the CURRENT normalizer behaviour so that H4
+ * can only change it deliberately. Cases marked `characterization: pre-H4` are the
+ * ones H4 is allowed to change (decision P2); all others must stay as they are.
+ */
+
+test('characterization: pre-H4 - zero blinkText and fadeText are dropped', () => {
+  assert.deepEqual(normalizer.appOptions({ blinkText: 0, fadeText: 0 }, []), {});
+  assert.deepEqual(normalizer.notifyOptions({ blinkText: 0, fadeText: 0 }, []), {});
+});
+
+test('characterization: non-zero blinkText and fadeText pass through', () => {
+  assert.deepEqual(normalizer.appOptions({ blinkText: 500, fadeText: 500 }, []), {
+    blinkText: 500,
+    fadeText: 500,
+  });
+});
+
+test('characterization: pre-H4 - invalid basicOptions color falls back to zero', () => {
+  assert.deepEqual(normalizer.appOptions({ color: 'red' }, []), { color: '0' });
+});
+
+test('characterization: valid basicOptions color passes through unchanged', () => {
+  assert.deepEqual(normalizer.appOptions({ color: '#ABCDEF' }, []), { color: '#ABCDEF' });
+});
+
+test('characterization: gradient is dropped as a whole when one color is invalid', () => {
+  assert.deepEqual(normalizer.appOptions({ gradient: ['#ABCDEF', 'nope'] }, []), {});
+  assert.deepEqual(normalizer.appOptions({ gradient: ['#ABCDEF', '#123456'] }, []), {
+    gradient: ['#ABCDEF', '#123456'],
+  });
+});
+
+test('characterization: invalid background, progress and bar colors are omitted', () => {
+  assert.deepEqual(normalizer.appOptions({
+    background: 'x',
+    progressC: 'x',
+    progressBC: 'x',
+    barBC: 'x',
+    bar: [1, 2, 3],
+  }, []), { bar: [1, 2, 3] });
+});
+
+test('characterization: blinkText and fadeText are mutually exclusive with rainbow and gradient', () => {
+  assert.deepEqual(normalizer.appOptions({ blinkText: 500, rainbow: true }, []), { rainbow: true });
+  assert.deepEqual(normalizer.appOptions({ fadeText: 500, gradient: ['#ABCDEF', '#123456'] }, []), {
+    gradient: ['#ABCDEF', '#123456'],
+  });
+});
+
+test('characterization: toText handles numeric, JSON and plain string inputs', () => {
+  // Numeric-looking strings and numbers stringify.
+  assert.deepEqual(normalizer.appOptions({ text: '123' }, []), { text: '123' });
+  assert.deepEqual(normalizer.appOptions({ text: 123 }, []), { text: '123' });
+
+  // JSON scalars that are neither string nor numeric are dropped.
+  assert.deepEqual(normalizer.appOptions({ text: 'null' }, []), {});
+  assert.deepEqual(normalizer.appOptions({ text: 'true' }, []), {});
+  assert.deepEqual(normalizer.appOptions({ text: '{"a":1}' }, []), {});
+
+  // Non-JSON strings pass through untouched.
+  assert.deepEqual(normalizer.appOptions({ text: 'hello world' }, []), { text: 'hello world' });
+  assert.deepEqual(normalizer.appOptions({ text: '' }, []), { text: '' });
+
+  // Fragments require a valid color: isTextFragment rejects the whole array otherwise,
+  // so the toColor('0') fallback inside toText is unreachable today.
+  assert.deepEqual(normalizer.appOptions({ text: '[{"t":"a","c":"bad"}]' }, []), {});
+  assert.deepEqual(normalizer.appOptions({ text: '[{"t":"a"}]' }, []), {});
+  assert.deepEqual(normalizer.appOptions({ text: '[{"t":"a","c":"#FFFFFF"}]' }, []), {
+    text: [{ t: 'a', c: '#FFFFFF' }],
+  });
+});
+
+test('characterization: repeat wins over duration and clears it on the input object', () => {
+  assert.deepEqual(normalizer.appOptions({ repeat: 2, duration: 10 }, []), { repeat: 2 });
+  assert.deepEqual(normalizer.appOptions({ duration: 10, repeat: 2 }, []), { repeat: 2 });
+  assert.deepEqual(normalizer.appOptions({ duration: 10 }, []), { duration: 10 });
+
+  // Side effect: basicOptions mutates the caller's options object.
+  const options = { repeat: 2, duration: 10 };
+  normalizer.appOptions(options, []);
+  assert.equal(options.duration, undefined);
+});
