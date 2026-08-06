@@ -115,5 +115,8 @@
   },
   "2.2.0": {
     "en": "Custom app names are now normalized to lowercase letters and digits, so apps created by older versions under a non-normalized name have to be deleted once directly on the device. Text is now shown exactly as entered, a blink or fade interval of 0 is sent to the device, and unrecognized colors are left out instead of turning black. Also improves AWTRIX 3 reliability, AWTRIX NG connection editing and rediscovery, and AWTRIX NG error detail."
+  },
+  "2.2.1": {
+    "en": "AWTRIX NG devices get a \"Try to discover\" maintenance action, so a device that moved to a new address can be repointed without re-pairing. Clearing the address in the settings now picks up the discovered one instead of silently restoring the old value. Also fixes several errors that were logged but never reported, and reports an unreadable icon list from the device properly."
   }
 }
