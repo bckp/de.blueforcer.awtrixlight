@@ -70,14 +70,33 @@ it. Re-reporting them as findings wastes a review cycle.
 - `indicatorOptions` sends `color: '0'` for an invalid or missing color. For indicators that
   is the documented "turn off" value, not a fallback. `basicOptions` deliberately behaves the
   other way and omits invalid colors.
+- `AwtrixNgApiPagePayload.scroll` is typed `AwtrixNgApiScrollPayload | AwtrixNgApiScrollMode`,
+  yet public payload validation rejects the string shorthand on purpose - the union exists for
+  the internal narrowing path in `Payload/Transformers.ts`, not as a supported input shape.
 - Text fragments require a valid `c`; `isTextFragment` rejects the whole array otherwise, so
   the `toColor('0')` fallback inside `toText()` is unreachable. Leave it.
 - `getVersion()`, `getCapabilities()`, `toAwtrixNgRtttlPayload` and
   `fromAwtrixNgHomeyPushedAppName` are part of the documented API surface even where unused.
 - Deprecated flow cards and the `applicationIcon` adapter in `app.ts` stay for compatibility.
 
+**Tooling and process**
+
+- ESLint is pinned to 8.57.1 + typescript-eslint 8 via `package.json` overrides because
+  `eslint-config-athom` (3.1.5) still targets the ESLint 7 era through transitive pins.
+  ESLint 8 is upstream EOL; the ESLint 9 upgrade waits for a new `eslint-config-athom`
+  release - do not force it through more overrides.
+- Diagnostic messages (the identity mismatch error, the legacy `applicationIcon` adapter
+  hints) are English-only on purpose: they are logs, not user-facing UI. Localize only if
+  users ask for it.
+- Activating a connection replaces the NG icon cache deliberately. Preserving it across a
+  settings save was evaluated and skipped (plan2 H8): the cache TTL is 5 s and keeping an
+  icons instance bound to a stale client is a real risk for negligible benefit.
+
 ## Known limitations — accepted, not forgotten
 
+- The two NG pairing views duplicate ~45 lines of Homey glue (`emitHomey`,
+  `createHomeyDevice`): Homey pair views cannot share scripts trivially. Consolidate only
+  with a build-step include, not by hand-editing one copy.
 - `commitConnection()` writes `baseUrl`, `address` and `port` as three separate store calls,
   so a failure mid-way can leave a new `baseUrl` next to a stale address and port. Accepted:
   the client is only activated after all three succeed, and `getBaseUrlFromStore()` prefers
