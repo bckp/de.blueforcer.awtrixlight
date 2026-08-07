@@ -42,13 +42,17 @@ const loadAwtrixNgDriver = ({ onTransportCreated, request }) => {
     if (requestPath === 'homey') {
       return { Driver: FakeHomeyDriver };
     }
-    if (requestPath === '../../lib/awtrixng/Http/AxiosTransport') {
+    // The transport is created inside the AwtrixNgApi facade since update-plan-3 (M4).
+    if (requestPath === '../Http/AxiosTransport') {
       return FakeAxiosTransport;
     }
     return originalLoad.call(this, requestPath, parent, isMain);
   };
 
   try {
+    // The facade module is reloaded together with the driver so each harness gets its own
+    // fake transport instead of the one captured by a previously cached facade.
+    delete require.cache[require.resolve('../.homeybuild/lib/awtrixng/Api/Api')];
     const modulePath = require.resolve('../.homeybuild/drivers/awtrixng/driver');
     delete require.cache[modulePath];
     // eslint-disable-next-line global-require
@@ -68,7 +72,7 @@ test('AWTRIX NG manual pairing option uses the localized title', () => {
   assert.equal(driver.createManualPairingOption().name, 'localized:pair.manual.title');
 });
 
-test('AWTRIX NG driver constructs all three probe clients through one private factory', async () => {
+test('AWTRIX NG driver probes all three pairing paths through the facade', async () => {
   const driverSource = fs.readFileSync(path.join(root, 'drivers/awtrixng/driver.ts'), 'utf8');
   const clientOptions = [];
   const AwtrixNgDriver = loadAwtrixNgDriver({
@@ -107,8 +111,8 @@ test('AWTRIX NG driver constructs all three probe clients through one private fa
     name: 'Discovery device',
   });
 
-  assert.equal(driverSource.match(/new AwtrixNgClient/g)?.length, 1);
-  assert.equal(driverSource.match(/this\.#createProbeClient\(\{/g)?.length, 3);
+  assert.equal(driverSource.includes('new AwtrixNgClient'), false, 'the driver never builds a client itself');
+  assert.equal(driverSource.match(/AwtrixNgApi\.probe\(this\.#createProbeConnection\(\{/g)?.length, 3);
   assert.equal(driverSource.includes('#mapProbeResult'), false);
   assert.deepEqual(clientOptions.map(({ baseUrl, auth }) => ({ baseUrl, auth })), [{
     baseUrl: 'http://192.0.2.60:8080',
