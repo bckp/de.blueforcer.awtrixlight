@@ -33,6 +33,26 @@ it. Re-reporting them as findings wastes a review cycle.
 - Icon cache TTLs differ on purpose: AWTRIX 3 uses 120 s, NG uses 5 s because NG has a fast
   dedicated files API.
 
+**AWTRIX NG facade (outcome of the implemented update-plan-3, doc removed after completion)**
+
+- The NG driver follows `Device → AwtrixNgApi (facade) → Client`. `lib/awtrixng/Api/Api.ts`
+  owns the client and the icon list and is the only construction path for both
+  (`fromConnection()`; the constructor stays public solely for fake-transport tests).
+  `driver.ts` probes through the static `AwtrixNgApi.probe()`.
+- Deliberate deviation from the awtrix3 `Api`: the NG facade never imports `homey` and does
+  not take the device in its constructor. It returns domain results and all Homey writes
+  (setSettings, setCapabilityValue, i18n) stay in `device.ts`, so `lib/awtrixng` stays
+  testable with a fake transport and no Homey mocks. Do not "align" it with awtrix3.
+- The driver layer imports `lib/awtrixng` only through the allowlist in
+  `test/awtrixng-lib-structure.test.js`; extend the facade instead of adding direct imports.
+- `device.client` and `device.icons` are read-only views of `device.api` kept for the flow
+  actions and the shared icon autocomplete; they are API surface, not leftovers.
+- The poll is owned by `device.ts`, not by the facade: its timer is bound to the device
+  lifecycle and its callback writes to Homey.
+- The pure functions in `Services/*`, `Device/*` and `Payload/*` stay exported functions,
+  not classes: they have isolated unit tests that import them directly, and the facade
+  calls them internally.
+
 **Error and failure contracts**
 
 - NG settings writes in `writePreparedSettingsChanges()` are sequential and fail-fast. These
