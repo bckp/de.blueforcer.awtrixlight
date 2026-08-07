@@ -6,7 +6,7 @@ import Api from '../../lib/awtrix3/Api/Api';
 import { AwtrixStats, SettingOptions } from '../../lib/awtrix3/Types';
 import { DeviceFailer, DevicePoll } from '../../lib/awtrix3/Interfaces';
 import Icons from '../../lib/awtrix3/List/Icons';
-import Poll from '../../lib/awtrix3/Poll';
+import Poll from '../../lib/shared/Poll';
 import { AwtrixDeviceType } from '../awtrix-device-type';
 
 const RebootFields: ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'] = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
@@ -76,9 +76,11 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
         }
       },
       this.homey,
-      (error: unknown) => this.error(error),
-      PollInterval,
-      PollIntervalLong,
+      {
+        intervalMs: PollInterval,
+        failsafeMs: PollIntervalLong,
+        onError: (error: unknown) => this.error(error),
+      },
     );
 
     // Initialize API etc

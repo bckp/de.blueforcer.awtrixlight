@@ -24,6 +24,12 @@ it. Re-reporting them as findings wastes a review cycle.
   independent drivers. Duplication between them is intentional. No shared class, no shared
   transport, no import across the two lib layers. `app.ts` and
   `drivers/shared-flow-actions.ts` keep their own guard copies for the same reason.
+  - The one owner-approved exception (update-plan-3, M6): `lib/shared/` may contain
+    exclusively protocol-agnostic infrastructure with no knowledge of the AWTRIX 3/NG APIs -
+    currently only `Poll` (+ `TimerHost`). Anything else requires explicit owner approval.
+    `lib/shared` must not import `homey`, anything from `drivers/` or from either protocol
+    lib layer, and must not contain any protocol type (guarded by
+    `test/shared-lib-structure.test.js`).
 - Icon cache TTLs differ on purpose: AWTRIX 3 uses 120 s, NG uses 5 s because NG has a fast
   dedicated files API.
 

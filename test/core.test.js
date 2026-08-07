@@ -3,7 +3,6 @@ const test = require('node:test');
 
 const normalizer = require('../.homeybuild/lib/awtrix3/Normalizer');
 const validator = require('../.homeybuild/lib/awtrix3/Validator');
-const Poll = require('../.homeybuild/lib/awtrix3/Poll').default;
 const Api = require('../.homeybuild/lib/awtrix3/Api/Api').default;
 const { statusFromHttpCode } = require('../.homeybuild/lib/awtrix3/Api/Client');
 const { Status } = require('../.homeybuild/lib/awtrix3/Api/Response');
@@ -125,98 +124,7 @@ test('HTTP status mapping treats only 2xx responses as success', () => {
   assert.equal(statusFromHttpCode(500), Status.Error);
 });
 
-test('Poll clears its interval and active state when stopped', () => {
-  const handles = [];
-  const cleared = [];
-  const homey = {
-    setInterval(callback, delay) {
-      const handle = { callback, delay };
-      handles.push(handle);
-      return handle;
-    },
-    clearInterval(handle) {
-      cleared.push(handle);
-    },
-  };
-  const poll = new Poll(() => {}, homey, () => {}, 10, 50);
-
-  poll.start();
-  assert.equal(poll.isActive(), true);
-  assert.equal(handles[0].delay, 10);
-
-  poll.extend();
-  assert.equal(poll.isExtended(), true);
-  assert.equal(handles[1].delay, 50);
-  assert.deepEqual(cleared, [handles[0]]);
-
-  poll.stop();
-  assert.equal(poll.isActive(), false);
-  assert.equal(poll.isExtended(), false);
-  assert.deepEqual(cleared, handles);
-});
-
-test('AWTRIX 3 Poll skips overlapping callbacks', async () => {
-  let intervalCallback;
-  const homey = {
-    setInterval(callback) {
-      intervalCallback = callback;
-      return 1;
-    },
-    clearInterval() {},
-  };
-  let finishFirstRun;
-  const firstRun = new Promise((resolve) => {
-    finishFirstRun = resolve;
-  });
-  let callbackCalls = 0;
-  const poll = new Poll(async () => {
-    callbackCalls += 1;
-    if (callbackCalls === 1) {
-      await firstRun;
-    }
-  }, homey, () => {}, 10, 50);
-
-  poll.start();
-  const pendingRun = intervalCallback();
-  await Promise.resolve();
-
-  await intervalCallback();
-  assert.equal(callbackCalls, 1);
-
-  finishFirstRun();
-  await pendingRun;
-  await intervalCallback();
-  assert.equal(callbackCalls, 2);
-});
-
-test('AWTRIX 3 Poll reports rejection and continues polling', async () => {
-  let intervalCallback;
-  const homey = {
-    setInterval(callback) {
-      intervalCallback = callback;
-      return 1;
-    },
-    clearInterval() {},
-  };
-  const callbackError = new Error('AWTRIX 3 poll failed');
-  const errors = [];
-  let callbackCalls = 0;
-  const poll = new Poll(async () => {
-    callbackCalls += 1;
-    if (callbackCalls === 1) {
-      throw callbackError;
-    }
-  }, homey, (error) => errors.push(error), 10, 50);
-
-  poll.start();
-  await intervalCallback();
-
-  assert.deepEqual(errors, [callbackError]);
-  assert.equal(poll.isActive(), true);
-
-  await intervalCallback();
-  assert.equal(callbackCalls, 2);
-});
+// The Poll tests moved to shared-poll.test.js together with the class (update-plan-3, M6).
 
 /**
  * Normalizer behaviour tests. Introduced in H3 as characterization tests; the cases

@@ -7,7 +7,7 @@ import AwtrixNgApi, {
   AwtrixNgWeatherOverlayCapabilityId,
   formatAwtrixNgErrorDetails,
 } from '../../lib/awtrixng/Api/Api';
-import AwtrixNgPoll from '../../lib/awtrixng/Device/Poll';
+import Poll from '../../lib/shared/Poll';
 import { toAwtrixNgBaseUrl } from '../../lib/awtrixng/Discovery/Detection';
 import { AwtrixNgHomeySettings, hasAwtrixNgLocalSettingsChange } from '../../lib/awtrixng/Services/Settings';
 import { toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
@@ -67,7 +67,7 @@ class AwtrixNgDevice extends Device {
 
   api?: AwtrixNgApi;
 
-  poll?: AwtrixNgPoll;
+  poll?: Poll;
 
   /** Resolves once the deferred Homey settings sync scheduled by onSettings() has finished. */
   pendingSettingsSync?: Promise<void>;
@@ -246,10 +246,13 @@ class AwtrixNgDevice extends Device {
     return undefined;
   }
 
-  private initializePoll(): AwtrixNgPoll {
-    const poll = new AwtrixNgPoll(async () => {
+  private initializePoll(): Poll {
+    const poll = new Poll(async () => {
       await this.refreshDeviceState({ allowAddCapabilities: false });
-    }, this.homey, PollIntervalMs, (error: unknown) => this.error(error));
+    }, this.homey, {
+      intervalMs: PollIntervalMs,
+      onError: (error: unknown) => this.error(error),
+    });
 
     this.poll = poll;
 

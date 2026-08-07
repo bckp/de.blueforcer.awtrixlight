@@ -58,7 +58,6 @@ test('AWTRIX NG lib never imports homey or driver code', () => {
 const allowedDriverImports = {
   'device.ts': [
     'lib/awtrixng/Api/Api',
-    'lib/awtrixng/Device/Poll',
     'lib/awtrixng/Discovery/Detection',
     'lib/awtrixng/Services/Settings',
     'lib/awtrixng/Support/Guards',

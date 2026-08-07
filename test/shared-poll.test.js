@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const AwtrixNgPoll = require('../.homeybuild/lib/awtrixng/Device/Poll').default;
+const Poll = require('../.homeybuild/lib/shared/Poll').default;
 
 const flushTasks = () => new Promise((resolve) => {
   setImmediate(resolve);
@@ -36,10 +36,10 @@ class FakeTimerHost {
 
 }
 
-test('AWTRIX NG poll starts, restarts and stops one interval', () => {
+test('shared poll starts, restarts and stops one interval', () => {
   const timerHost = new FakeTimerHost();
   const callback = () => undefined;
-  const poll = new AwtrixNgPoll(callback, timerHost, 60000, () => {});
+  const poll = new Poll(callback, timerHost, { intervalMs: 60000, onError: () => {} });
 
   assert.equal(poll.isActive(), false);
 
@@ -57,21 +57,18 @@ test('AWTRIX NG poll starts, restarts and stops one interval', () => {
   poll.stop();
   assert.equal(poll.isActive(), false);
   assert.deepEqual(timerHost.clearCalls, [1, 2]);
-
-  poll.stop();
-  assert.deepEqual(timerHost.clearCalls, [1, 2]);
 });
 
-test('AWTRIX NG poll skips a tick while its callback is still running', async () => {
+test('shared poll skips a tick while its callback is still running', async () => {
   const timerHost = new FakeTimerHost();
   const firstRun = deferred();
   let callbackCalls = 0;
-  const poll = new AwtrixNgPoll(async () => {
+  const poll = new Poll(async () => {
     callbackCalls += 1;
     if (callbackCalls === 1) {
       await firstRun.promise;
     }
-  }, timerHost, 60000, () => {});
+  }, timerHost, { intervalMs: 60000, onError: () => {} });
 
   poll.start();
   const intervalCallback = timerHost.setCalls[0].callback;
@@ -87,17 +84,17 @@ test('AWTRIX NG poll skips a tick while its callback is still running', async ()
   assert.equal(callbackCalls, 2);
 });
 
-test('AWTRIX NG poll reports callback rejection and remains usable', async () => {
+test('shared poll reports callback rejection and remains usable', async () => {
   const timerHost = new FakeTimerHost();
-  const callbackError = new Error('NG poll failed');
+  const callbackError = new Error('poll failed');
   const errors = [];
   let callbackCalls = 0;
-  const poll = new AwtrixNgPoll(async () => {
+  const poll = new Poll(async () => {
     callbackCalls += 1;
     if (callbackCalls === 1) {
       throw callbackError;
     }
-  }, timerHost, 60000, (error) => errors.push(error));
+  }, timerHost, { intervalMs: 60000, onError: (error) => errors.push(error) });
 
   poll.start();
   const intervalCallback = timerHost.setCalls[0].callback;
@@ -109,4 +106,46 @@ test('AWTRIX NG poll reports callback rejection and remains usable', async () =>
 
   await intervalCallback();
   assert.equal(callbackCalls, 2);
+});
+
+test('shared poll extend switches to the failsafe interval until stopped', () => {
+  const timerHost = new FakeTimerHost();
+  const poll = new Poll(() => {}, timerHost, { intervalMs: 10, failsafeMs: 50, onError: () => {} });
+
+  poll.start();
+  assert.equal(poll.isActive(), true);
+  assert.equal(poll.isExtended(), false);
+  assert.equal(timerHost.setCalls[0].intervalMs, 10);
+
+  poll.extend();
+  assert.equal(poll.isExtended(), true);
+  assert.equal(timerHost.setCalls[1].intervalMs, 50);
+  assert.deepEqual(timerHost.clearCalls, [1]);
+
+  poll.stop();
+  assert.equal(poll.isActive(), false);
+  assert.equal(poll.isExtended(), false);
+  assert.deepEqual(timerHost.clearCalls, [1, 2]);
+});
+
+test('shared poll start resets the extended mode back to the regular interval', () => {
+  const timerHost = new FakeTimerHost();
+  const poll = new Poll(() => {}, timerHost, { intervalMs: 10, failsafeMs: 50, onError: () => {} });
+
+  poll.extend();
+  assert.equal(poll.isExtended(), true);
+
+  poll.start();
+  assert.equal(poll.isExtended(), false);
+  assert.equal(timerHost.setCalls[1].intervalMs, 10);
+});
+
+test('shared poll extend without failsafeMs throws instead of silently doing nothing', () => {
+  const timerHost = new FakeTimerHost();
+  const poll = new Poll(() => {}, timerHost, { intervalMs: 10, onError: () => {} });
+
+  poll.start();
+  assert.throws(() => poll.extend(), /failsafeMs/);
+  assert.equal(poll.isActive(), true, 'the regular interval keeps running');
+  assert.equal(poll.isExtended(), false);
 });

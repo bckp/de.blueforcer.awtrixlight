@@ -5,7 +5,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const Api = require('../.homeybuild/lib/awtrix3/Api/Api').default;
-const Poll = require('../.homeybuild/lib/awtrix3/Poll').default;
+const Poll = require('../.homeybuild/lib/shared/Poll').default;
 const { Status } = require('../.homeybuild/lib/awtrix3/Api/Response');
 const {
   createFakeHomey,
@@ -1009,9 +1009,11 @@ test('AWTRIX 3 poll reports a failing capability refresh through onError', async
       }
     },
     fakeHomey,
-    (error) => captured.push(error),
-    60000,
-    300000,
+    {
+      intervalMs: 60000,
+      failsafeMs: 300000,
+      onError: (error) => captured.push(error),
+    },
   );
 
   poll.start();
