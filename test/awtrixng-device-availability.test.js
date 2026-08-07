@@ -11,10 +11,17 @@ const {
 const { AwtrixNgApiError } = require('../.homeybuild/lib/awtrixng/Api/ErrorParser');
 const { AwtrixNgInvalidResponseError } = require('../.homeybuild/lib/awtrixng/Api/InvalidResponseError');
 const { AwtrixNgHttpError } = require('../.homeybuild/lib/awtrixng/Http/Transport');
+const AwtrixNgApi = require('../.homeybuild/lib/awtrixng/Api/Api').default;
 const {
   createFakeHomey,
   fakeAwtrixNgTransport,
 } = require('./helpers/fake-homey');
+
+/** Wraps a fake client in a real facade so device.api keeps the production classification logic. */
+const facadeFor = (fakeClient) => new AwtrixNgApi(fakeClient, {
+  baseUrl: 'http://192.0.2.20:80',
+  icons: { emptyIcon: { name: 'empty', id: '-', description: '' } },
+});
 
 const device = {
   uid: 'aabbccddeeff',
@@ -48,13 +55,17 @@ const loadAwtrixNgDevice = (transport) => {
     if (request === 'homey') {
       return { Device: FakeHomeyDevice };
     }
-    if (request === '../../lib/awtrixng/Http/AxiosTransport') {
+    // The transport is created inside the AwtrixNgApi facade since update-plan-3 (M3).
+    if (request === '../Http/AxiosTransport') {
       return FakeAxiosTransport;
     }
     return originalLoad.call(this, request, parent, isMain);
   };
 
   try {
+    // The facade module is reloaded together with the device so each harness gets its own
+    // fake transport instead of the one captured by a previously cached facade.
+    delete require.cache[require.resolve('../.homeybuild/lib/awtrixng/Api/Api')];
     const modulePath = require.resolve('../.homeybuild/drivers/awtrixng/device');
     delete require.cache[modulePath];
     // eslint-disable-next-line global-require
@@ -208,7 +219,7 @@ test('AWTRIX NG device localizes availability headers and preserves technical er
 
   for (const scenario of scenarios) {
     const { awtrixNgDevice, calls } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
-    awtrixNgDevice.client = { getDevice: scenario.getDevice };
+    awtrixNgDevice.api = facadeFor({ getDevice: scenario.getDevice });
 
     await awtrixNgDevice.refreshAvailability();
 
@@ -219,11 +230,11 @@ test('AWTRIX NG device localizes availability headers and preserves technical er
 test('AWTRIX NG settings refresh rejects a response that is not a plain object', async () => {
   const { awtrixNgDevice } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
 
-  awtrixNgDevice.client = {
+  awtrixNgDevice.api = facadeFor({
     async getSettings() {
       return [];
     },
-  };
+  });
 
   await assert.rejects(
     () => awtrixNgDevice.refreshSettingsFromDevice(),
@@ -240,11 +251,11 @@ test('AWTRIX NG settings refresh rejects a response that is not a plain object',
 test('AWTRIX NG apps refresh rejects a response that is not an array', async () => {
   const { awtrixNgDevice } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
 
-  awtrixNgDevice.client = {
+  awtrixNgDevice.api = facadeFor({
     async getApps() {
       return null;
     },
-  };
+  });
 
   await assert.rejects(
     () => awtrixNgDevice.refreshAppsFromDevice(),
@@ -341,18 +352,21 @@ test('AWTRIX NG onAdded uploads bundled icons with bounded parallelism and repor
   let maximumActiveUploads = 0;
   const { awtrixNgDevice, calls } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
 
-  awtrixNgDevice.icons = {
-    async upload({ fileName, body }) {
-      assert.equal(Buffer.isBuffer(body), true);
-      uploads.push(fileName);
-      activeUploads += 1;
-      maximumActiveUploads = Math.max(maximumActiveUploads, activeUploads);
-      await Promise.resolve();
-      activeUploads -= 1;
+  // device.icons is a read-only view of device.api.icons since update-plan-3 (M3).
+  awtrixNgDevice.api = {
+    icons: {
+      async upload({ fileName, body }) {
+        assert.equal(Buffer.isBuffer(body), true);
+        uploads.push(fileName);
+        activeUploads += 1;
+        maximumActiveUploads = Math.max(maximumActiveUploads, activeUploads);
+        await Promise.resolve();
+        activeUploads -= 1;
 
-      if (fileName === 'homey.jpg') {
-        throw uploadError;
-      }
+        if (fileName === 'homey.jpg') {
+          throw uploadError;
+        }
+      },
     },
   };
 

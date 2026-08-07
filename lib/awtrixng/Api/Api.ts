@@ -38,6 +38,14 @@ import {
   AwtrixNgApiPushedAppPayload,
 } from './Types';
 
+// Re-exported facade surface: device.ts consumes these alongside AwtrixNgApi so it does
+// not have to import the individual lib modules the facade already wraps.
+export { AwtrixNgDeviceIdentityMismatchError } from './IdentityMismatchError';
+export { formatAwtrixNgErrorDetails } from '../Device/Availability';
+export { AwtrixNgWeatherOverlayCapabilityId } from '../Services/Display';
+export type { AwtrixNgBasicAuthOptions } from '../Http/Transport';
+export type { AwtrixNgDeviceProbeResult } from '../Discovery/Detection';
+
 const DeviceEndpoint = '/api/v1/device';
 const SettingsEndpoint = '/api/v1/settings';
 const AppsEndpoint = '/api/v1/apps';
@@ -109,6 +117,18 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
   /** One-off probe without holding an instance - for pairing and rediscovery in driver.ts. */
   static async probe(options: AwtrixNgConnectionOptions): Promise<AwtrixNgDeviceProbeResult> {
     return probeAwtrixNgDevice(AwtrixNgApi.createClient(options));
+  }
+
+  /**
+   * Pure validation of a Homey settings change: builds and discards the settings patch and
+   * validates the built-in app values. Static so device.ts can fail fast before probing a
+   * candidate connection; applySettingsChange() repeats the cheap work on the live instance.
+   */
+  static validateSettingsChange(newSettings: AwtrixNgHomeySettings, changedKeys: readonly string[]): void {
+    const remoteSettingsKeys = changedKeys.filter((key) => !isAwtrixNgBuiltinAppSetting(key));
+
+    createAwtrixNgSettingsPatchFromChangedSettings(newSettings, remoteSettingsKeys);
+    validateAwtrixNgBuiltinAppSettingsChange(newSettings, changedKeys);
   }
 
   private static createClient(options: AwtrixNgConnectionOptions): AwtrixNgClient {
