@@ -37,8 +37,6 @@ import {
   AwtrixNgApiOkResponse,
   AwtrixNgApiPushedAppPayload,
 } from './Types';
-// TODO(M2): move AwtrixNgFlowActionClient into lib/awtrixng/Api so lib stops importing from drivers/.
-import { AwtrixNgFlowActionClient } from '../../../drivers/awtrixng/flow-actions';
 
 const DeviceEndpoint = '/api/v1/device';
 const SettingsEndpoint = '/api/v1/settings';
@@ -50,6 +48,22 @@ export interface AwtrixNgConnectionOptions {
   timeoutMs?: number;
   debug?: boolean;
   log?: AwtrixNgDebugLogger;
+}
+
+/**
+ * The API surface the flow actions run against. Lives next to the facade (which implements
+ * it) so `lib/awtrixng` never depends on `drivers/`; drivers/awtrixng/flow-actions.ts
+ * re-exports it for backwards compatibility.
+ */
+export interface AwtrixNgFlowActionClient {
+  sendNotification(payload: AwtrixNgApiNotificationPayload): Promise<AwtrixNgApiOkResponse>;
+  dismissActiveNotification(): Promise<AwtrixNgApiOkResponse>;
+  patchDisplay(patch: AwtrixNgApiDisplayPatch): Promise<AwtrixNgApiOkResponse>;
+  playRtttl(rtttl: string): Promise<AwtrixNgApiOkResponse>;
+  putIndicator(id: AwtrixNgIndicatorId, payload: AwtrixNgApiIndicatorPayload): Promise<AwtrixNgApiOkResponse>;
+  deleteIndicator(id: AwtrixNgIndicatorId): Promise<AwtrixNgApiOkResponse>;
+  putPushedApp(name: string, payload: AwtrixNgApiPushedAppPayload): Promise<AwtrixNgApiOkResponse>;
+  deleteApp(name: string): Promise<AwtrixNgApiOkResponse>;
 }
 
 export interface AwtrixNgSettingsChangeResult {
