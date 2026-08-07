@@ -1,0 +1,290 @@
+import AxiosAwtrixNgHttpTransport from '../Http/AxiosTransport';
+import { AwtrixNgBasicAuthOptions, AwtrixNgDebugLogger } from '../Http/Transport';
+import AwtrixNgClient, { AwtrixNgIndicatorId } from './Client';
+import { AwtrixNgInvalidResponseError } from './InvalidResponseError';
+import { AwtrixNgDeviceIdentityMismatchError } from './IdentityMismatchError';
+import { AwtrixNgDeviceProbeResult, probeAwtrixNgDevice } from '../Discovery/Detection';
+import {
+  AwtrixNgHomeySettings,
+  AwtrixNgHomeySettingsPatch,
+  createAwtrixNgSettingsPatchFromChangedSettings,
+  toAwtrixNgHomeySettingsUpdate,
+  writeAwtrixNgSettingsPatch,
+} from '../Services/Settings';
+import {
+  AwtrixNgBuiltinAppSettings,
+  isAwtrixNgBuiltinAppSetting,
+  prepareAwtrixNgBuiltinAppSettingsChange,
+  toAwtrixNgBuiltinAppSettingsUpdate,
+  validateAwtrixNgBuiltinAppSettingsChange,
+  writeAwtrixNgAppsOrder,
+} from '../Services/Apps';
+import { AwtrixNgWeatherOverlayValue, toAwtrixNgHomeyWeatherOverlayValue } from '../Services/Display';
+import {
+  runAwtrixNgMatrixPowerCapability,
+  runAwtrixNgNextAppCapability,
+  runAwtrixNgPreviousAppCapability,
+  runAwtrixNgWeatherOverlayCapability,
+} from '../Device/Controls';
+import { AwtrixNgCapabilityUpdatePlan, createAwtrixNgCapabilityUpdatePlan } from '../Device/State';
+import AwtrixNgIcons, { AwtrixNgIconsOptions } from '../Services/Icons';
+import { isPlainObject } from '../Support/Guards';
+import {
+  AwtrixNgApiDeviceStateResponse,
+  AwtrixNgApiDisplayPatch,
+  AwtrixNgApiIndicatorPayload,
+  AwtrixNgApiNotificationPayload,
+  AwtrixNgApiOkResponse,
+  AwtrixNgApiPushedAppPayload,
+} from './Types';
+// TODO(M2): move AwtrixNgFlowActionClient into lib/awtrixng/Api so lib stops importing from drivers/.
+import { AwtrixNgFlowActionClient } from '../../../drivers/awtrixng/flow-actions';
+
+const DeviceEndpoint = '/api/v1/device';
+const SettingsEndpoint = '/api/v1/settings';
+const AppsEndpoint = '/api/v1/apps';
+
+export interface AwtrixNgConnectionOptions {
+  baseUrl: string;
+  auth?: AwtrixNgBasicAuthOptions;
+  timeoutMs?: number;
+  debug?: boolean;
+  log?: AwtrixNgDebugLogger;
+}
+
+export interface AwtrixNgSettingsChangeResult {
+  /** Values to write back into the Homey settings (device.setSettings), if any diverged. */
+  homeyUpdate?: AwtrixNgHomeySettingsPatch;
+}
+
+export type AwtrixNgDetectedDeviceProbeResult = Extract<AwtrixNgDeviceProbeResult, { status: 'detected' }>;
+
+/**
+ * Facade that owns the client and the icon list and carries every device operation the
+ * driver layer needs. It deliberately never imports `homey`: it returns domain results
+ * (settings patches, overlay values, capability plans) and leaves all Homey writes -
+ * setSettings, setCapabilityValue, i18n messages - to the device, so the whole
+ * `lib/awtrixng` stays testable with a fake transport and no Homey mocks.
+ */
+export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
+
+  readonly baseUrl: string;
+
+  readonly icons: AwtrixNgIcons;
+
+  readonly #client: AwtrixNgClient;
+
+  /**
+   * Production code constructs the facade through fromConnection(); the constructor stays
+   * public only so tests can inject a client backed by a fake transport.
+   */
+  constructor(client: AwtrixNgClient, options: { baseUrl: string; icons: AwtrixNgIconsOptions }) {
+    this.#client = client;
+    this.baseUrl = options.baseUrl;
+    this.icons = new AwtrixNgIcons(client, options.icons);
+  }
+
+  /** The only production construction path - encapsulates the transport and client wiring. */
+  static fromConnection(options: AwtrixNgConnectionOptions, icons: AwtrixNgIconsOptions): AwtrixNgApi {
+    return new AwtrixNgApi(AwtrixNgApi.createClient(options), {
+      baseUrl: options.baseUrl,
+      icons,
+    });
+  }
+
+  /** One-off probe without holding an instance - for pairing and rediscovery in driver.ts. */
+  static async probe(options: AwtrixNgConnectionOptions): Promise<AwtrixNgDeviceProbeResult> {
+    return probeAwtrixNgDevice(AwtrixNgApi.createClient(options));
+  }
+
+  private static createClient(options: AwtrixNgConnectionOptions): AwtrixNgClient {
+    return new AwtrixNgClient(new AxiosAwtrixNgHttpTransport({
+      baseUrl: options.baseUrl,
+      ...(options.auth === undefined ? {} : { auth: options.auth }),
+      ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
+      ...(options.debug === undefined ? {} : { debug: options.debug }),
+      ...(options.log === undefined ? {} : { log: options.log }),
+    }));
+  }
+
+  // ---- identity / availability -------------------------------------------
+
+  probe(): Promise<AwtrixNgDeviceProbeResult> {
+    return probeAwtrixNgDevice(this.#client);
+  }
+
+  /**
+   * Probe plus uid check: throws the probe error for unreachable or auth-guarded devices,
+   * an AwtrixNgInvalidResponseError for a wrong-shaped response and an
+   * AwtrixNgDeviceIdentityMismatchError when the address answers as a different device.
+   */
+  async verifyIdentity(expectedUid: string): Promise<AwtrixNgDetectedDeviceProbeResult> {
+    const result = await this.probe();
+
+    if (result.status === 'auth-required' || result.status === 'offline') {
+      throw result.error;
+    }
+
+    if (result.status === 'rejected') {
+      throw new AwtrixNgInvalidResponseError({
+        endpoint: DeviceEndpoint,
+        expectedShape: 'a valid AWTRIX NG device state object',
+        actualValue: result.rawResponse,
+      });
+    }
+
+    if (result.device.uid !== expectedUid) {
+      throw new AwtrixNgDeviceIdentityMismatchError(expectedUid, result.device.uid);
+    }
+
+    return result;
+  }
+
+  // ---- state reads (sync into Homey) ---------------------------------------
+
+  getDeviceState(): Promise<AwtrixNgApiDeviceStateResponse> {
+    return this.#client.getDevice();
+  }
+
+  /** Returns the Homey settings update derived from the device settings, or undefined when in sync. */
+  async readSettings(current: AwtrixNgHomeySettings): Promise<AwtrixNgHomeySettingsPatch | undefined> {
+    const apiSettings = await this.#client.getSettings();
+
+    if (!isPlainObject(apiSettings)) {
+      throw new AwtrixNgInvalidResponseError({
+        endpoint: SettingsEndpoint,
+        expectedShape: 'a plain object',
+        actualValue: apiSettings,
+      });
+    }
+
+    const update = toAwtrixNgHomeySettingsUpdate(apiSettings, current);
+
+    return Object.keys(update).length > 0 ? update : undefined;
+  }
+
+  async readWeatherOverlay(): Promise<AwtrixNgWeatherOverlayValue> {
+    const display = await this.#client.getDisplay();
+
+    return toAwtrixNgHomeyWeatherOverlayValue(display.overlay);
+  }
+
+  /** Returns the built-in app settings update derived from the app inventory, or undefined when in sync. */
+  async readBuiltinAppSettings(current: AwtrixNgHomeySettings): Promise<AwtrixNgBuiltinAppSettings | undefined> {
+    const apps = await this.#client.getApps();
+
+    if (!Array.isArray(apps)) {
+      throw new AwtrixNgInvalidResponseError({
+        endpoint: AppsEndpoint,
+        expectedShape: 'an array',
+        actualValue: apps,
+      });
+    }
+
+    const update = toAwtrixNgBuiltinAppSettingsUpdate(apps, current);
+
+    return Object.keys(update).length > 0 ? update : undefined;
+  }
+
+  planCapabilityUpdate(
+    state: AwtrixNgApiDeviceStateResponse,
+    existingCapabilities: readonly string[],
+    options: { allowAddCapabilities: boolean },
+  ): AwtrixNgCapabilityUpdatePlan {
+    return createAwtrixNgCapabilityUpdatePlan(state, existingCapabilities, options);
+  }
+
+  // ---- settings writes ------------------------------------------------------
+
+  /**
+   * Consolidates the settings-change pipeline: build the settings patch, validate the
+   * built-in app change, prepare the apps-order payload and write both. The order matters
+   * and mirrors the pre-facade device code; the writes are sequential and fail-fast because
+   * these endpoints offer no transaction - if the second write fails the first may already
+   * be applied and the next save reconciles the state.
+   * Throws AwtrixNgBuiltinAppUnavailableError before anything is written.
+   */
+  async applySettingsChange(
+    newSettings: AwtrixNgHomeySettings,
+    changedKeys: readonly string[],
+  ): Promise<AwtrixNgSettingsChangeResult> {
+    const remoteSettingsKeys = changedKeys.filter((key) => !isAwtrixNgBuiltinAppSetting(key));
+    const settingsPatch = createAwtrixNgSettingsPatchFromChangedSettings(newSettings, remoteSettingsKeys);
+
+    validateAwtrixNgBuiltinAppSettingsChange(newSettings, changedKeys);
+
+    const appsOrderPayload = await prepareAwtrixNgBuiltinAppSettingsChange(this.#client, newSettings, changedKeys);
+
+    if (appsOrderPayload !== undefined) {
+      await writeAwtrixNgAppsOrder(this.#client, appsOrderPayload);
+    }
+
+    if (settingsPatch === undefined) {
+      return {};
+    }
+
+    const apiSettings = await writeAwtrixNgSettingsPatch(this.#client, settingsPatch);
+
+    if (!isPlainObject(apiSettings)) {
+      return {};
+    }
+
+    const homeyUpdate = toAwtrixNgHomeySettingsUpdate(apiSettings, newSettings);
+
+    return Object.keys(homeyUpdate).length > 0 ? { homeyUpdate } : {};
+  }
+
+  // ---- control capabilities -------------------------------------------------
+
+  /** Values arrive as unknown from the capability listeners; validation stays in lib. */
+  async setMatrixPower(value: unknown): Promise<void> {
+    await runAwtrixNgMatrixPowerCapability(this.#client, value);
+  }
+
+  async nextApp(): Promise<void> {
+    await runAwtrixNgNextAppCapability(this.#client);
+  }
+
+  async previousApp(): Promise<void> {
+    await runAwtrixNgPreviousAppCapability(this.#client);
+  }
+
+  async setWeatherOverlay(value: unknown): Promise<void> {
+    await runAwtrixNgWeatherOverlayCapability(this.#client, value);
+  }
+
+  // ---- AwtrixNgFlowActionClient (delegation to the client) --------------------
+
+  sendNotification(payload: AwtrixNgApiNotificationPayload): Promise<AwtrixNgApiOkResponse> {
+    return this.#client.sendNotification(payload);
+  }
+
+  dismissActiveNotification(): Promise<AwtrixNgApiOkResponse> {
+    return this.#client.dismissActiveNotification();
+  }
+
+  patchDisplay(patch: AwtrixNgApiDisplayPatch): Promise<AwtrixNgApiOkResponse> {
+    return this.#client.patchDisplay(patch);
+  }
+
+  playRtttl(rtttl: string): Promise<AwtrixNgApiOkResponse> {
+    return this.#client.playRtttl(rtttl);
+  }
+
+  putIndicator(id: AwtrixNgIndicatorId, payload: AwtrixNgApiIndicatorPayload): Promise<AwtrixNgApiOkResponse> {
+    return this.#client.putIndicator(id, payload);
+  }
+
+  deleteIndicator(id: AwtrixNgIndicatorId): Promise<AwtrixNgApiOkResponse> {
+    return this.#client.deleteIndicator(id);
+  }
+
+  putPushedApp(name: string, payload: AwtrixNgApiPushedAppPayload): Promise<AwtrixNgApiOkResponse> {
+    return this.#client.putPushedApp(name, payload);
+  }
+
+  deleteApp(name: string): Promise<AwtrixNgApiOkResponse> {
+    return this.#client.deleteApp(name);
+  }
+
+}

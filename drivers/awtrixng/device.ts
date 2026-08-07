@@ -4,6 +4,7 @@ import path from 'path';
 import AxiosAwtrixNgHttpTransport from '../../lib/awtrixng/Http/AxiosTransport';
 import AwtrixNgClient from '../../lib/awtrixng/Api/Client';
 import { AwtrixNgInvalidResponseError } from '../../lib/awtrixng/Api/InvalidResponseError';
+import { AwtrixNgDeviceIdentityMismatchError } from '../../lib/awtrixng/Api/IdentityMismatchError';
 import { formatAwtrixNgErrorDetails } from '../../lib/awtrixng/Device/Availability';
 import {
   runAwtrixNgMatrixPowerCapability,
@@ -56,25 +57,6 @@ const toConnectionPort = (value: unknown): number => {
 
   return port;
 };
-
-interface AwtrixNgDeviceIdentityMismatchError extends Error {
-  readonly protocol: 'awtrix-ng';
-  readonly expectedUid: string;
-  readonly actualUid: string;
-}
-
-const createAwtrixNgDeviceIdentityMismatchError = (
-  expectedUid: string,
-  actualUid: string,
-): AwtrixNgDeviceIdentityMismatchError => Object.assign(
-  new Error(`AWTRIX NG device identity mismatch: expected ${expectedUid}, received ${actualUid}.`),
-  {
-    name: 'AwtrixNgDeviceIdentityMismatchError',
-    protocol: 'awtrix-ng' as const,
-    expectedUid,
-    actualUid,
-  },
-);
 
 interface AwtrixNgDeviceStore {
   baseUrl?: string;
@@ -449,7 +431,7 @@ class AwtrixNgDevice extends Device {
     const expectedUid = this.getData().id as string;
 
     if (result.device.uid !== expectedUid) {
-      throw createAwtrixNgDeviceIdentityMismatchError(expectedUid, result.device.uid);
+      throw new AwtrixNgDeviceIdentityMismatchError(expectedUid, result.device.uid);
     }
 
     return client;
