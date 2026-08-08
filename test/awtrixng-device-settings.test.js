@@ -40,13 +40,17 @@ const loadAwtrixNgDevice = (transport, clientCreations) => {
         DiscoveryResultMDNSSD: FakeDiscoveryResultMDNSSD,
       };
     }
-    if (request === '../../lib/awtrixng/Http/AxiosTransport') {
+    // The transport is created inside the AwtrixNgApi facade since update-plan-3 (M3).
+    if (request === '../Http/AxiosTransport') {
       return FakeAxiosTransport;
     }
     return originalLoad.call(this, request, parent, isMain);
   };
 
   try {
+    // The facade module is reloaded together with the device so each harness gets its own
+    // fake transport instead of the one captured by a previously cached facade.
+    delete require.cache[require.resolve('../.homeybuild/lib/awtrixng/Api/Api')];
     const modulePath = require.resolve('../.homeybuild/drivers/awtrixng/device');
     delete require.cache[modulePath];
     // eslint-disable-next-line global-require
@@ -133,8 +137,8 @@ const createSettingsHarness = ({
 
   Object.assign(device, {
     homey: createFakeHomey(),
-    client: oldClient,
-    icons: { kind: 'old-icons' },
+    // device.client is a read-only view of device.api since update-plan-3 (M3).
+    api: oldClient,
     available: true,
     log() {},
     error(...args) {

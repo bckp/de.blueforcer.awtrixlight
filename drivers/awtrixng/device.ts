@@ -1,45 +1,16 @@
 import fs from 'fs';
 import { Device, DiscoveryResultMDNSSD } from 'homey';
 import path from 'path';
-import AxiosAwtrixNgHttpTransport from '../../lib/awtrixng/Http/AxiosTransport';
-import AwtrixNgClient from '../../lib/awtrixng/Api/Client';
-import { AwtrixNgInvalidResponseError } from '../../lib/awtrixng/Api/InvalidResponseError';
-import { formatAwtrixNgErrorDetails } from '../../lib/awtrixng/Device/Availability';
-import {
-  runAwtrixNgMatrixPowerCapability,
-  runAwtrixNgNextAppCapability,
-  runAwtrixNgPreviousAppCapability,
-  runAwtrixNgWeatherOverlayCapability,
-} from '../../lib/awtrixng/Device/Controls';
-import { createAwtrixNgCapabilityUpdatePlan } from '../../lib/awtrixng/Device/State';
-import { AwtrixNgDeviceProbeResult, probeAwtrixNgDevice, toAwtrixNgBaseUrl } from '../../lib/awtrixng/Discovery/Detection';
-import { AwtrixNgBasicAuthOptions } from '../../lib/awtrixng/Http/Transport';
-import AwtrixNgIcons from '../../lib/awtrixng/Services/Icons';
-import {
-  prepareAwtrixNgBuiltinAppSettingsChange,
-  isAwtrixNgBuiltinAppSetting,
-  toAwtrixNgBuiltinAppSettingsUpdate,
-  validateAwtrixNgBuiltinAppSettingsChange,
-  writeAwtrixNgAppsOrder,
-} from '../../lib/awtrixng/Services/Apps';
-import {
+import AwtrixNgApi, {
+  AwtrixNgBasicAuthOptions,
+  AwtrixNgDeviceProbeResult,
   AwtrixNgWeatherOverlayCapabilityId,
-  toAwtrixNgHomeyWeatherOverlayValue,
-} from '../../lib/awtrixng/Services/Display';
-import AwtrixNgPoll from '../../lib/awtrixng/Device/Poll';
-import {
-  AwtrixNgHomeySettings,
-  createAwtrixNgSettingsPatchFromChangedSettings,
-  hasAwtrixNgLocalSettingsChange,
-  toAwtrixNgHomeySettingsUpdate,
-  writeAwtrixNgSettingsPatch,
-} from '../../lib/awtrixng/Services/Settings';
-import {
-  AwtrixNgApiAppsOrderPayload,
-  AwtrixNgApiDeviceStateResponse,
-  AwtrixNgApiSettingsPatch,
-} from '../../lib/awtrixng/Api/Types';
-import { isPlainObject, toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
+  formatAwtrixNgErrorDetails,
+} from '../../lib/awtrixng/Api/Api';
+import Poll from '../../lib/shared/Poll';
+import { toAwtrixNgBaseUrl } from '../../lib/awtrixng/Discovery/Detection';
+import { AwtrixNgHomeySettings, hasAwtrixNgLocalSettingsChange } from '../../lib/awtrixng/Services/Settings';
+import { toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
 import { AwtrixDeviceType } from '../awtrix-device-type';
 
 const PollIntervalMs = 60000;
@@ -56,25 +27,6 @@ const toConnectionPort = (value: unknown): number => {
 
   return port;
 };
-
-interface AwtrixNgDeviceIdentityMismatchError extends Error {
-  readonly protocol: 'awtrix-ng';
-  readonly expectedUid: string;
-  readonly actualUid: string;
-}
-
-const createAwtrixNgDeviceIdentityMismatchError = (
-  expectedUid: string,
-  actualUid: string,
-): AwtrixNgDeviceIdentityMismatchError => Object.assign(
-  new Error(`AWTRIX NG device identity mismatch: expected ${expectedUid}, received ${actualUid}.`),
-  {
-    name: 'AwtrixNgDeviceIdentityMismatchError',
-    protocol: 'awtrix-ng' as const,
-    expectedUid,
-    actualUid,
-  },
-);
 
 interface AwtrixNgDeviceStore {
   baseUrl?: string;
@@ -111,24 +63,27 @@ interface AwtrixNgSettingsConnectionCandidate {
   syncAddressIntoSettings: boolean;
 }
 
-interface AwtrixNgLocallyPreparedSettingsChanges {
-  settingsPatch?: AwtrixNgApiSettingsPatch;
-}
-
-interface AwtrixNgPreparedSettingsChanges extends AwtrixNgLocallyPreparedSettingsChanges {
-  appsOrderPayload?: AwtrixNgApiAppsOrderPayload;
-}
-
 class AwtrixNgDevice extends Device {
 
-  client?: AwtrixNgClient;
+  api?: AwtrixNgApi;
 
-  icons?: AwtrixNgIcons;
-
-  poll?: AwtrixNgPoll;
+  poll?: Poll;
 
   /** Resolves once the deferred Homey settings sync scheduled by onSettings() has finished. */
   pendingSettingsSync?: Promise<void>;
+
+  /**
+   * The flow actions (drivers/awtrixng/flow-actions.ts) reach the API through `client`
+   * and the shared icon autocomplete (drivers/shared-flow-actions.ts) through `icons`;
+   * both are read-only views of the facade.
+   */
+  get client(): AwtrixNgApi | undefined {
+    return this.api;
+  }
+
+  get icons(): AwtrixNgApi['icons'] | undefined {
+    return this.api?.icons;
+  }
 
   getAwtrixDeviceType(): AwtrixDeviceType {
     return 'awtrixng';
@@ -146,7 +101,7 @@ class AwtrixNgDevice extends Device {
       return;
     }
 
-    this.configureClient(baseUrl, await this.getSettings() as AwtrixNgDeviceSettings);
+    this.configureApi(baseUrl, await this.getSettings() as AwtrixNgDeviceSettings);
 
     try {
       const deviceStateResult = await this.refreshDeviceState({ allowAddCapabilities: true });
@@ -208,26 +163,16 @@ class AwtrixNgDevice extends Device {
 
   async onSettings({ oldSettings, newSettings, changedKeys }: AwtrixNgDeviceSettingsChange): Promise<void> {
     this.log('AwtrixNgDevice settings were changed', oldSettings, newSettings, changedKeys);
-    const locallyPreparedChanges = this.prepareLocalSettingsChanges(newSettings, changedKeys);
+
+    // Pure validation first: an invalid key or value must fail before any request is made.
+    AwtrixNgApi.validateSettingsChange(newSettings, changedKeys);
 
     if (hasAwtrixNgLocalSettingsChange(changedKeys)) {
-      await this.applySettingsChangesWithCandidateConnection(
-        newSettings as AwtrixNgDeviceSettings,
-        changedKeys,
-        locallyPreparedChanges,
-      );
+      await this.applySettingsChangesWithCandidateConnection(newSettings as AwtrixNgDeviceSettings, changedKeys);
       return;
     }
 
-    const client = this.getClient();
-    const preparedChanges = await this.prepareSettingsChanges(
-      client,
-      newSettings,
-      changedKeys,
-      locallyPreparedChanges,
-    );
-
-    await this.writePreparedSettingsChanges(client, preparedChanges);
+    await this.getApi().applySettingsChange(newSettings, changedKeys);
   }
 
   /**
@@ -242,19 +187,19 @@ class AwtrixNgDevice extends Device {
 
   private initCapabilityListeners(): void {
     this.registerCapabilityListener('awtrix_matrix', async (value: unknown): Promise<void> => {
-      await runAwtrixNgMatrixPowerCapability(this.getClient(), value);
+      await this.getApi().setMatrixPower(value);
     });
 
     this.registerCapabilityListener('button_next', async (): Promise<void> => {
-      await runAwtrixNgNextAppCapability(this.getClient());
+      await this.getApi().nextApp();
     });
 
     this.registerCapabilityListener('button_prev', async (): Promise<void> => {
-      await runAwtrixNgPreviousAppCapability(this.getClient());
+      await this.getApi().previousApp();
     });
 
     this.registerCapabilityListener(AwtrixNgWeatherOverlayCapabilityId, async (value: unknown): Promise<void> => {
-      await runAwtrixNgWeatherOverlayCapability(this.getClient(), value);
+      await this.getApi().setWeatherOverlay(value);
     });
 
     this.registerCapabilityListener('button.rediscover', async (): Promise<void> => {
@@ -301,30 +246,29 @@ class AwtrixNgDevice extends Device {
     return undefined;
   }
 
-  private initializePoll(): AwtrixNgPoll {
-    const poll = new AwtrixNgPoll(async () => {
+  private initializePoll(): Poll {
+    const poll = new Poll(async () => {
       await this.refreshDeviceState({ allowAddCapabilities: false });
-    }, this.homey, PollIntervalMs, (error: unknown) => this.error(error));
+    }, this.homey, {
+      intervalMs: PollIntervalMs,
+      onError: (error: unknown) => this.error(error),
+    });
 
     this.poll = poll;
 
     return poll;
   }
 
-  private getClient(): AwtrixNgClient {
-    if (this.client === undefined) {
+  private getApi(): AwtrixNgApi {
+    if (this.api === undefined) {
       throw new Error(this.getConnectionNotConfiguredMessage());
     }
 
-    return this.client;
+    return this.api;
   }
 
   async refreshDeviceState(options: { allowAddCapabilities: boolean }): Promise<AwtrixNgDeviceProbeResult | undefined> {
-    if (this.client === undefined) {
-      throw new Error(this.getConnectionNotConfiguredMessage());
-    }
-
-    const result = await probeAwtrixNgDevice(this.client);
+    const result = await this.getApi().probe();
 
     if (result.status === 'detected') {
       await this.applyDeviceState(result.device, options.allowAddCapabilities);
@@ -338,27 +282,16 @@ class AwtrixNgDevice extends Device {
   }
 
   private async refreshSettingsFromDevice(): Promise<void> {
-    const apiSettings = await this.getClient().getSettings();
-
-    if (!isPlainObject(apiSettings)) {
-      throw new AwtrixNgInvalidResponseError({
-        endpoint: '/api/v1/settings',
-        expectedShape: 'a plain object',
-        actualValue: apiSettings,
-      });
-    }
-
     const currentSettings = await this.getSettings() as AwtrixNgHomeySettings;
-    const homeySettingsUpdate = toAwtrixNgHomeySettingsUpdate(apiSettings, currentSettings);
+    const homeySettingsUpdate = await this.getApi().readSettings(currentSettings);
 
-    if (Object.keys(homeySettingsUpdate).length > 0) {
+    if (homeySettingsUpdate !== undefined) {
       await this.setSettings(homeySettingsUpdate);
     }
   }
 
   private async refreshDisplayFromDevice(): Promise<void> {
-    const display = await this.getClient().getDisplay();
-    const weatherOverlay = toAwtrixNgHomeyWeatherOverlayValue(display.overlay);
+    const weatherOverlay = await this.getApi().readWeatherOverlay();
 
     if (this.hasCapability(AwtrixNgWeatherOverlayCapabilityId)) {
       await this.setCapabilityValue(AwtrixNgWeatherOverlayCapabilityId, weatherOverlay);
@@ -366,26 +299,19 @@ class AwtrixNgDevice extends Device {
   }
 
   private async refreshAppsFromDevice(): Promise<void> {
-    const apps = await this.getClient().getApps();
-
-    if (!Array.isArray(apps)) {
-      throw new AwtrixNgInvalidResponseError({
-        endpoint: '/api/v1/apps',
-        expectedShape: 'an array',
-        actualValue: apps,
-      });
-    }
-
     const currentSettings = await this.getSettings() as AwtrixNgHomeySettings;
-    const homeySettingsUpdate = toAwtrixNgBuiltinAppSettingsUpdate(apps, currentSettings);
+    const homeySettingsUpdate = await this.getApi().readBuiltinAppSettings(currentSettings);
 
-    if (Object.keys(homeySettingsUpdate).length > 0) {
+    if (homeySettingsUpdate !== undefined) {
       await this.setSettings(homeySettingsUpdate);
     }
   }
 
-  private async applyDeviceState(deviceState: AwtrixNgApiDeviceStateResponse, allowAddCapabilities: boolean): Promise<void> {
-    const plan = createAwtrixNgCapabilityUpdatePlan(deviceState, this.getCapabilities(), {
+  private async applyDeviceState(
+    deviceState: Extract<AwtrixNgDeviceProbeResult, { status: 'detected' }>['device'],
+    allowAddCapabilities: boolean,
+  ): Promise<void> {
+    const plan = this.getApi().planCapabilityUpdate(deviceState, this.getCapabilities(), {
       allowAddCapabilities,
     });
 
@@ -402,22 +328,17 @@ class AwtrixNgDevice extends Device {
     }
   }
 
-  private configureClient(baseUrl: string, settings: AwtrixNgDeviceSettings): void {
-    this.activateClient(this.createClient(baseUrl, this.getAuthFromSettingsSnapshot(settings)));
+  private configureApi(baseUrl: string, settings: AwtrixNgDeviceSettings): void {
+    this.activateApi(this.createApi(baseUrl, this.getAuthFromSettingsSnapshot(settings)));
   }
 
-  private createClient(baseUrl: string, auth?: AwtrixNgBasicAuthOptions): AwtrixNgClient {
-    return new AwtrixNgClient(new AxiosAwtrixNgHttpTransport({
+  private createApi(baseUrl: string, auth?: AwtrixNgBasicAuthOptions): AwtrixNgApi {
+    return AwtrixNgApi.fromConnection({
       baseUrl,
       auth,
       debug: process.env.DEBUG === '1',
       log: this.log.bind(this),
-    }));
-  }
-
-  private activateClient(client: AwtrixNgClient): void {
-    this.client = client;
-    this.icons = new AwtrixNgIcons(this.client, {
+    }, {
       emptyIcon: {
         name: this.homey.__('list.icons.empty.name'),
         id: '-',
@@ -427,32 +348,19 @@ class AwtrixNgDevice extends Device {
     });
   }
 
+  private activateApi(api: AwtrixNgApi): void {
+    this.api = api;
+  }
+
   private async verifyCandidateConnection(
     baseUrl: string,
     auth?: AwtrixNgBasicAuthOptions,
-  ): Promise<AwtrixNgClient> {
-    const client = this.createClient(baseUrl, auth);
-    const result = await probeAwtrixNgDevice(client);
+  ): Promise<AwtrixNgApi> {
+    const api = this.createApi(baseUrl, auth);
 
-    if (result.status === 'auth-required' || result.status === 'offline') {
-      throw result.error;
-    }
+    await api.verifyIdentity(this.getData().id as string);
 
-    if (result.status === 'rejected') {
-      throw new AwtrixNgInvalidResponseError({
-        endpoint: '/api/v1/device',
-        expectedShape: 'a valid AWTRIX NG device state object',
-        actualValue: result.rawResponse,
-      });
-    }
-
-    const expectedUid = this.getData().id as string;
-
-    if (result.device.uid !== expectedUid) {
-      throw createAwtrixNgDeviceIdentityMismatchError(expectedUid, result.device.uid);
-    }
-
-    return client;
+    return api;
   }
 
   private getConnectionCandidateFromSettings(
@@ -524,20 +432,13 @@ class AwtrixNgDevice extends Device {
   private async applySettingsChangesWithCandidateConnection(
     newSettings: AwtrixNgDeviceSettings,
     changedKeys: readonly string[],
-    locallyPreparedChanges: AwtrixNgLocallyPreparedSettingsChanges,
   ): Promise<void> {
     const { connection, syncAddressIntoSettings } = this.getConnectionCandidateFromSettings(newSettings, changedKeys);
-    const client = await this.verifyCandidateConnection(connection.baseUrl, connection.auth);
-    const preparedChanges = await this.prepareSettingsChanges(
-      client,
-      newSettings,
-      changedKeys,
-      locallyPreparedChanges,
-    );
+    const api = await this.verifyCandidateConnection(connection.baseUrl, connection.auth);
 
-    await this.writePreparedSettingsChanges(client, preparedChanges);
+    await api.applySettingsChange(newSettings, changedKeys);
 
-    await this.commitConnection(connection, client, false);
+    await this.commitConnection(connection, api, false);
 
     if (syncAddressIntoSettings) {
       this.scheduleRestoredConnectionSettingsSync(connection);
@@ -569,47 +470,6 @@ class AwtrixNgDevice extends Device {
       });
   }
 
-  private prepareLocalSettingsChanges(
-    newSettings: AwtrixNgHomeySettings,
-    changedKeys: readonly string[],
-  ): AwtrixNgLocallyPreparedSettingsChanges {
-    const remoteSettingsKeys = changedKeys.filter((key) => !isAwtrixNgBuiltinAppSetting(key));
-    const settingsPatch = createAwtrixNgSettingsPatchFromChangedSettings(newSettings, remoteSettingsKeys);
-
-    validateAwtrixNgBuiltinAppSettingsChange(newSettings, changedKeys);
-
-    return { settingsPatch };
-  }
-
-  private async prepareSettingsChanges(
-    client: AwtrixNgClient,
-    newSettings: AwtrixNgHomeySettings,
-    changedKeys: readonly string[],
-    locallyPreparedChanges: AwtrixNgLocallyPreparedSettingsChanges,
-  ): Promise<AwtrixNgPreparedSettingsChanges> {
-    const appsOrderPayload = await prepareAwtrixNgBuiltinAppSettingsChange(client, newSettings, changedKeys);
-
-    return {
-      ...locallyPreparedChanges,
-      appsOrderPayload,
-    };
-  }
-
-  private async writePreparedSettingsChanges(
-    client: AwtrixNgClient,
-    changes: AwtrixNgPreparedSettingsChanges,
-  ): Promise<void> {
-    // These endpoints do not provide a transaction. Writes are sequential and fail-fast:
-    // if the second write fails, the first may already be applied and the next save reconciles the state.
-    if (changes.appsOrderPayload !== undefined) {
-      await writeAwtrixNgAppsOrder(client, changes.appsOrderPayload);
-    }
-
-    if (changes.settingsPatch !== undefined) {
-      await writeAwtrixNgSettingsPatch(client, changes.settingsPatch);
-    }
-  }
-
   private async commitDiscoveredConnection(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {
     const port = toConnectionPort(discoveryResult.port);
     const connection: AwtrixNgConnectionCandidate = {
@@ -621,12 +481,12 @@ class AwtrixNgDevice extends Device {
       }),
     };
     const settings = await this.getSettings() as AwtrixNgDeviceSettings;
-    const client = await this.verifyCandidateConnection(
+    const api = await this.verifyCandidateConnection(
       connection.baseUrl,
       this.getAuthFromSettingsSnapshot(settings),
     );
 
-    await this.commitConnection(connection, client, true);
+    await this.commitConnection(connection, api, true);
     this.ensurePollingStarted();
 
     const result = await this.refreshDeviceState({ allowAddCapabilities: false });
@@ -636,7 +496,7 @@ class AwtrixNgDevice extends Device {
 
   private async commitConnection(
     connection: AwtrixNgConnectionCandidate,
-    client: AwtrixNgClient,
+    api: AwtrixNgApi,
     syncHomeySettings: boolean,
   ): Promise<void> {
     await this.setStoreValue('baseUrl', connection.baseUrl);
@@ -650,7 +510,7 @@ class AwtrixNgDevice extends Device {
       });
     }
 
-    this.activateClient(client);
+    this.activateApi(api);
   }
 
   private ensurePollingStarted(): void {

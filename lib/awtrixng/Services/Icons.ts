@@ -4,6 +4,7 @@ import { AwtrixNgFileDirectory, AwtrixNgFileUploadRequest } from '../Api/Client'
 import { AwtrixNgInvalidResponseError } from '../Api/InvalidResponseError';
 import { AwtrixNgApiFilesResponse, AwtrixNgApiOkResponse } from '../Api/Types';
 import { isPlainObject } from '../Support/Guards';
+import { TimeoutTimerHost } from '../../shared/Poll';
 
 const IconsDirectory: AwtrixNgFileDirectory = '/ICONS';
 const FilesEndpoint = '/api/v1/files';
@@ -31,14 +32,9 @@ export interface AwtrixNgIconClient {
   uploadFile<TBody = unknown>(upload: AwtrixNgFileUploadRequest<TBody>): Promise<AwtrixNgApiOkResponse>;
 }
 
-interface AwtrixNgIconTimerHost {
-  setTimeout(callback: () => void, ms: number): ReturnType<typeof setTimeout>;
-  clearTimeout(timer: ReturnType<typeof setTimeout>): void;
-}
-
 export interface AwtrixNgIconsOptions {
   emptyIcon: AwtrixNgIconAutocompleteItem;
-  timerHost?: AwtrixNgIconTimerHost;
+  timerHost?: TimeoutTimerHost;
   cacheTtlMs?: number;
 }
 
@@ -78,7 +74,7 @@ export default class AwtrixNgIcons {
 
   readonly #emptyIcon: AwtrixNgIconAutocompleteItem;
 
-  readonly #timerHost?: AwtrixNgIconTimerHost;
+  readonly #timerHost?: TimeoutTimerHost;
 
   readonly #cacheTtlMs: number;
 

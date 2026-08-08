@@ -3,7 +3,7 @@
   "version": "2.2.1",
   "main": "app.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-driver-assets.js",
     "lint": "eslint --ext .js,.ts --ignore-path .gitignore .",
     "test": "npm run build && node --test test/*.test.js"
   },

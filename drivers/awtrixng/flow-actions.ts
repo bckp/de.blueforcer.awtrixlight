@@ -16,23 +16,15 @@ import {
   toAwtrixNgPushedAppPayload,
 } from '../../lib/awtrixng/Payload/Transformers';
 import {
-  AwtrixNgApiDisplayPatch,
   AwtrixNgApiIndicatorPayload,
   AwtrixNgApiNotificationPayload,
-  AwtrixNgApiOkResponse,
   AwtrixNgApiPushedAppPayload,
 } from '../../lib/awtrixng/Api/Types';
+import type { AwtrixNgFlowActionClient } from '../../lib/awtrixng/Api/Api';
 
-export interface AwtrixNgFlowActionClient {
-  sendNotification(payload: AwtrixNgApiNotificationPayload): Promise<AwtrixNgApiOkResponse>;
-  dismissActiveNotification(): Promise<AwtrixNgApiOkResponse>;
-  patchDisplay(patch: AwtrixNgApiDisplayPatch): Promise<AwtrixNgApiOkResponse>;
-  playRtttl(rtttl: string): Promise<AwtrixNgApiOkResponse>;
-  putIndicator(id: AwtrixNgIndicatorId, payload: AwtrixNgApiIndicatorPayload): Promise<AwtrixNgApiOkResponse>;
-  deleteIndicator(id: AwtrixNgIndicatorId): Promise<AwtrixNgApiOkResponse>;
-  putPushedApp(name: string, payload: AwtrixNgApiPushedAppPayload): Promise<AwtrixNgApiOkResponse>;
-  deleteApp(name: string): Promise<AwtrixNgApiOkResponse>;
-}
+// The client interface moved next to the facade that implements it (update-plan-3, M2);
+// the re-export keeps existing imports of this module working.
+export type { AwtrixNgFlowActionClient };
 
 export interface AwtrixNgFlowActionDevice {
   client?: AwtrixNgFlowActionClient;

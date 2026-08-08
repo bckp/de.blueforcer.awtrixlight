@@ -1,14 +1,15 @@
 import { Driver } from 'homey';
 import PairSession from 'homey/lib/PairSession';
-import AxiosAwtrixNgHttpTransport from '../../lib/awtrixng/Http/AxiosTransport';
-import { AwtrixNgBasicAuthOptions } from '../../lib/awtrixng/Http/Transport';
-import AwtrixNgClient from '../../lib/awtrixng/Api/Client';
+import AwtrixNgApi, {
+  AwtrixNgBasicAuthOptions,
+  AwtrixNgConnectionOptions,
+  AwtrixNgDeviceProbeResult,
+} from '../../lib/awtrixng/Api/Api';
 import { AwtrixNgApiError, AwtrixNgApiErrorCode } from '../../lib/awtrixng/Api/ErrorParser';
 import { AwtrixNgApiDeviceStateResponse } from '../../lib/awtrixng/Api/Types';
 import { AwtrixNgHomeyCapabilityId, getAwtrixNgInitialCapabilityIds } from '../../lib/awtrixng/Device/State';
 import {
   isAwtrixNgMdnsCandidate,
-  probeAwtrixNgDevice,
   toAwtrixNgBaseUrl,
 } from '../../lib/awtrixng/Discovery/Detection';
 import { isRecord, toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
@@ -280,34 +281,41 @@ class AwtrixNgDriver extends Driver {
     };
   }
 
-  #createProbeClient(input: {
+  #createProbeConnection(input: {
     baseUrl: string;
     auth?: AwtrixNgBasicAuthOptions;
-  }): AwtrixNgClient {
-    return new AwtrixNgClient(new AxiosAwtrixNgHttpTransport({
+  }): AwtrixNgConnectionOptions {
+    return {
       baseUrl: input.baseUrl,
       ...(input.auth === undefined ? {} : { auth: input.auth }),
       debug: process.env.DEBUG === '1',
       log: this.log.bind(this),
-    }));
+    };
   }
 
-  private async probeManualPairingInput(input: AwtrixNgManualPairingProbeInput): Promise<AwtrixNgManualPairingProbeResponse> {
-    const baseUrl = toAwtrixNgBaseUrl(input);
-    const client = this.#createProbeClient({
-      baseUrl,
-    });
-    const result = await probeAwtrixNgDevice(client);
-
+  /** Shared mapping of a probe result onto the pairing session response shape. */
+  #toPairingProbeResponse(
+    result: AwtrixNgDeviceProbeResult,
+    target: {
+      name?: string;
+      address: string;
+      port: number;
+      baseUrl: string;
+      hostname?: string;
+      settings?: AwtrixNgPairDeviceCredentials;
+    },
+  ): AwtrixNgManualPairingProbeResponse {
     if (result.status === 'detected') {
       return {
         status: 'detected',
         device: this.toPairDevice({
-          name: result.device.boardType,
-          address: input.address,
-          port: input.port,
-          baseUrl,
+          name: target.name || result.device.boardType,
+          address: target.address,
+          port: target.port,
+          baseUrl: target.baseUrl,
+          hostname: target.hostname,
           device: result.device,
+          settings: target.settings,
         }),
       };
     }
@@ -331,6 +339,19 @@ class AwtrixNgDriver extends Driver {
       message: result.error instanceof Error ? result.error.message : 'Device is offline or unreachable.',
       error: result.error instanceof AwtrixNgApiError ? this.serializeAwtrixNgApiError(result.error) : undefined,
     };
+  }
+
+  private async probeManualPairingInput(input: AwtrixNgManualPairingProbeInput): Promise<AwtrixNgManualPairingProbeResponse> {
+    const baseUrl = toAwtrixNgBaseUrl(input);
+    const result = await AwtrixNgApi.probe(this.#createProbeConnection({
+      baseUrl,
+    }));
+
+    return this.#toPairingProbeResponse(result, {
+      address: input.address,
+      port: input.port,
+      baseUrl,
+    });
   }
 
   private toPendingAuthPairTarget(input: AwtrixNgManualPairingProbeInput): AwtrixNgPendingAuthPairTarget {
@@ -345,52 +366,25 @@ class AwtrixNgDriver extends Driver {
     target: AwtrixNgPendingAuthPairTarget,
     credentials: AwtrixNgCredentialsPairingInput,
   ): Promise<AwtrixNgCredentialsPairingResponse> {
-    const client = this.#createProbeClient({
+    const result = await AwtrixNgApi.probe(this.#createProbeConnection({
       baseUrl: target.baseUrl,
       auth: {
         username: credentials.username,
         password: credentials.password,
       },
+    }));
+
+    return this.#toPairingProbeResponse(result, {
+      name: target.name,
+      address: target.address,
+      port: target.port,
+      baseUrl: target.baseUrl,
+      hostname: target.hostname,
+      settings: {
+        authUser: credentials.username,
+        authPass: credentials.password,
+      },
     });
-    const result = await probeAwtrixNgDevice(client);
-
-    if (result.status === 'detected') {
-      return {
-        status: 'detected',
-        device: this.toPairDevice({
-          name: target.name || result.device.boardType,
-          address: target.address,
-          port: target.port,
-          baseUrl: target.baseUrl,
-          hostname: target.hostname,
-          device: result.device,
-          settings: {
-            authUser: credentials.username,
-            authPass: credentials.password,
-          },
-        }),
-      };
-    }
-
-    if (result.status === 'auth-required') {
-      return {
-        status: 'auth-required',
-        error: this.serializeAwtrixNgApiError(result.error),
-      };
-    }
-
-    if (result.status === 'rejected') {
-      return {
-        status: 'rejected',
-        reason: result.reason,
-      };
-    }
-
-    return {
-      status: 'offline',
-      message: result.error instanceof Error ? result.error.message : 'Device is offline or unreachable.',
-      error: result.error instanceof AwtrixNgApiError ? this.serializeAwtrixNgApiError(result.error) : undefined,
-    };
   }
 
   private parseManualPairingProbeInput(payload: unknown): AwtrixNgManualPairingProbeInput {
@@ -502,10 +496,9 @@ class AwtrixNgDriver extends Driver {
       address: discoveryResult.address,
       port,
     });
-    const client = this.#createProbeClient({
+    const result = await AwtrixNgApi.probe(this.#createProbeConnection({
       baseUrl,
-    });
-    const result = await probeAwtrixNgDevice(client);
+    }));
 
     if (result.status === 'detected') {
       return this.toPairDevice({

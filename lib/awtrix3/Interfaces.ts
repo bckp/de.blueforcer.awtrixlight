@@ -1,4 +1,4 @@
-import Poll from './Poll';
+import Poll from '../shared/Poll';
 
 export interface DeviceFailer {
   failsReset(): void;

@@ -3,7 +3,7 @@
  *
  * Only `lib/awtrixng` and `drivers/awtrixng` may import from here. The AWTRIX 3
  * layer and the shared driver layer (`app.ts`, `drivers/shared-flow-actions.ts`)
- * keep their own copies on purpose - see claude.md section 6.
+ * keep their own copies on purpose - see the layer separation rules in AGENTS.md.
  *
  * Two distinct record semantics exist and must not be conflated:
  * - `isRecord` accepts arrays (used where an array is still a usable object,
