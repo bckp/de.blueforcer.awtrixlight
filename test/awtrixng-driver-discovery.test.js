@@ -113,7 +113,9 @@ test('AWTRIX NG driver probes all three pairing paths through the facade', async
 
   assert.equal(driverSource.includes('new AwtrixNgClient'), false, 'the driver never builds a client itself');
   assert.equal(driverSource.match(/AwtrixNgApi\.probe\(this\.#createProbeConnection\(\{/g)?.length, 3);
-  assert.equal(driverSource.includes('#mapProbeResult'), false);
+  // Both pairing session paths share one response mapper (owner-approved consolidation);
+  // probeDiscoveryResult stays separate because it filters instead of reporting statuses.
+  assert.equal(driverSource.match(/this\.#toPairingProbeResponse\(/g)?.length, 2);
   assert.deepEqual(clientOptions.map(({ baseUrl, auth }) => ({ baseUrl, auth })), [{
     baseUrl: 'http://192.0.2.60:8080',
     auth: undefined,
