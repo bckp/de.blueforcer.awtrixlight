@@ -173,6 +173,7 @@ AWTRIX NG driver mapuje jen doložené a podporované capabilities:
 
 | AWTRIX NG field / endpoint | Homey capability | Poznámka |
 |---|---|---|
+| `batteryPercent` | `measure_battery` | mapuje se hodnota 0–100; capability se přidá jen při init/pairingu, pokud field obsahuje platnou hodnotu |
 | `lowBattery` | `alarm_battery` | mapuje se boolean low-battery stav |
 | `temperature` | `measure_temperature` | přidá se jen při init/pairingu, pokud field existuje |
 | `humidity` | `measure_humidity` | přidá se jen při init/pairingu, pokud field existuje |
@@ -180,10 +181,11 @@ AWTRIX NG driver mapuje jen doložené a podporované capabilities:
 
 Weather overlay capability hodnoty jsou `none`, `drizzle`, `frost`, `rain`, `snow`, `storm`, `thunder`. Změna capability nebo flow action posílá `PATCH /api/v1/display` pouze s polem `overlay`; `overlaySettings` se v první verzi neposílá.
 
+Přítomná hodnota `batteryPercent` v rozsahu 0–100 zpřístupní standardní Homey capability `measure_battery` a její vestavěné Flow cards `measure_battery` a `measure_battery_threshold_below`. Již spárované zařízení ji získá při následujícím initu; polling nové capabilities nepřidává.
+
 Nepodporované v první NG verzi:
 
 - `lightLevel` se nemapuje do `measure_luminance`, protože není v luxech.
-- `batteryPercent` se nemapuje do Homey battery capability; používá se pouze `lowBattery`.
 - `pressureHpa` se nemapuje.
 - Polling nepřidává nové capabilities; pouze aktualizuje capabilities existující na zařízení.
 - `overlaySettings.speed`, `overlaySettings.palette` a `overlaySettings.blend` nejsou v první verzi podporované.

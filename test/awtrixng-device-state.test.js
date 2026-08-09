@@ -93,6 +93,7 @@ const baseCapabilityValues = [{
 test('AWTRIX NG initial capability ids include base controls and supported optional fields present at init/pairing', () => {
   const deviceState = {
     ...baseDeviceState,
+    batteryPercent: 0,
     lowBattery: false,
     temperature: 22.5,
     humidity: 45,
@@ -100,16 +101,16 @@ test('AWTRIX NG initial capability ids include base controls and supported optio
 
   assert.deepEqual(getAwtrixNgInitialCapabilityIds(deviceState), [
     ...AwtrixNgBaseCapabilityIds,
+    'measure_battery',
     'alarm_battery',
     'measure_temperature',
     'measure_humidity',
   ]);
 });
 
-test('AWTRIX NG initial capability ids ignore unsupported and non-mapped fields', () => {
+test('AWTRIX NG initial capability ids ignore unsupported fields', () => {
   const deviceState = {
     ...baseDeviceState,
-    batteryPercent: 82,
     pressureHpa: 1013,
     lightLevel: 80,
   };
@@ -135,6 +136,7 @@ test('AWTRIX NG capability plan adds base controls and supported optional values
   }), {
     capabilitiesToAdd: [
       ...AwtrixNgBaseCapabilityIds,
+      'measure_battery',
       'alarm_battery',
       'measure_temperature',
       'measure_humidity',
@@ -142,6 +144,9 @@ test('AWTRIX NG capability plan adds base controls and supported optional values
     valuesToSet: [
       ...baseCapabilityValues,
       {
+        capabilityId: 'measure_battery',
+        value: 82,
+      }, {
         capabilityId: 'alarm_battery',
         value: true,
       }, {
@@ -155,15 +160,36 @@ test('AWTRIX NG capability plan adds base controls and supported optional values
   });
 });
 
+test('AWTRIX NG capability plan migrates measure_battery for an existing device during init', () => {
+  const deviceState = {
+    ...baseDeviceState,
+    batteryPercent: 82,
+  };
+
+  assert.deepEqual(createAwtrixNgCapabilityUpdatePlan(deviceState, AwtrixNgBaseCapabilityIds, {
+    allowAddCapabilities: true,
+  }), {
+    capabilitiesToAdd: ['measure_battery'],
+    valuesToSet: [
+      ...baseCapabilityValues,
+      {
+        capabilityId: 'measure_battery',
+        value: 82,
+      },
+    ],
+  });
+});
+
 test('AWTRIX NG capability plan does not add capabilities during polling', () => {
   const deviceState = {
     ...baseDeviceState,
+    batteryPercent: 100,
     lowBattery: false,
     temperature: 22.5,
     humidity: 45,
   };
 
-  assert.deepEqual(createAwtrixNgCapabilityUpdatePlan(deviceState, ['alarm_battery', 'awtrix_matrix', 'rssi', 'ip'], {
+  assert.deepEqual(createAwtrixNgCapabilityUpdatePlan(deviceState, ['measure_battery', 'alarm_battery', 'awtrix_matrix', 'rssi', 'ip'], {
     allowAddCapabilities: false,
   }), {
     capabilitiesToAdd: [],
@@ -177,15 +203,33 @@ test('AWTRIX NG capability plan does not add capabilities during polling', () =>
       capabilityId: 'ip',
       value: '192.168.1.44',
     }, {
+      capabilityId: 'measure_battery',
+      value: 100,
+    }, {
       capabilityId: 'alarm_battery',
       value: false,
     }],
   });
 });
 
+test('AWTRIX NG capability plan skips a newly detected battery measurement during polling', () => {
+  const plan = createAwtrixNgCapabilityUpdatePlan({
+    ...baseDeviceState,
+    batteryPercent: 50,
+  }, AwtrixNgBaseCapabilityIds, {
+    allowAddCapabilities: false,
+  });
+
+  assert.deepEqual(plan, {
+    capabilitiesToAdd: [],
+    valuesToSet: baseCapabilityValues,
+  });
+});
+
 test('AWTRIX NG capability plan skips missing optional fields instead of writing null or zero', () => {
   assert.deepEqual(createAwtrixNgCapabilityUpdatePlan(baseDeviceState, [
     ...AwtrixNgBaseCapabilityIds,
+    'measure_battery',
     'alarm_battery',
     'measure_temperature',
     'measure_humidity',
@@ -195,4 +239,18 @@ test('AWTRIX NG capability plan skips missing optional fields instead of writing
     capabilitiesToAdd: [],
     valuesToSet: baseCapabilityValues,
   });
+});
+
+test('AWTRIX NG capability plan skips battery percentages outside Homey\'s 0-100 range', () => {
+  for (const batteryPercent of [-1, 101, Number.NaN, Number.POSITIVE_INFINITY]) {
+    const plan = createAwtrixNgCapabilityUpdatePlan({
+      ...baseDeviceState,
+      batteryPercent,
+    }, [], {
+      allowAddCapabilities: true,
+    });
+
+    assert.equal(plan.capabilitiesToAdd.includes('measure_battery'), false);
+    assert.equal(plan.valuesToSet.some((update) => update.capabilityId === 'measure_battery'), false);
+  }
 });
