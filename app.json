@@ -840,18 +840,36 @@
           "preventInsights": true,
           "title": {
             "en": "Indicator top"
+          },
+          "insightsTitleTrue": {
+            "en": "Top indicator turned on"
+          },
+          "insightsTitleFalse": {
+            "en": "Top indicator turned off"
           }
         },
         "alarm_generic.indicator2": {
           "preventInsights": true,
           "title": {
             "en": "Indicator middle"
+          },
+          "insightsTitleTrue": {
+            "en": "Middle indicator turned on"
+          },
+          "insightsTitleFalse": {
+            "en": "Middle indicator turned off"
           }
         },
         "alarm_generic.indicator3": {
           "preventInsights": true,
           "title": {
             "en": "Indicator bottom"
+          },
+          "insightsTitleTrue": {
+            "en": "Bottom indicator turned on"
+          },
+          "insightsTitleFalse": {
+            "en": "Bottom indicator turned off"
           }
         },
         "button.rediscover": {
@@ -1115,18 +1133,36 @@
           "preventInsights": true,
           "title": {
             "en": "Indicator top"
+          },
+          "insightsTitleTrue": {
+            "en": "Top indicator turned on"
+          },
+          "insightsTitleFalse": {
+            "en": "Top indicator turned off"
           }
         },
         "alarm_generic.indicator2": {
           "preventInsights": true,
           "title": {
             "en": "Indicator middle"
+          },
+          "insightsTitleTrue": {
+            "en": "Middle indicator turned on"
+          },
+          "insightsTitleFalse": {
+            "en": "Middle indicator turned off"
           }
         },
         "alarm_generic.indicator3": {
           "preventInsights": true,
           "title": {
             "en": "Indicator bottom"
+          },
+          "insightsTitleTrue": {
+            "en": "Bottom indicator turned on"
+          },
+          "insightsTitleFalse": {
+            "en": "Bottom indicator turned off"
           }
         },
         "button.rediscover": {
