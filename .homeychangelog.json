@@ -118,5 +118,8 @@
   },
   "2.2.1": {
     "en": "AWTRIX NG devices get a \"Try to discover\" maintenance action, so a device that moved to a new address can be repointed without re-pairing. Clearing the address in the settings now picks up the discovered one instead of silently restoring the old value. Also fixes several errors that were logged but never reported, and reports an unreadable icon list from the device properly."
+  },
+  "2.2.2": {
+    "en": "Add battery_percentage, fixes and optimalizations"
   }
 }
