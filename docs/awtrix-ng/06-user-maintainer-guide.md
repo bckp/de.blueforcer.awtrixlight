@@ -174,14 +174,13 @@ AWTRIX NG driver mapuje jen doložené a podporované capabilities:
 | AWTRIX NG field / endpoint | Homey capability | Poznámka |
 |---|---|---|
 | `batteryPercent` | `measure_battery` | mapuje se hodnota 0–100; capability se přidá jen při init/pairingu, pokud field obsahuje platnou hodnotu |
-| `lowBattery` | `alarm_battery` | mapuje se boolean low-battery stav |
 | `temperature` | `measure_temperature` | přidá se jen při init/pairingu, pokud field existuje |
 | `humidity` | `measure_humidity` | přidá se jen při init/pairingu, pokud field existuje |
 | `GET /api/v1/display.overlay` | `awtrixng_weather_overlay` | custom enum picker; `none` se mapuje na API `overlay: null` |
 
 Weather overlay capability hodnoty jsou `none`, `drizzle`, `frost`, `rain`, `snow`, `storm`, `thunder`. Změna capability nebo flow action posílá `PATCH /api/v1/display` pouze s polem `overlay`; `overlaySettings` se v první verzi neposílá.
 
-Přítomná hodnota `batteryPercent` v rozsahu 0–100 zpřístupní standardní Homey capability `measure_battery` a její vestavěné Flow cards `measure_battery` a `measure_battery_threshold_below`. Již spárované zařízení ji získá při následujícím initu; polling nové capabilities nepřidává.
+Přítomná hodnota `batteryPercent` v rozsahu 0–100 zpřístupní standardní Homey capability `measure_battery` a její vestavěné Flow cards pro změnu hodnoty a procentní hranice. Driver deklaruje typ baterie jako interní (`energy.batteries: ["INTERNAL"]`). Již spárované zařízení získá procentní capability při následujícím initu; polling nové capabilities nepřidává. Pole `lowBattery` se záměrně nemapuje do `alarm_battery`, protože by vedle procentních triggerů přidalo překrývající se sadu battery-alarm Flow cards. Zařízení spárovaná před tímto rozhodnutím odstraní zastaralou capability při následující úspěšné inicializaci.
 
 Nepodporované v první NG verzi:
 

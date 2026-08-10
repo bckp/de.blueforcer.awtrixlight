@@ -11,6 +11,7 @@ const {
 const { AwtrixNgApiError } = require('../.homeybuild/lib/awtrixng/Api/ErrorParser');
 const { AwtrixNgInvalidResponseError } = require('../.homeybuild/lib/awtrixng/Api/InvalidResponseError');
 const { AwtrixNgHttpError } = require('../.homeybuild/lib/awtrixng/Http/Transport');
+const { AwtrixNgBaseCapabilityIds } = require('../.homeybuild/lib/awtrixng/Device/State');
 const AwtrixNgApi = require('../.homeybuild/lib/awtrixng/Api/Api').default;
 const {
   createFakeHomey,
@@ -75,11 +76,14 @@ const loadAwtrixNgDevice = (transport) => {
   }
 };
 
-const createAwtrixNgDeviceHarness = (transport) => {
+const createAwtrixNgDeviceHarness = (transport, { initialCapabilities = [] } = {}) => {
   const homey = createFakeHomey();
-  const capabilities = new Set();
+  const capabilities = new Set(initialCapabilities);
   const calls = {
+    addCapability: [],
     error: [],
+    removeCapability: [],
+    setCapabilityValue: [],
     setAvailable: [],
     setUnavailable: [],
   };
@@ -106,9 +110,15 @@ const createAwtrixNgDeviceHarness = (transport) => {
       return capabilities.has(capabilityId);
     },
     async addCapability(capabilityId) {
+      calls.addCapability.push(capabilityId);
       capabilities.add(capabilityId);
     },
-    async setCapabilityValue() {
+    async removeCapability(capabilityId) {
+      calls.removeCapability.push(capabilityId);
+      capabilities.delete(capabilityId);
+    },
+    async setCapabilityValue(capabilityId, value) {
+      calls.setCapabilityValue.push({ capabilityId, value });
       return undefined;
     },
     async setAvailable() {
@@ -119,7 +129,12 @@ const createAwtrixNgDeviceHarness = (transport) => {
     },
   });
 
-  return { awtrixNgDevice, calls, homey };
+  return {
+    awtrixNgDevice,
+    calls,
+    capabilities,
+    homey,
+  };
 };
 
 test('AWTRIX NG availability state marks detected probe as available', () => {
@@ -182,6 +197,54 @@ test('AWTRIX NG availability state reports wrong-shape probe as unavailable', ()
 test('AWTRIX NG error detail formatter handles non-API errors explicitly', () => {
   assert.equal(formatAwtrixNgErrorDetails(new Error('socket closed')), 'socket closed');
   assert.equal(formatAwtrixNgErrorDetails(null), 'Unknown error.');
+});
+
+test('AWTRIX NG removes the deprecated battery alarm while preserving battery percentage', async () => {
+  const { awtrixNgDevice, calls, capabilities } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport(), {
+    initialCapabilities: [
+      ...AwtrixNgBaseCapabilityIds,
+      'alarm_battery',
+    ],
+  });
+  awtrixNgDevice.api = facadeFor({});
+
+  await awtrixNgDevice.applyDeviceState({
+    ...fullDeviceState,
+    batteryPercent: 82,
+    lowBattery: true,
+  }, true);
+
+  assert.deepEqual(calls.removeCapability, ['alarm_battery']);
+  assert.equal(capabilities.has('alarm_battery'), false);
+  assert.equal(capabilities.has('measure_battery'), true);
+  assert.deepEqual(calls.setCapabilityValue.find(({ capabilityId }) => capabilityId === 'measure_battery'), {
+    capabilityId: 'measure_battery',
+    value: 82,
+  });
+});
+
+test('AWTRIX NG battery alarm migration failure is contained and retried on a later init', async () => {
+  const migrationError = new Error('remove failed');
+  const { awtrixNgDevice, calls, capabilities } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport(), {
+    initialCapabilities: [
+      ...AwtrixNgBaseCapabilityIds,
+      'alarm_battery',
+    ],
+  });
+  awtrixNgDevice.api = facadeFor({});
+  awtrixNgDevice.removeCapability = async () => {
+    throw migrationError;
+  };
+
+  await assert.doesNotReject(() => awtrixNgDevice.applyDeviceState({
+    ...fullDeviceState,
+    batteryPercent: 82,
+    lowBattery: true,
+  }, true));
+
+  assert.deepEqual(calls.error, [migrationError]);
+  assert.equal(capabilities.has('alarm_battery'), true);
+  assert.equal(capabilities.has('measure_battery'), true);
 });
 
 test('AWTRIX NG device localizes availability headers and preserves technical error details', async () => {

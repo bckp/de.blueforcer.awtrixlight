@@ -56,6 +56,14 @@ test('AWTRIX NG driver compose declares base control capabilities', () => {
   ]);
 });
 
+test('AWTRIX NG driver describes its battery as internal', () => {
+  const awtrixNgDriver = readJson('drivers/awtrixng/driver.compose.json');
+
+  assert.deepEqual(awtrixNgDriver.energy, {
+    batteries: ['INTERNAL'],
+  });
+});
+
 test('AWTRIX NG pairing uses discovery list with a custom selection router', () => {
   const awtrixNgDriver = readJson('drivers/awtrixng/driver.compose.json');
   const awtrix3Driver = readJson('drivers/awtrixlight/driver.compose.json');

@@ -315,6 +315,12 @@ class AwtrixNgDevice extends Device {
       allowAddCapabilities,
     });
 
+    for (const capabilityId of plan.capabilitiesToRemove) {
+      if (this.hasCapability(capabilityId)) {
+        await this.removeCapability(capabilityId).catch((error: unknown) => this.error(error));
+      }
+    }
+
     for (const capabilityId of plan.capabilitiesToAdd) {
       if (!this.hasCapability(capabilityId)) {
         await this.addCapability(capabilityId);

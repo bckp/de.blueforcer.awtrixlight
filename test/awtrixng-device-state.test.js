@@ -102,15 +102,15 @@ test('AWTRIX NG initial capability ids include base controls and supported optio
   assert.deepEqual(getAwtrixNgInitialCapabilityIds(deviceState), [
     ...AwtrixNgBaseCapabilityIds,
     'measure_battery',
-    'alarm_battery',
     'measure_temperature',
     'measure_humidity',
   ]);
 });
 
-test('AWTRIX NG initial capability ids ignore unsupported fields', () => {
+test('AWTRIX NG initial capability ids ignore unsupported and deliberately unmapped fields', () => {
   const deviceState = {
     ...baseDeviceState,
+    lowBattery: true,
     pressureHpa: 1013,
     lightLevel: 80,
   };
@@ -134,10 +134,10 @@ test('AWTRIX NG capability plan adds base controls and supported optional values
   assert.deepEqual(createAwtrixNgCapabilityUpdatePlan(deviceState, [], {
     allowAddCapabilities: true,
   }), {
+    capabilitiesToRemove: [],
     capabilitiesToAdd: [
       ...AwtrixNgBaseCapabilityIds,
       'measure_battery',
-      'alarm_battery',
       'measure_temperature',
       'measure_humidity',
     ],
@@ -146,9 +146,6 @@ test('AWTRIX NG capability plan adds base controls and supported optional values
       {
         capabilityId: 'measure_battery',
         value: 82,
-      }, {
-        capabilityId: 'alarm_battery',
-        value: true,
       }, {
         capabilityId: 'measure_temperature',
         value: 0,
@@ -169,7 +166,34 @@ test('AWTRIX NG capability plan migrates measure_battery for an existing device 
   assert.deepEqual(createAwtrixNgCapabilityUpdatePlan(deviceState, AwtrixNgBaseCapabilityIds, {
     allowAddCapabilities: true,
   }), {
+    capabilitiesToRemove: [],
     capabilitiesToAdd: ['measure_battery'],
+    valuesToSet: [
+      ...baseCapabilityValues,
+      {
+        capabilityId: 'measure_battery',
+        value: 82,
+      },
+    ],
+  });
+});
+
+test('AWTRIX NG capability plan removes the deprecated battery alarm during init', () => {
+  const deviceState = {
+    ...baseDeviceState,
+    batteryPercent: 82,
+    lowBattery: true,
+  };
+
+  assert.deepEqual(createAwtrixNgCapabilityUpdatePlan(deviceState, [
+    ...AwtrixNgBaseCapabilityIds,
+    'measure_battery',
+    'alarm_battery',
+  ], {
+    allowAddCapabilities: true,
+  }), {
+    capabilitiesToRemove: ['alarm_battery'],
+    capabilitiesToAdd: [],
     valuesToSet: [
       ...baseCapabilityValues,
       {
@@ -192,6 +216,7 @@ test('AWTRIX NG capability plan does not add capabilities during polling', () =>
   assert.deepEqual(createAwtrixNgCapabilityUpdatePlan(deviceState, ['measure_battery', 'alarm_battery', 'awtrix_matrix', 'rssi', 'ip'], {
     allowAddCapabilities: false,
   }), {
+    capabilitiesToRemove: [],
     capabilitiesToAdd: [],
     valuesToSet: [{
       capabilityId: 'awtrix_matrix',
@@ -205,9 +230,6 @@ test('AWTRIX NG capability plan does not add capabilities during polling', () =>
     }, {
       capabilityId: 'measure_battery',
       value: 100,
-    }, {
-      capabilityId: 'alarm_battery',
-      value: false,
     }],
   });
 });
@@ -221,6 +243,7 @@ test('AWTRIX NG capability plan skips a newly detected battery measurement durin
   });
 
   assert.deepEqual(plan, {
+    capabilitiesToRemove: [],
     capabilitiesToAdd: [],
     valuesToSet: baseCapabilityValues,
   });
@@ -236,6 +259,7 @@ test('AWTRIX NG capability plan skips missing optional fields instead of writing
   ], {
     allowAddCapabilities: false,
   }), {
+    capabilitiesToRemove: [],
     capabilitiesToAdd: [],
     valuesToSet: baseCapabilityValues,
   });

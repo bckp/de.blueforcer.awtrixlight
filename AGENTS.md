@@ -77,6 +77,10 @@ it. Re-reporting them as findings wastes a review cycle.
   the `toColor('0')` fallback inside `toText()` is unreachable. Leave it.
 - `getVersion()`, `getCapabilities()`, `toAwtrixNgRtttlPayload` and
   `fromAwtrixNgHomeyPushedAppName` are part of the documented API surface even where unused.
+- AWTRIX NG maps `batteryPercent` to `measure_battery` but deliberately does not expose
+  `lowBattery` as `alarm_battery`: the two standard capabilities create overlapping battery
+  Flow cards. Existing NG devices remove the deprecated alarm capability during a successful
+  initialization; its removal is best-effort so it cannot make the device unavailable.
 - Deprecated flow cards and the `applicationIcon` adapter in `app.ts` stay for compatibility.
 
 **Tooling and process**

@@ -299,6 +299,7 @@ test('planCapabilityUpdate delegates to the capability update plan', () => {
 
   const plan = api.planCapabilityUpdate(deviceStateResponse, ['awtrix_matrix'], { allowAddCapabilities: false });
 
+  assert.deepEqual(plan.capabilitiesToRemove, []);
   assert.deepEqual(plan.capabilitiesToAdd, []);
   assert.ok(plan.valuesToSet.some((update) => update.capabilityId === 'awtrix_matrix' && update.value === true));
 });

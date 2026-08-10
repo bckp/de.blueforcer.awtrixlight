@@ -12,7 +12,9 @@ export type AwtrixNgHomeyBaseCapabilityId = 'button_prev'
   | 'ip'
   | 'button.rediscover';
 
-export type AwtrixNgHomeyOptionalCapabilityId = 'measure_battery' | 'alarm_battery' | 'measure_temperature' | 'measure_humidity';
+export type AwtrixNgHomeyOptionalCapabilityId = 'measure_battery' | 'measure_temperature' | 'measure_humidity';
+
+export type AwtrixNgHomeyDeprecatedCapabilityId = 'alarm_battery';
 
 export type AwtrixNgHomeyCapabilityId = AwtrixNgHomeyBaseCapabilityId | AwtrixNgHomeyOptionalCapabilityId;
 
@@ -24,6 +26,7 @@ export interface AwtrixNgCapabilityValueUpdate {
 }
 
 export interface AwtrixNgCapabilityUpdatePlan {
+  capabilitiesToRemove: AwtrixNgHomeyDeprecatedCapabilityId[];
   capabilitiesToAdd: AwtrixNgHomeyCapabilityId[];
   valuesToSet: AwtrixNgCapabilityValueUpdate[];
 }
@@ -59,10 +62,6 @@ const optionalCapabilityFields = [{
   capabilityId: 'measure_battery',
   isValidValue: isValidBatteryPercent,
 }, {
-  field: 'lowBattery',
-  capabilityId: 'alarm_battery',
-  isValidValue: (value: unknown): value is boolean => typeof value === 'boolean',
-}, {
   field: 'temperature',
   capabilityId: 'measure_temperature',
   isValidValue: (value: unknown): value is number => typeof value === 'number',
@@ -94,6 +93,10 @@ export const createAwtrixNgCapabilityUpdatePlan = (
   currentCapabilities: readonly string[],
   options: AwtrixNgCapabilityUpdateOptions,
 ): AwtrixNgCapabilityUpdatePlan => {
+  const capabilitiesToRemove: AwtrixNgHomeyDeprecatedCapabilityId[] = options.allowAddCapabilities
+    && currentCapabilities.includes('alarm_battery')
+    ? ['alarm_battery']
+    : [];
   const capabilitiesToAdd: AwtrixNgHomeyCapabilityId[] = [];
   const valuesToSet: AwtrixNgCapabilityValueUpdate[] = [];
   const knownCapabilities = new Set<string>(currentCapabilities);
@@ -151,6 +154,7 @@ export const createAwtrixNgCapabilityUpdatePlan = (
   }
 
   return {
+    capabilitiesToRemove,
     capabilitiesToAdd,
     valuesToSet,
   };
