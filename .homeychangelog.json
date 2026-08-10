@@ -121,5 +121,8 @@
   },
   "2.2.2": {
     "en": "Add battery_percentage, fixes and optimalizations"
+  },
+  "2.2.3": {
+    "en": "Fixed wrong name for generic alert"
   }
 }
