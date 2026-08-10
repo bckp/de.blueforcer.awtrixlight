@@ -12,7 +12,7 @@ export type AwtrixNgHomeyBaseCapabilityId = 'button_prev'
   | 'ip'
   | 'button.rediscover';
 
-export type AwtrixNgHomeyOptionalCapabilityId = 'alarm_battery' | 'measure_temperature' | 'measure_humidity';
+export type AwtrixNgHomeyOptionalCapabilityId = 'measure_battery' | 'alarm_battery' | 'measure_temperature' | 'measure_humidity';
 
 export type AwtrixNgHomeyCapabilityId = AwtrixNgHomeyBaseCapabilityId | AwtrixNgHomeyOptionalCapabilityId;
 
@@ -47,7 +47,18 @@ export const AwtrixNgBaseCapabilityIds: readonly AwtrixNgHomeyBaseCapabilityId[]
   'button.rediscover',
 ];
 
+const isValidBatteryPercent = (value: unknown): value is number => (
+  typeof value === 'number'
+  && Number.isFinite(value)
+  && value >= 0
+  && value <= 100
+);
+
 const optionalCapabilityFields = [{
+  field: 'batteryPercent',
+  capabilityId: 'measure_battery',
+  isValidValue: isValidBatteryPercent,
+}, {
   field: 'lowBattery',
   capabilityId: 'alarm_battery',
   isValidValue: (value: unknown): value is boolean => typeof value === 'boolean',
