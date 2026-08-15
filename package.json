@@ -22,10 +22,6 @@
     "eslint-plugin-import": "^2.32.0",
     "typescript": "^5.9.3"
   },
-  "dependencies": {
-    "axios": "^1.19.0",
-    "form-data": "^4.0.6"
-  },
   "overrides": {
     "eslint-config-athom": {
       "eslint-config-airbnb-base": "^15.0.0",

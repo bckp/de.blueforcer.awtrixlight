@@ -1,24 +1,37 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const FormData = require('form-data');
 
 const http = require('../.homeybuild/lib/awtrixng/Http/Transport');
-const AxiosAwtrixNgHttpTransport = require('../.homeybuild/lib/awtrixng/Http/AxiosTransport').default;
+const FetchAwtrixNgHttpTransport = require('../.homeybuild/lib/awtrixng/Http/FetchTransport').default;
 
 const { AwtrixNgHttpError } = http;
 
-const createRecordingAxios = (responseFactory) => {
+const createRecordingFetch = (responseFactory) => {
   const calls = [];
 
-  return {
-    calls,
-    client: {
-      async request(config) {
-        calls.push(config);
-        return responseFactory(config);
+  const fetchMock = async (url, config) => {
+    calls.push({ url, config });
+    const mockedResponse = responseFactory(config);
+
+    if (mockedResponse instanceof Error) {
+      throw mockedResponse;
+    }
+
+    return {
+      ok: mockedResponse.status >= 200 && mockedResponse.status < 300,
+      status: mockedResponse.status,
+      statusText: mockedResponse.statusText || 'OK',
+      headers: new Headers(mockedResponse.headers || {}),
+      text: async () => {
+        if (typeof mockedResponse.data === 'string') return mockedResponse.data;
+        return JSON.stringify(mockedResponse.data);
       },
-    },
+      arrayBuffer: async () => new ArrayBuffer(0),
+    };
   };
+
+  fetchMock.calls = calls;
+  return fetchMock;
 };
 
 test('AWTRIX NG HTTP contract module is importable after build', () => {
@@ -91,8 +104,9 @@ test('fake AWTRIX NG transport can round-trip a typed request shape at runtime',
   });
 });
 
-test('axios AWTRIX NG transport maps GET, POST, PATCH and DELETE requests', async () => {
-  const recordingAxios = createRecordingAxios(() => ({
+test('fetch AWTRIX NG transport maps GET, POST, PATCH and DELETE requests', async () => {
+  const originalFetch = global.fetch;
+  const recordingFetch = createRecordingFetch(() => ({
     status: 200,
     headers: {
       'content-type': 'application/json',
@@ -101,41 +115,48 @@ test('axios AWTRIX NG transport maps GET, POST, PATCH and DELETE requests', asyn
       ok: true,
     },
   }));
-  const transport = new AxiosAwtrixNgHttpTransport({
-    baseUrl: 'http://192.0.2.10:8080/',
-    timeoutMs: 10000,
-  }, recordingAxios.client);
+  global.fetch = recordingFetch;
 
-  await transport.request({ method: 'GET', path: '/api/v1/device' });
-  await transport.request({ method: 'POST', path: '/api/v1/notifications', body: { text: 'hello' } });
-  await transport.request({ method: 'PATCH', path: '/api/v1/display', body: { power: false } });
-  await transport.request({ method: 'DELETE', path: '/api/v1/notifications/active' });
+  try {
+    const transport = new FetchAwtrixNgHttpTransport({
+      baseUrl: 'http://192.0.2.10:8080/',
+      timeoutMs: 10000,
+    });
 
-  assert.deepEqual(recordingAxios.calls.map((call) => ({
-    method: call.method,
-    url: call.url,
-    data: call.data,
-  })), [{
-    method: 'GET',
-    url: 'http://192.0.2.10:8080/api/v1/device',
-    data: undefined,
-  }, {
-    method: 'POST',
-    url: 'http://192.0.2.10:8080/api/v1/notifications',
-    data: { text: 'hello' },
-  }, {
-    method: 'PATCH',
-    url: 'http://192.0.2.10:8080/api/v1/display',
-    data: { power: false },
-  }, {
-    method: 'DELETE',
-    url: 'http://192.0.2.10:8080/api/v1/notifications/active',
-    data: undefined,
-  }]);
+    await transport.request({ method: 'GET', path: '/api/v1/device' });
+    await transport.request({ method: 'POST', path: '/api/v1/notifications', body: { text: 'hello' } });
+    await transport.request({ method: 'PATCH', path: '/api/v1/display', body: { power: false } });
+    await transport.request({ method: 'DELETE', path: '/api/v1/notifications/active' });
+
+    assert.deepEqual(recordingFetch.calls.map((call) => ({
+      method: call.config.method,
+      url: call.url,
+      data: call.config.body ? JSON.parse(call.config.body) : undefined,
+    })), [{
+      method: 'GET',
+      url: 'http://192.0.2.10:8080/api/v1/device',
+      data: undefined,
+    }, {
+      method: 'POST',
+      url: 'http://192.0.2.10:8080/api/v1/notifications',
+      data: { text: 'hello' },
+    }, {
+      method: 'PATCH',
+      url: 'http://192.0.2.10:8080/api/v1/display',
+      data: { power: false },
+    }, {
+      method: 'DELETE',
+      url: 'http://192.0.2.10:8080/api/v1/notifications/active',
+      data: undefined,
+    }]);
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
 
-test('axios AWTRIX NG transport applies auth, JSON content type, query and timeout config', async () => {
-  const recordingAxios = createRecordingAxios(() => ({
+test('fetch AWTRIX NG transport applies auth, JSON content type, query and timeout config', async () => {
+  const originalFetch = global.fetch;
+  const recordingFetch = createRecordingFetch(() => ({
     status: 200,
     headers: {
       'x-test': 'ok',
@@ -144,142 +165,157 @@ test('axios AWTRIX NG transport applies auth, JSON content type, query and timeo
       power: true,
     },
   }));
-  const transport = new AxiosAwtrixNgHttpTransport({
-    baseUrl: 'http://awtrix-ng.local:8081',
-    timeoutMs: 10000,
-    auth: {
-      username: 'homey',
-      password: 'secret',
-    },
-  }, recordingAxios.client);
+  global.fetch = recordingFetch;
 
-  const response = await transport.request({
-    method: 'PATCH',
-    path: 'api/v1/display',
-    query: {
-      dryRun: false,
-      retry: 1,
-    },
-    body: {
-      power: true,
-    },
-    timeoutMs: 2500,
-  });
+  try {
+    const transport = new FetchAwtrixNgHttpTransport({
+      baseUrl: 'http://awtrix-ng.local:8081',
+      timeoutMs: 10000,
+      auth: {
+        username: 'homey',
+        password: 'secret',
+      },
+    });
 
-  assert.equal(recordingAxios.calls.length, 1);
-  assert.equal(recordingAxios.calls[0].url, 'http://awtrix-ng.local:8081/api/v1/display');
-  assert.equal(recordingAxios.calls[0].timeout, 2500);
-  assert.equal(recordingAxios.calls[0].maxRedirects, 0);
-  assert.deepEqual(recordingAxios.calls[0].params, {
-    dryRun: false,
-    retry: 1,
-  });
-  assert.equal(recordingAxios.calls[0].headers.Authorization, `Basic ${Buffer.from('homey:secret').toString('base64')}`);
-  assert.equal(recordingAxios.calls[0].headers['Content-Type'], 'application/json');
-  assert.equal(recordingAxios.calls[0].headers.Accept, '*/*');
-  assert.equal(recordingAxios.calls[0].headers['User-Agent'], 'Homey/1.0');
-  assert.deepEqual(response, {
-    status: 200,
-    headers: {
-      'x-test': 'ok',
-    },
-    data: {
-      power: true,
-    },
-  });
-});
+    const response = await transport.request({
+      method: 'PATCH',
+      path: 'api/v1/display',
+      query: {
+        dryRun: false,
+        retry: 1,
+      },
+      body: {
+        power: true,
+      },
+      timeoutMs: 2500,
+    });
 
-test('axios AWTRIX NG transport does not log requests by default', async () => {
-  const logs = [];
-  const recordingAxios = createRecordingAxios(() => ({
-    status: 200,
-    statusText: 'OK',
-    headers: {
-      'content-type': 'application/json',
-    },
-    data: {
-      ok: true,
-    },
-  }));
-  const transport = new AxiosAwtrixNgHttpTransport({
-    baseUrl: 'http://awtrix-ng.local',
-    log: (entry) => logs.push(entry),
-  }, recordingAxios.client);
-
-  await transport.request({
-    method: 'GET',
-    path: '/api/v1/device',
-  });
-
-  assert.deepEqual(logs, []);
-});
-
-test('axios AWTRIX NG transport logs request and response in debug mode with redacted auth header', async () => {
-  const logs = [];
-  const recordingAxios = createRecordingAxios(() => ({
-    status: 200,
-    statusText: 'OK',
-    headers: {
-      'content-type': 'application/json',
-    },
-    data: {
-      ok: true,
-    },
-  }));
-  const transport = new AxiosAwtrixNgHttpTransport({
-    baseUrl: 'http://awtrix-ng.local',
-    auth: {
-      username: 'homey',
-      password: 'secret',
-    },
-    debug: true,
-    log: (entry) => logs.push(entry),
-  }, recordingAxios.client);
-
-  await transport.request({
-    method: 'POST',
-    path: '/api/v1/notifications',
-    query: {
-      dryRun: false,
-    },
-    body: {
-      text: 'hello',
-    },
-  });
-
-  assert.equal(recordingAxios.calls[0].headers.Authorization, `Basic ${Buffer.from('homey:secret').toString('base64')}`);
-  assert.deepEqual(logs, [{
-    message: 'POST',
-    url: 'http://awtrix-ng.local/api/v1/notifications',
-    headers: {
-      Accept: '*/*',
-      'User-Agent': 'Homey/1.0',
-      Authorization: '<redacted>',
-      'Content-Type': 'application/json',
-    },
-    query: {
-      dryRun: false,
-    },
-    data: {
-      text: 'hello',
-    },
-  }, {
-    message: 'POST(response)',
-    url: 'http://awtrix-ng.local/api/v1/notifications',
-    dump: {
+    assert.equal(recordingFetch.calls.length, 1);
+    assert.equal(recordingFetch.calls[0].url, 'http://awtrix-ng.local:8081/api/v1/display?dryRun=false&retry=1');
+    assert.equal(recordingFetch.calls[0].config.headers.Authorization, `Basic ${Buffer.from('homey:secret').toString('base64')}`);
+    assert.equal(recordingFetch.calls[0].config.headers['Content-Type'], 'application/json');
+    assert.equal(recordingFetch.calls[0].config.headers.Accept, '*/*');
+    assert.equal(recordingFetch.calls[0].config.headers['User-Agent'], 'Homey/1.0');
+    assert.deepEqual(response, {
       status: 200,
-      statusText: 'OK',
-      data: {
-        ok: true,
-      },
       headers: {
-        'content-type': 'application/json',
+        'x-test': 'ok',
       },
-    },
-  }]);
+      data: {
+        power: true,
+      },
+    });
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
 
-test('axios AWTRIX NG transport logs error response body in debug mode', async () => {
+test('fetch AWTRIX NG transport does not log requests by default', async () => {
+  const originalFetch = global.fetch;
+  const logs = [];
+  const recordingFetch = createRecordingFetch(() => ({
+    status: 200,
+    statusText: 'OK',
+    headers: {
+      'content-type': 'application/json',
+    },
+    data: {
+      ok: true,
+    },
+  }));
+  global.fetch = recordingFetch;
+
+  try {
+    const transport = new FetchAwtrixNgHttpTransport({
+      baseUrl: 'http://awtrix-ng.local',
+      log: (entry) => logs.push(entry),
+    });
+
+    await transport.request({
+      method: 'GET',
+      path: '/api/v1/device',
+    });
+
+    assert.deepEqual(logs, []);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('fetch AWTRIX NG transport logs request and response in debug mode with redacted auth header', async () => {
+  const originalFetch = global.fetch;
+  const logs = [];
+  const recordingFetch = createRecordingFetch(() => ({
+    status: 200,
+    statusText: 'OK',
+    headers: {
+      'content-type': 'application/json',
+    },
+    data: {
+      ok: true,
+    },
+  }));
+  global.fetch = recordingFetch;
+
+  try {
+    const transport = new FetchAwtrixNgHttpTransport({
+      baseUrl: 'http://awtrix-ng.local',
+      auth: {
+        username: 'homey',
+        password: 'secret',
+      },
+      debug: true,
+      log: (entry) => logs.push(entry),
+    });
+
+    await transport.request({
+      method: 'POST',
+      path: '/api/v1/notifications',
+      query: {
+        dryRun: false,
+      },
+      body: {
+        text: 'hello',
+      },
+    });
+
+    assert.equal(recordingFetch.calls[0].config.headers.Authorization, `Basic ${Buffer.from('homey:secret').toString('base64')}`);
+    assert.deepEqual(logs, [{
+      message: 'POST',
+      url: 'http://awtrix-ng.local/api/v1/notifications?dryRun=false',
+      headers: {
+        Accept: '*/*',
+        'User-Agent': 'Homey/1.0',
+        Authorization: '<redacted>',
+        'Content-Type': 'application/json',
+      },
+      query: {
+        dryRun: false,
+      },
+      data: {
+        text: 'hello',
+      },
+    }, {
+      message: 'POST(response)',
+      url: 'http://awtrix-ng.local/api/v1/notifications?dryRun=false',
+      dump: {
+        status: 200,
+        statusText: 'OK',
+        data: {
+          ok: true,
+        },
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    }]);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('fetch AWTRIX NG transport logs error response body in debug mode', async () => {
+  const originalFetch = global.fetch;
   const logs = [];
   const rawBody = {
     error: {
@@ -288,10 +324,8 @@ test('axios AWTRIX NG transport logs error response body in debug mode', async (
       field: 'duration',
     },
   };
-  const recordingAxios = createRecordingAxios(() => {
-    const error = new Error('Request failed with status code 422');
-    error.isAxiosError = true;
-    error.response = {
+  const recordingFetch = createRecordingFetch(() => {
+    return {
       status: 422,
       statusText: 'Unprocessable Content',
       headers: {
@@ -299,112 +333,96 @@ test('axios AWTRIX NG transport logs error response body in debug mode', async (
       },
       data: rawBody,
     };
-    throw error;
   });
-  const transport = new AxiosAwtrixNgHttpTransport({
-    baseUrl: 'http://awtrix-ng.local',
-    debug: true,
-    log: (entry) => logs.push(entry),
-  }, recordingAxios.client);
+  global.fetch = recordingFetch;
 
-  await assert.rejects(
-    () => transport.request({
-      method: 'PATCH',
-      path: '/api/v1/settings',
-      body: {
+  try {
+    const transport = new FetchAwtrixNgHttpTransport({
+      baseUrl: 'http://awtrix-ng.local',
+      debug: true,
+      log: (entry) => logs.push(entry),
+    });
+
+    await assert.rejects(
+      () => transport.request({
+        method: 'PATCH',
+        path: '/api/v1/settings',
+        body: {
+          duration: 5,
+        },
+      }),
+      AwtrixNgHttpError,
+    );
+
+    assert.deepEqual(logs, [{
+      message: 'PATCH',
+      url: 'http://awtrix-ng.local/api/v1/settings',
+      headers: {
+        Accept: '*/*',
+        'User-Agent': 'Homey/1.0',
+        'Content-Type': 'application/json',
+      },
+      query: undefined,
+      data: {
         duration: 5,
       },
-    }),
-    AwtrixNgHttpError,
-  );
-
-  assert.deepEqual(logs, [{
-    message: 'PATCH',
-    url: 'http://awtrix-ng.local/api/v1/settings',
-    headers: {
-      Accept: '*/*',
-      'User-Agent': 'Homey/1.0',
-      'Content-Type': 'application/json',
-    },
-    query: undefined,
-    data: {
-      duration: 5,
-    },
-  }, {
-    message: 'PATCH(response)',
-    url: 'http://awtrix-ng.local/api/v1/settings',
-    dump: {
-      status: 422,
-      statusText: 'Unprocessable Content',
-      data: rawBody,
-      headers: {
-        'content-type': 'application/json',
+    }, {
+      message: 'PATCH(response)',
+      url: 'http://awtrix-ng.local/api/v1/settings',
+      dump: {
+        status: 422,
+        statusText: 'Unprocessable Content',
+        data: rawBody,
+        headers: {
+          'content-type': 'application/json',
+        },
       },
-    },
-  }, {
-    message: 'PATCH(error)',
-    url: 'http://awtrix-ng.local/api/v1/settings',
-    arg: 'Request failed with status code 422',
-  }]);
+    }, {
+      message: 'PATCH(error)',
+      url: 'http://awtrix-ng.local/api/v1/settings',
+      arg: 'Request failed with status code 422',
+    }]);
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
 
-test('axios AWTRIX NG transport supports text responses', async () => {
-  const recordingAxios = createRecordingAxios(() => ({
+test('fetch AWTRIX NG transport supports text responses', async () => {
+  const originalFetch = global.fetch;
+  const recordingFetch = createRecordingFetch(() => ({
     status: 200,
     headers: {
       'content-type': 'text/plain',
     },
     data: '1.0.0',
   }));
-  const transport = new AxiosAwtrixNgHttpTransport({
-    baseUrl: 'http://awtrix-ng.local',
-  }, recordingAxios.client);
+  global.fetch = recordingFetch;
 
-  const response = await transport.request({
-    method: 'GET',
-    path: '/version',
-    responseType: 'text',
-  });
+  try {
+    const transport = new FetchAwtrixNgHttpTransport({
+      baseUrl: 'http://awtrix-ng.local',
+    });
 
-  assert.equal(recordingAxios.calls[0].responseType, 'text');
-  assert.deepEqual(response, {
-    status: 200,
-    headers: {
-      'content-type': 'text/plain',
-    },
-    data: '1.0.0',
-  });
+    const response = await transport.request({
+      method: 'GET',
+      path: '/version',
+      responseType: 'text',
+    });
+
+    assert.deepEqual(response, {
+      status: 200,
+      headers: {
+        'content-type': 'text/plain',
+      },
+      data: '1.0.0',
+    });
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
 
-test('axios AWTRIX NG transport does not overwrite multipart content type with JSON', async () => {
-  const recordingAxios = createRecordingAxios(() => ({
-    status: 200,
-    headers: {},
-    data: {
-      ok: true,
-    },
-  }));
-  const transport = new AxiosAwtrixNgHttpTransport({
-    baseUrl: 'http://awtrix-ng.local',
-  }, recordingAxios.client);
-  const form = new FormData();
-  form.append('file', Buffer.from('icon'), { filename: 'homey.gif' });
-
-  await transport.request({
-    method: 'POST',
-    path: '/api/v1/files',
-    query: {
-      dir: '/ICONS',
-    },
-    body: form,
-  });
-
-  assert.equal(recordingAxios.calls[0].headers['Content-Type'], undefined);
-  assert.match(recordingAxios.calls[0].headers['content-type'], /^multipart\/form-data; boundary=/);
-  assert.equal(recordingAxios.calls[0].data, form);
-});
-
-test('axios AWTRIX NG transport preserves non-2xx status, headers and raw body', async () => {
+test('fetch AWTRIX NG transport preserves non-2xx status, headers and raw body', async () => {
+  const originalFetch = global.fetch;
   const rawBody = {
     error: {
       code: 'validationFailed',
@@ -412,50 +430,52 @@ test('axios AWTRIX NG transport preserves non-2xx status, headers and raw body',
       field: 'brightness',
     },
   };
-  const recordingAxios = createRecordingAxios(() => {
-    const error = new Error('Request failed with status code 422');
-    error.isAxiosError = true;
-    error.response = {
+  const recordingFetch = createRecordingFetch(() => {
+    return {
       status: 422,
       headers: {
         'content-type': 'application/json',
       },
       data: rawBody,
     };
-    throw error;
   });
-  const transport = new AxiosAwtrixNgHttpTransport({
-    baseUrl: 'http://awtrix-ng.local',
-  }, recordingAxios.client);
+  global.fetch = recordingFetch;
 
   try {
-    await transport.request({
-      method: 'PATCH',
-      path: '/api/v1/settings',
-      body: {
-        brightness: 999,
-      },
+    const transport = new FetchAwtrixNgHttpTransport({
+      baseUrl: 'http://awtrix-ng.local',
     });
-    assert.fail('Expected transport request to throw');
-  } catch (error) {
-    assert.equal(error instanceof AwtrixNgHttpError, true);
-    assert.equal(error.name, 'AwtrixNgHttpError');
-    assert.equal(error.status, 422);
-    assert.equal(error.method, 'PATCH');
-    assert.equal(error.url, 'http://awtrix-ng.local/api/v1/settings');
-    assert.deepEqual(error.headers, {
-      'content-type': 'application/json',
-    });
-    assert.equal(error.rawBody, rawBody);
+
+    try {
+      await transport.request({
+        method: 'PATCH',
+        path: '/api/v1/settings',
+        body: {
+          brightness: 999,
+        },
+      });
+      assert.fail('Expected transport request to throw');
+    } catch (error) {
+      assert.equal(error instanceof AwtrixNgHttpError, true);
+      assert.equal(error.name, 'AwtrixNgHttpError');
+      assert.equal(error.status, 422);
+      assert.equal(error.method, 'PATCH');
+      assert.equal(error.url, 'http://awtrix-ng.local/api/v1/settings');
+      assert.deepEqual(error.headers, {
+        'content-type': 'application/json',
+      });
+      assert.deepEqual(error.rawBody, rawBody);
+    }
+  } finally {
+    global.fetch = originalFetch;
   }
 });
 
-test('axios AWTRIX NG transport disables redirects and preserves the redirect response', async () => {
+test('fetch AWTRIX NG transport preserves the redirect response', async () => {
+  const originalFetch = global.fetch;
   const rawBody = '<a href="http://other-device.local/">Moved</a>';
-  const recordingAxios = createRecordingAxios(() => {
-    const error = new Error('Request failed with status code 302');
-    error.isAxiosError = true;
-    error.response = {
+  const recordingFetch = createRecordingFetch(() => {
+    return {
       status: 302,
       headers: {
         location: 'http://other-device.local/',
@@ -463,26 +483,30 @@ test('axios AWTRIX NG transport disables redirects and preserves the redirect re
       },
       data: rawBody,
     };
-    throw error;
   });
-  const transport = new AxiosAwtrixNgHttpTransport({
-    baseUrl: 'http://awtrix-ng.local',
-  }, recordingAxios.client);
+  global.fetch = recordingFetch;
 
-  await assert.rejects(
-    () => transport.request({ method: 'GET', path: '/api/v1/device' }),
-    (error) => {
-      assert.equal(error instanceof AwtrixNgHttpError, true);
-      assert.equal(error.status, 302);
-      assert.equal(error.method, 'GET');
-      assert.equal(error.url, 'http://awtrix-ng.local/api/v1/device');
-      assert.deepEqual(error.headers, {
-        location: 'http://other-device.local/',
-        'content-type': 'text/html',
-      });
-      assert.equal(error.rawBody, rawBody);
-      return true;
-    },
-  );
-  assert.equal(recordingAxios.calls[0].maxRedirects, 0);
+  try {
+    const transport = new FetchAwtrixNgHttpTransport({
+      baseUrl: 'http://awtrix-ng.local',
+    });
+
+    await assert.rejects(
+      () => transport.request({ method: 'GET', path: '/api/v1/device' }),
+      (error) => {
+        assert.equal(error instanceof AwtrixNgHttpError, true);
+        assert.equal(error.status, 302);
+        assert.equal(error.method, 'GET');
+        assert.equal(error.url, 'http://awtrix-ng.local/api/v1/device');
+        assert.deepEqual(error.headers, {
+          location: 'http://other-device.local/',
+          'content-type': 'text/html',
+        });
+        assert.equal(error.rawBody, rawBody);
+        return true;
+      },
+    );
+  } finally {
+    global.fetch = originalFetch;
+  }
 });

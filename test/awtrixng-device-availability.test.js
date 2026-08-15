@@ -48,7 +48,7 @@ const loadAwtrixNgDevice = (transport) => {
 
   function FakeHomeyDevice() {}
 
-  function FakeAxiosTransport() {
+  function FakeFetchTransport() {
     return transport;
   }
 
@@ -57,8 +57,8 @@ const loadAwtrixNgDevice = (transport) => {
       return { Device: FakeHomeyDevice };
     }
     // The transport is created inside the AwtrixNgApi facade since update-plan-3 (M3).
-    if (request === '../Http/AxiosTransport') {
-      return FakeAxiosTransport;
+    if (request === '../Http/FetchTransport') {
+      return FakeFetchTransport;
     }
     return originalLoad.call(this, request, parent, isMain);
   };

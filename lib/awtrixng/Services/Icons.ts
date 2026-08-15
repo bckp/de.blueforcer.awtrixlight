@@ -1,4 +1,3 @@
-import FormData from 'form-data';
 import path from 'path';
 import { AwtrixNgFileDirectory, AwtrixNgFileUploadRequest } from '../Api/Client';
 import { AwtrixNgInvalidResponseError } from '../Api/InvalidResponseError';
@@ -63,7 +62,7 @@ export const toAwtrixNgIconAutocompleteItems = (
 
 export const createAwtrixNgIconUploadForm = (source: AwtrixNgIconUploadSource): FormData => {
   const form = new FormData();
-  form.append('file', source.body, { filename: source.fileName });
+  form.append('file', new Blob([source.body]), source.fileName);
 
   return form;
 };

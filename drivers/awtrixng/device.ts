@@ -10,6 +10,7 @@ import AwtrixNgApi, {
 import Poll from '../../lib/shared/Poll';
 import { toAwtrixNgBaseUrl } from '../../lib/awtrixng/Discovery/Detection';
 import { AwtrixNgHomeySettings, hasAwtrixNgLocalSettingsChange } from '../../lib/awtrixng/Services/Settings';
+import runWithConcurrencyLimit from '../../lib/shared/Concurrency';
 import { toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
 import { AwtrixDeviceType } from '../awtrix-device-type';
 
@@ -562,28 +563,17 @@ class AwtrixNgDevice extends Device {
     const dirEntries = await fs.promises.readdir(BundledIconsDirectory, { withFileTypes: true });
     const iconFiles = dirEntries.filter((entry) => entry.isFile()).map((entry) => entry.name);
     const failures: Array<{ fileName: string; error: unknown; index: number }> = [];
-    let nextIconIndex = 0;
-
-    const uploadNextIcon = async (): Promise<void> => {
-      while (nextIconIndex < iconFiles.length) {
-        const index = nextIconIndex;
-        const fileName = iconFiles[index];
-        nextIconIndex += 1;
-
-        try {
-          const body = await fs.promises.readFile(path.join(BundledIconsDirectory, fileName));
-          await icons.upload({
-            fileName,
-            body,
-          });
-        } catch (error: unknown) {
-          failures.push({ fileName, error, index });
-        }
+    await runWithConcurrencyLimit(iconFiles, MaxConcurrentIconUploads, async (fileName, index) => {
+      try {
+        const body = await fs.promises.readFile(path.join(BundledIconsDirectory, fileName));
+        await icons.upload({
+          fileName,
+          body,
+        });
+      } catch (error: unknown) {
+        failures.push({ fileName, error, index });
       }
-    };
-
-    const concurrency = Math.min(MaxConcurrentIconUploads, iconFiles.length);
-    await Promise.all(Array.from({ length: concurrency }, () => uploadNextIcon()));
+    });
 
     if (failures.length > 0) {
       failures.sort((left, right) => left.index - right.index);

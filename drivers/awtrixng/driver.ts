@@ -12,6 +12,7 @@ import {
   isAwtrixNgMdnsCandidate,
   toAwtrixNgBaseUrl,
 } from '../../lib/awtrixng/Discovery/Detection';
+import runWithConcurrencyLimit from '../../lib/shared/Concurrency';
 import { isRecord, toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
 
 const AwtrixNgManualPairingOptionId = '__awtrixng_manual_pairing__' as const;
@@ -447,19 +448,11 @@ class AwtrixNgDriver extends Driver {
     const discoveryResults = this.getDiscoveryStrategy().getDiscoveryResults();
     const candidates = (Object.values(discoveryResults) as unknown[])
       .filter((discoveryResult): discoveryResult is AwtrixNgDiscoveryResult => this.isAwtrixNgDiscoveryResult(discoveryResult));
-    const devices: Array<AwtrixNgDiscoveredPairListItem | undefined> = new Array(candidates.length);
-    let nextCandidateIndex = 0;
-
-    const probeNextCandidate = async (): Promise<void> => {
-      while (nextCandidateIndex < candidates.length) {
-        const candidateIndex = nextCandidateIndex;
-        nextCandidateIndex += 1;
-        devices[candidateIndex] = await this.probeDiscoveryResult(candidates[candidateIndex]);
-      }
-    };
-
-    const concurrency = Math.min(MaxConcurrentDiscoveryProbes, candidates.length);
-    await Promise.all(Array.from({ length: concurrency }, () => probeNextCandidate()));
+    const devices = await runWithConcurrencyLimit(
+      candidates,
+      MaxConcurrentDiscoveryProbes,
+      async (candidate) => this.probeDiscoveryResult(candidate),
+    );
 
     return devices
       .filter((device): device is AwtrixNgDiscoveredPairListItem => device !== undefined)

@@ -85,6 +85,7 @@ it. Re-reporting them as findings wastes a review cycle.
 
 **Tooling and process**
 
+- Use native `fetch` and `FormData` (requires Node.js 18+). The use of `axios` and `form-data` packages is explicitly forbidden for all new and existing code, as it was removed to optimize the project.
 - ESLint is pinned to 8.57.1 + typescript-eslint 8 via `package.json` overrides because
   `eslint-config-athom` (3.1.5) still targets the ESLint 7 era through transitive pins.
   ESLint 8 is upstream EOL; the ESLint 9 upgrade waits for a new `eslint-config-athom`

@@ -29,12 +29,12 @@ const loadAwtrixNgDriver = ({ onTransportCreated, request }) => {
 
   function FakeHomeyDriver() {}
 
-  function FakeAxiosTransport(options) {
+  function FakeFetchTransport(options) {
     this.options = options;
     onTransportCreated?.(options);
   }
 
-  FakeAxiosTransport.prototype.request = function fakeRequest(httpRequest) {
+  FakeFetchTransport.prototype.request = function fakeRequest(httpRequest) {
     return request(this.options, httpRequest);
   };
 
@@ -43,8 +43,8 @@ const loadAwtrixNgDriver = ({ onTransportCreated, request }) => {
       return { Driver: FakeHomeyDriver };
     }
     // The transport is created inside the AwtrixNgApi facade since update-plan-3 (M4).
-    if (requestPath === '../Http/AxiosTransport') {
-      return FakeAxiosTransport;
+    if (requestPath === '../Http/FetchTransport') {
+      return FakeFetchTransport;
     }
     return originalLoad.call(this, requestPath, parent, isMain);
   };

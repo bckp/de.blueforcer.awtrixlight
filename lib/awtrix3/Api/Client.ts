@@ -1,6 +1,5 @@
-import axios, { AxiosResponse } from 'axios';
-import FormData from 'form-data';
 import { Response, Status } from './Response';
+import FetchError from './FetchError';
 
 const Timeout = 10000;
 const RedactedHeaderValue = '<redacted>';
@@ -93,58 +92,109 @@ export default class Client {
   }
 
   async #getRequest(url: string): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(new Error('Request Timeout')), Timeout);
     try {
       const headers = this.#getHeaders();
       this.#debugRequest('GET', url, headers);
-      const result = await axios.get(url, {
-        headers,
-        timeout: Timeout,
-        maxRedirects: 0,
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers as Record<string, string>,
+        signal: controller.signal,
+        redirect: 'manual',
       });
-      this.#debugResponse('GET', url, result);
+      clearTimeout(timeoutId);
+
+      let data;
+      const text = await response.text();
+      try {
+        data = text ? JSON.parse(text) : undefined;
+      } catch {
+        data = text;
+      }
+
+      this.#debugResponse('GET', url, response, data);
+
+      if (!response.ok) {
+        throw new FetchError(`Request failed with status ${response.status}`, response.status);
+      }
+
       return {
-        status: statusFromHttpCode(result.status),
-        data: result.data,
+        status: statusFromHttpCode(response.status),
+        data,
       };
     } catch (error: any) {
+      clearTimeout(timeoutId);
       return this.#requestError(error, url);
     }
   }
 
   async post(cmd: string, data: any, headers?: RequestHeaders): Promise<Response> {
     const url: string = this.#getApiUrl(cmd);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(new Error('Request Timeout')), Timeout);
     try {
       const requestHeaders = this.#getHeaders(headers);
       this.#debugRequest('POST', url, requestHeaders, data);
-      const result = await axios.post(url, data, {
-        headers: requestHeaders,
-        timeout: Timeout,
-        maxRedirects: 0,
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: requestHeaders as Record<string, string>,
+        body: JSON.stringify(data),
+        signal: controller.signal,
+        redirect: 'manual',
       });
-      this.#debugResponse('POST', url, result);
+      clearTimeout(timeoutId);
+
+      this.#debugResponse('POST', url, response);
+
+      if (!response.ok) {
+        throw new FetchError(`Request failed with status ${response.status}`, response.status);
+      }
+
       return {
-        status: statusFromHttpCode(result.status),
+        status: statusFromHttpCode(response.status),
       };
     } catch (error: any) {
+      clearTimeout(timeoutId);
       return this.#requestError(error, url);
     }
   }
 
   async upload(path: string, form: FormData): Promise<Response> {
     const url: string = this.#getUrl(path);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(new Error('Request Timeout')), Timeout);
     try {
-      const headers = this.#getHeaders(form.getHeaders());
+      const headers = this.#getHeaders();
+      // Native fetch automatically sets Content-Type with boundary for FormData
+      if ('Content-Type' in headers) {
+        delete headers['Content-Type'];
+      }
+
       this.#debugRequest('POST(upload)', url, headers);
-      const result = await axios.post(url, form, {
-        headers,
-        timeout: Timeout,
-        maxRedirects: 0,
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers as Record<string, string>,
+        body: form,
+        signal: controller.signal,
+        redirect: 'manual',
       });
-      this.#debugResponse('POST(upload)', url, result);
+      clearTimeout(timeoutId);
+
+      this.#debugResponse('POST(upload)', url, response);
+
+      if (!response.ok) {
+        throw new FetchError(`Request failed with status ${response.status}`, response.status);
+      }
+
       return {
-        status: statusFromHttpCode(result.status),
+        status: statusFromHttpCode(response.status),
       };
     } catch (error: any) {
+      clearTimeout(timeoutId);
       return this.#requestError(error, url);
     }
   }
@@ -175,7 +225,7 @@ export default class Client {
     this.#debugError('Result(error)', url, error.message || error);
 
     // Device did not respond in time
-    if (error.code === 'ECONNABORTED' || error.code === 'ERR_CANCELED') {
+    if (error.name === 'AbortError' || error.message === 'Request Timeout') {
       return {
         status: Status.NotFound,
       };
@@ -184,9 +234,11 @@ export default class Client {
     let message = 'unknown error';
     let status = Status.Error;
 
-    if (axios.isAxiosError(error)) {
+    if (error instanceof FetchError) {
       message = error.message;
-      status = statusFromHttpCode(error.response?.status || 500);
+      status = statusFromHttpCode(error.status || 500);
+    } else if (error instanceof Error) {
+      message = error.message;
     }
 
     return {
@@ -207,7 +259,7 @@ export default class Client {
     });
   }
 
-  #debugResponse(message: string, url: string, response?: AxiosResponse): void {
+  #debugResponse(message: string, url: string, response?: globalThis.Response, data?: any): void {
     if (!this.debug) {
       return;
     }
@@ -216,8 +268,13 @@ export default class Client {
     if (response) {
       dump.status = response.status;
       dump.statusText = response.statusText;
-      dump.data = response.data;
-      dump.headers = redactAuthorization(response.headers);
+      dump.data = data;
+
+      const headersObj: Record<string, string> = {};
+      response.headers.forEach((val: string, key: string) => {
+        headersObj[key] = val;
+      });
+      dump.headers = redactAuthorization(headersObj);
     }
     this.log({
       message,

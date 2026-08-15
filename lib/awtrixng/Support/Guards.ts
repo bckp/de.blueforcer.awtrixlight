@@ -7,7 +7,7 @@
  *
  * Two distinct record semantics exist and must not be conflated:
  * - `isRecord` accepts arrays (used where an array is still a usable object,
- *   for example mDNS TXT records, axios headers, API error envelopes).
+ *   for example mDNS TXT records, fetch headers, API error envelopes).
  * - `isPlainObject` rejects arrays and objects with a custom prototype (used
  *   where the value must be a JSON object, for example payload transforms).
  */

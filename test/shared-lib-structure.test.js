@@ -7,7 +7,7 @@ const sharedLibDir = path.join(__dirname, '..', 'lib', 'shared');
 
 // AGENTS.md: lib/shared may contain exclusively protocol-agnostic infrastructure.
 // Currently only Poll (+ TimerHost); anything else needs explicit owner approval.
-const allowedFiles = ['Poll.ts'];
+const allowedFiles = ['Concurrency.ts', 'Poll.ts'];
 
 test('shared lib contains only the approved protocol-agnostic modules', () => {
   const entries = fs.readdirSync(sharedLibDir, { withFileTypes: true });

@@ -1,4 +1,4 @@
-import AxiosAwtrixNgHttpTransport from '../Http/AxiosTransport';
+import FetchAwtrixNgHttpTransport from '../Http/FetchTransport';
 import { AwtrixNgBasicAuthOptions, AwtrixNgDebugLogger } from '../Http/Transport';
 import AwtrixNgClient, { AwtrixNgIndicatorId } from './Client';
 import { AwtrixNgInvalidResponseError } from './InvalidResponseError';
@@ -138,7 +138,7 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
   }
 
   private static createClient(options: AwtrixNgConnectionOptions): AwtrixNgClient {
-    return new AwtrixNgClient(new AxiosAwtrixNgHttpTransport({
+    return new AwtrixNgClient(new FetchAwtrixNgHttpTransport({
       baseUrl: options.baseUrl,
       ...(options.auth === undefined ? {} : { auth: options.auth }),
       ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),

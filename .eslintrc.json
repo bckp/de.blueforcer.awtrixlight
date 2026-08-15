@@ -6,7 +6,7 @@
   ],
   "rules": {
     // Off: the offending signatures put optional parameters after a defaulted one
-    // (Api.clientVerify, AxiosTransport constructor options). Reordering them would
+    // (Api.clientVerify, FetchTransport constructor options). Reordering them would
     // change public call signatures, which a lint upgrade must not do.
     "default-param-last": "off",
     "node/no-unsupported-features/es-syntax": [

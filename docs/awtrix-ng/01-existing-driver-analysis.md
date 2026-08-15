@@ -14,7 +14,7 @@ Aktualizace architektonického rozhodnutí: AWTRIX 3 a AWTRIX NG se mají brát 
 | `drivers/awtrixlight/device.ts` | Homey device `AwtrixLightDevice`; drží instanci API klienta, polling, lifecycle hooky, capabilities a příkazové metody `cmd*`. |
 | `drivers/awtrixlight/interfaces.ts` | Úzké pomocné interface pro fail/poll integraci (`DeviceFailer`, `DevicePoll`). Nejde o společné aplikační rozhraní driveru. |
 | `lib/awtrix3/Api/Api.ts` | AWTRIX 3 API wrapper; mapuje doménové metody na HTTP endpointy a zpracovává status do dostupnosti Homey zařízení. |
-| `lib/awtrix3/Api/Client.ts` | Nízká HTTP vrstva nad `axios`; skládá URL, hlavičky, Basic Auth, timeouty a mapuje HTTP status kódy. |
+| `lib/awtrix3/Api/Client.ts` | Nízká HTTP vrstva nad `nativní fetch`; skládá URL, hlavičky, Basic Auth, timeouty a mapuje HTTP status kódy. |
 | `lib/awtrix3/Api/Response.ts` | Interní enum `Status` a interface `Response`. |
 | `lib/awtrix3/Types.ts` | Typy payloadů a očekávaných odpovědí (`AwtrixStats`, `SettingOptions`, `NotifyOptions`, `AppOptions`, atd.). |
 | `lib/awtrix3/Normalizer.ts` | Validace/normalizace request payloadů před odesláním na AWTRIX 3. |
@@ -551,7 +551,7 @@ Ruční zadání IP je v aktuálním kódu vypnuté (`ManualAdd = false`).
 ### Timeouty
 
 - HTTP klient má konstantu `Timeout = 10000` ms.
-- Každý `axios.get`, `axios.post` a upload používá:
+- Každý `nativní fetch.get`, `nativní fetch.post` a upload používá:
   - `timeout: 10000`
   - `signal: abortSignal(10000)`
 - Timeout/abort (`ECONNABORTED`, `ERR_CANCELED`) se mapuje na `Status.NotFound`.
@@ -599,7 +599,7 @@ Pokryto:
 Nepokryto:
 
 - `Api` endpoint mapping;
-- reálné `Client.get/post/upload` volání přes mockovaný `axios`;
+- reálné `Client.get/post/upload` volání přes mockovaný `nativní fetch`;
 - Basic Auth hlavička;
 - timeout/abort chování;
 - availability/fail counter logika;
@@ -638,7 +638,7 @@ flowchart TD
     Driver[drivers/awtrixlight/driver.ts UlanziAwtrix]
     Device[drivers/awtrixlight/device.ts AwtrixLightDevice]
     Api[lib/awtrix3/Api/Api.ts]
-    Client[lib/awtrix3/Api/Client.ts axios]
+    Client[lib/awtrix3/Api/Client.ts nativní fetch]
     Normalizer[lib/awtrix3/Normalizer.ts + Validator.ts]
     Icons[lib/awtrix3/List/Icons.ts]
     Poll[lib/awtrix3/Poll.ts]
@@ -728,4 +728,4 @@ Tok požadavku z flow karty:
 
 ## Shrnutí
 
-Aktuální implementace je jeden konkrétní Homey driver `awtrixlight` pro AWTRIX 3. Architektura je jednoduchá: Homey driver registruje flow karty, Homey device drží stav a deleguje příkazy do AWTRIX 3 API wrapperu pod `lib/awtrix3`, wrapper používá `axios` klienta. Neexistuje obecné rozhraní pro více typů AWTRIX zařízení a podle aktuálního rozhodnutí se nemá doplňovat sdílená runtime abstrakce pro AWTRIX 3/NG. Největší rizika pro přidání AWTRIX NG jsou přímé závislosti flow karet na `AwtrixLightDevice`, AWTRIX 3-specific endpointy/payloady, nedostatečně detailní error model a chybějící bezpečná detekce typu zařízení.
+Aktuální implementace je jeden konkrétní Homey driver `awtrixlight` pro AWTRIX 3. Architektura je jednoduchá: Homey driver registruje flow karty, Homey device drží stav a deleguje příkazy do AWTRIX 3 API wrapperu pod `lib/awtrix3`, wrapper používá `nativní fetch` klienta. Neexistuje obecné rozhraní pro více typů AWTRIX zařízení a podle aktuálního rozhodnutí se nemá doplňovat sdílená runtime abstrakce pro AWTRIX 3/NG. Největší rizika pro přidání AWTRIX NG jsou přímé závislosti flow karet na `AwtrixLightDevice`, AWTRIX 3-specific endpointy/payloady, nedostatečně detailní error model a chybějící bezpečná detekce typu zařízení.
