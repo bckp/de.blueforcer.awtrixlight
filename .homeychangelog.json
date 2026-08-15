@@ -127,5 +127,8 @@
   },
   "2.2.4": {
     "en": "Fix: RTTTL use new API (min awtrixNG v1.1.0)"
+  },
+  "2.2.5": {
+    "en": "Small code fixes"
   }
 }
