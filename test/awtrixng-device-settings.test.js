@@ -115,6 +115,7 @@ const createSettingsHarness = ({
   const settings = { ...initialSettings };
   const setSettingsCalls = [];
   const errors = [];
+  const logs = [];
   const capabilityListeners = [];
   const capabilityValues = [];
   const responses = { ...createDefaultResponses(), ...responseOverrides };
@@ -140,7 +141,9 @@ const createSettingsHarness = ({
     // device.client is a read-only view of device.api since update-plan-3 (M3).
     api: oldClient,
     available: true,
-    log() {},
+    log(...args) {
+      logs.push(args);
+    },
     error(...args) {
       errors.push(args);
     },
@@ -207,6 +210,7 @@ const createSettingsHarness = ({
     device,
     errors,
     events,
+    logs,
     oldClient,
     requestLog: () => transport.calls.map(({ method, path }) => `${method} ${path}`),
     setSettingsCalls,
@@ -215,6 +219,49 @@ const createSettingsHarness = ({
     transport,
   };
 };
+
+test('AWTRIX NG settings logs redact credentials without changing the submitted settings', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: {
+      address: '192.0.2.10',
+      port: 80,
+      authUser: 'homey',
+      authPass: 'new-secret',
+    },
+  });
+
+  await harness.device.onInit();
+  harness.logs.length = 0;
+  const oldSettings = {
+    authUser: 'old-user',
+    authPass: 'old-secret',
+    uppercase: false,
+  };
+  const newSettings = {
+    authUser: 'new-user',
+    authPass: 'new-secret',
+    uppercase: true,
+  };
+
+  await harness.device.onSettings({
+    oldSettings,
+    newSettings,
+    changedKeys: ['uppercase'],
+  });
+
+  assert.deepEqual(harness.logs, [[
+    'AwtrixNgDevice settings were changed',
+    { authUser: '<redacted>', authPass: '<redacted>', uppercase: false },
+    { authUser: '<redacted>', authPass: '<redacted>', uppercase: true },
+    ['uppercase'],
+  ]]);
+  assert.equal(oldSettings.authUser, 'old-user');
+  assert.equal(oldSettings.authPass, 'old-secret');
+  assert.equal(newSettings.authUser, 'new-user');
+  assert.equal(newSettings.authPass, 'new-secret');
+  assert.deepEqual(harness.transport.calls.at(-1).body, { uppercase: true });
+});
 
 test('AWTRIX NG local settings change falls back to the stored address when settings carry none', async () => {
   const harness = createSettingsHarness({

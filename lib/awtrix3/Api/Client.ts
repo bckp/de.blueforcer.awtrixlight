@@ -63,12 +63,25 @@ export default class Client {
     this.pass = pass;
   }
 
+  #normalizeAddress(address: string): string {
+    const trimmed = address.trim();
+    const containsMultipleColons = trimmed.indexOf(':') !== trimmed.lastIndexOf(':');
+
+    if (containsMultipleColons && !trimmed.startsWith('[') && !trimmed.endsWith(']')) {
+      return `[${trimmed}]`;
+    }
+
+    return trimmed;
+  }
+
   #getApiUrl(path: string): string {
     return this.#getUrl(`api/${path}`);
   }
 
   #getUrl(path: string): string {
-    return `http://${this.ip}/${path}`;
+    const address = this.#normalizeAddress(this.ip);
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    return `http://${address}/${cleanPath}`;
   }
 
   async get(cmd: string): Promise<Response> {
@@ -137,18 +150,25 @@ export default class Client {
   }
 
   #getHeaders(headers: RequestHeaders = {}): RequestHeaders {
-    headers['Content-Type'] = 'application/json';
-    headers['User-Agent'] = 'Homey/1.0';
-    headers.Accept = '*/*';
+    const result: RequestHeaders = {
+      Accept: '*/*',
+      'User-Agent': 'Homey/1.0',
+      ...headers,
+    };
+
+    const hasContentType = Object.keys(result).some((key) => key.toLowerCase() === 'content-type');
+    if (!hasContentType) {
+      result['Content-Type'] = 'application/json';
+    }
 
     if (!this.user || !this.pass) {
-      return headers;
+      return result;
     }
 
     const token = Buffer.from(`${this.user}:${this.pass}`).toString('base64');
-    headers.Authorization = `Basic ${token}`;
+    result.Authorization = `Basic ${token}`;
 
-    return headers;
+    return result;
   }
 
   #requestError(error: any, url: string): Response {

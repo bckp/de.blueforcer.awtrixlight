@@ -129,3 +129,45 @@ test('AWTRIX 3 debug logs redact authorization while axios receives the real tok
   assert.equal(JSON.stringify(logs).includes(expectedAuthorization), false);
   assert.equal(JSON.stringify(logs).includes('response-secret'), false);
 });
+
+test('AWTRIX 3 client keeps caller headers immutable and preserves multipart content type', async () => {
+  const axiosMock = createRecordingAxios();
+  const Client = loadClientWithAxios(axiosMock);
+  const client = new Client({ ip: '192.0.2.10' });
+  const headers = {
+    'Content-Type': 'text/plain',
+    'X-Request-Id': 'request-1',
+  };
+
+  await client.post('rtttl', 'melody', headers);
+  const form = new FormData();
+  form.append('image', Buffer.from('icon'), { filename: 'icon.jpg' });
+  await client.upload('edit', form);
+
+  assert.deepEqual(headers, {
+    'Content-Type': 'text/plain',
+    'X-Request-Id': 'request-1',
+  });
+  assert.notEqual(axiosMock.calls[0].config.headers, headers);
+  assert.equal(axiosMock.calls[0].config.headers['Content-Type'], 'text/plain');
+  assert.match(axiosMock.calls[1].config.headers['content-type'], /^multipart\/form-data; boundary=/);
+  assert.equal(axiosMock.calls[1].config.headers['Content-Type'], undefined);
+});
+
+test('AWTRIX 3 client brackets IPv6 URLs without treating host ports as IPv6', async () => {
+  const axiosMock = createRecordingAxios();
+  const Client = loadClientWithAxios(axiosMock);
+  const client = new Client({ ip: '2001:db8::10' });
+
+  await client.get('stats');
+  client.setIp('[2001:db8::11]');
+  await client.getDirect('/api/stats');
+  client.setIp('awtrix.local:8080');
+  await client.post('power', { power: true });
+
+  assert.deepEqual(axiosMock.calls.map((call) => call.url), [
+    'http://[2001:db8::10]/api/stats',
+    'http://[2001:db8::11]/api/stats',
+    'http://awtrix.local:8080/api/power',
+  ]);
+});

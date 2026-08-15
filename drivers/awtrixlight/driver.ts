@@ -1,5 +1,6 @@
 import { Driver } from 'homey';
 import PairSession from 'homey/lib/PairSession';
+import { isIP } from 'net';
 import AwtrixLightDevice from './device';
 import { HomeyAwtrixIcon } from '../../lib/awtrix3/Types';
 
@@ -50,15 +51,33 @@ export default class UlanziAwtrix extends Driver {
     });
 
     this.homey.flow.getActionCard('notificationJson').registerRunListener(async (args: ListenerArgsNotificationJson) => {
-      await args.device.cmdNotify(args.msg, { ...JSON.parse(args.options) });
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(args.options);
+      } catch {
+        throw new TypeError('Notification options must be valid JSON.');
+      }
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        throw new TypeError('Notification options must be a JSON object.');
+      }
+      await args.device.cmdNotify(args.msg, { ...(parsed as Record<string, unknown>) });
     });
 
     // Custom app
     this.homey.flow.getActionCard('customApp').registerRunListener(async (args: ListenerArgsCustomApp) => {
-      const parsed = JSON.parse(args.options);
-      const text = args.msg || parsed.text || '';
-      const duration = args.duration ?? parsed.duration;
-      const params = { ...parsed, text, duration };
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(args.options);
+      } catch {
+        throw new TypeError('Custom app options must be valid JSON.');
+      }
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        throw new TypeError('Custom app options must be a JSON object.');
+      }
+      const parsedRecord = parsed as Record<string, unknown>;
+      const text = args.msg || (parsedRecord.text as string | undefined) || '';
+      const duration = args.duration ?? parsedRecord.duration;
+      const params: Record<string, unknown> = { ...parsedRecord, text, duration };
 
       if (args.color) params.color = args.color;
       if (args.icon.id && args.icon.id !== '-') params.icon = args.icon.id;
@@ -83,20 +102,26 @@ export default class UlanziAwtrix extends Driver {
 
       this.log(discoveryResults);
 
-      const devices = Object.values(discoveryResults).map((discoveryResult) => {
-        return {
+      const devices = Object.values(discoveryResults).flatMap((discoveryResult) => {
+        const address = typeof discoveryResult?.address === 'string' ? discoveryResult.address.trim() : '';
+
+        if (isIP(address) === 0) {
+          return [];
+        }
+
+        return [{
           name: discoveryResult.id,
           data: {
             id: discoveryResult.id,
           },
           store: {
-            address: discoveryResult.address,
+            address,
           },
           settings: {
             user: '',
             pass: '',
           },
-        };
+        }];
       });
 
       this.log(devices);

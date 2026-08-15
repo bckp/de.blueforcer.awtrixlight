@@ -16,6 +16,7 @@ import { AwtrixDeviceType } from '../awtrix-device-type';
 const PollIntervalMs = 60000;
 const BundledIconsDirectory = path.join(__dirname, 'assets/images/icons');
 const MaxConcurrentIconUploads = 3;
+const RedactedSettingValue = '<redacted>';
 
 // Hard-failing wrapper: the connection cannot be built without a usable port.
 const toConnectionPort = (value: unknown): number => {
@@ -62,6 +63,16 @@ interface AwtrixNgSettingsConnectionCandidate {
    */
   syncAddressIntoSettings: boolean;
 }
+
+const redactSettingsForLog = (settings: Record<string, unknown>): Record<string, unknown> => ({
+  ...settings,
+  ...(typeof settings.authUser === 'string' && settings.authUser.length > 0
+    ? { authUser: RedactedSettingValue }
+    : {}),
+  ...(typeof settings.authPass === 'string' && settings.authPass.length > 0
+    ? { authPass: RedactedSettingValue }
+    : {}),
+});
 
 class AwtrixNgDevice extends Device {
 
@@ -129,6 +140,7 @@ class AwtrixNgDevice extends Device {
   async onDeleted(): Promise<void> {
     this.log('AwtrixNgDevice has been deleted');
     this.poll?.stop();
+    this.icons?.invalidate();
   }
 
   onDiscoveryResult(discoveryResult: DiscoveryResultMDNSSD): boolean {
@@ -162,7 +174,12 @@ class AwtrixNgDevice extends Device {
   }
 
   async onSettings({ oldSettings, newSettings, changedKeys }: AwtrixNgDeviceSettingsChange): Promise<void> {
-    this.log('AwtrixNgDevice settings were changed', oldSettings, newSettings, changedKeys);
+    this.log(
+      'AwtrixNgDevice settings were changed',
+      redactSettingsForLog(oldSettings),
+      redactSettingsForLog(newSettings),
+      changedKeys,
+    );
 
     // Pure validation first: an invalid key or value must fail before any request is made.
     AwtrixNgApi.validateSettingsChange(newSettings, changedKeys);
@@ -542,8 +559,8 @@ class AwtrixNgDevice extends Device {
       throw new Error(this.getConnectionNotConfiguredMessage());
     }
 
-    const iconFiles = fs.readdirSync(BundledIconsDirectory)
-      .filter((fileName) => fs.statSync(path.join(BundledIconsDirectory, fileName)).isFile());
+    const dirEntries = await fs.promises.readdir(BundledIconsDirectory, { withFileTypes: true });
+    const iconFiles = dirEntries.filter((entry) => entry.isFile()).map((entry) => entry.name);
     const failures: Array<{ fileName: string; error: unknown; index: number }> = [];
     let nextIconIndex = 0;
 
@@ -554,9 +571,10 @@ class AwtrixNgDevice extends Device {
         nextIconIndex += 1;
 
         try {
+          const body = await fs.promises.readFile(path.join(BundledIconsDirectory, fileName));
           await icons.upload({
             fileName,
-            body: fs.readFileSync(path.join(BundledIconsDirectory, fileName)),
+            body,
           });
         } catch (error: unknown) {
           failures.push({ fileName, error, index });

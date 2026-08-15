@@ -423,7 +423,9 @@ test('AWTRIX NG onAdded uploads bundled icons with bounded parallelism and repor
         uploads.push(fileName);
         activeUploads += 1;
         maximumActiveUploads = Math.max(maximumActiveUploads, activeUploads);
-        await Promise.resolve();
+        await new Promise((resolve) => {
+          setImmediate(resolve);
+        });
         activeUploads -= 1;
 
         if (fileName === 'homey.jpg') {
@@ -452,4 +454,26 @@ test('AWTRIX NG onAdded uploads bundled icons with bounded parallelism and repor
   assert.equal(calls.error[0][0].error.code, 'validationFailed');
   assert.equal(calls.error[0][0].error.message, 'icon format rejected');
   assert.equal(calls.error[0][0].error.field, 'file');
+});
+
+test('AWTRIX NG onDeleted stops polling and clears the icon cache timer', async () => {
+  const { awtrixNgDevice } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
+  const calls = [];
+
+  awtrixNgDevice.poll = {
+    stop() {
+      calls.push('poll.stop');
+    },
+  };
+  awtrixNgDevice.api = {
+    icons: {
+      invalidate() {
+        calls.push('icons.invalidate');
+      },
+    },
+  };
+
+  await awtrixNgDevice.onDeleted();
+
+  assert.deepEqual(calls, ['poll.stop', 'icons.invalidate']);
 });

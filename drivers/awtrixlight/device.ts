@@ -12,6 +12,7 @@ import { AwtrixDeviceType } from '../awtrix-device-type';
 const RebootFields: ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'] = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
 const PollInterval: number = 60000; // 1 minute
 const PollIntervalLong: number = 300000; // 5 minutes
+const RedactedSettingValue = '<redacted>';
 
 /** Capabilities whose relative order is part of the UI; rebuilt as a group when it drifts. */
 const desiredCapabilityOrder: string[] = ['button_prev', 'button_next', 'awtrix_matrix'];
@@ -23,6 +24,13 @@ const additionalCapabilities: string[] = ['rssi', 'ip', 'button.rediscover'];
 const isInDesiredOrder = (capabilities: string[], desiredOrder: string[]): boolean => desiredOrder.every(
   (capability, index) => index === 0 || capabilities.indexOf(desiredOrder[index - 1]) < capabilities.indexOf(capability),
 );
+
+const redactSettingsForLog = (settings: Record<string, unknown>): Record<string, unknown> => ({
+  ...settings,
+  ...(typeof settings.pass === 'string' && settings.pass.length > 0
+    ? { pass: RedactedSettingValue }
+    : {}),
+});
 
 export default class AwtrixLightDevice extends Device implements DeviceFailer, DevicePoll {
 
@@ -114,7 +122,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       this.failsReset();
       this.failsCritical(true);
       if (this.getAvailable()) {
-        this.log('Device availalible');
+        this.log('Device available');
         // Availability is governed by the fail counter, not by a single refresh hiccup,
         // so a refresh failure is reported but must not abort initialization.
         try {
@@ -179,12 +187,13 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     const uploadErrors: Error[] = [];
     for (const file of files) {
       try {
-        await this.api.uploadImage(fs.readFileSync(`${directory}/${file}`), file);
-        this.icons.invalidate();
+        const fileContent = await fs.promises.readFile(`${directory}/${file}`);
+        await this.api.uploadImage(fileContent, file);
       } catch (cause) {
         uploadErrors.push(new Error(`Failed to upload bundled icon: ${file}`, { cause }));
       }
     }
+    this.icons.invalidate();
 
     if (uploadErrors.length > 0) {
       this.error(new AggregateError(uploadErrors, 'Failed to upload bundled AWTRIX 3 icons'));
@@ -196,7 +205,12 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     newSettings: { [key: string]: boolean | string | number | undefined | null };
     changedKeys: string[];
   }): Promise<string | void> {
-    this.log('AwtrixLightDevice settings where changed', oldSettings, newSettings, changedKeys);
+    this.log(
+      'AwtrixLightDevice settings were changed',
+      redactSettingsForLog(oldSettings),
+      redactSettingsForLog(newSettings),
+      changedKeys,
+    );
 
     // If user or pass changed, update credentials
     const credentialsChanged = changedKeys.includes('user') || changedKeys.includes('pass');
@@ -233,6 +247,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   async onDeleted() {
     this.log('AwtrixLightDevice has been deleted');
     this.poll.stop();
+    this.icons?.invalidate();
   }
 
   onDiscoveryResult(discoveryResult: DiscoveryResultMDNSSD) {

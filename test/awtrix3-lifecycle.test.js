@@ -350,6 +350,39 @@ test('AWTRIX 3 non-credential settings do not probe credentials while offline', 
   assert.equal(calls.reboot, 1);
 });
 
+test('AWTRIX 3 settings logs redact passwords without changing settings writes', async () => {
+  const logs = [];
+  const settingsWrites = [];
+  const oldSettings = { user: 'homey', pass: 'old-secret', TIM: false };
+  const newSettings = { user: 'homey', pass: 'new-secret', TIM: false };
+  const context = {
+    log(...args) {
+      logs.push(args);
+    },
+    api: {
+      async setSettings(settings) {
+        settingsWrites.push(settings);
+      },
+    },
+  };
+
+  await AwtrixLightDevice.prototype.onSettings.call(context, {
+    oldSettings,
+    newSettings,
+    changedKeys: [],
+  });
+
+  assert.deepEqual(logs, [[
+    'AwtrixLightDevice settings were changed',
+    { user: 'homey', pass: '<redacted>', TIM: false },
+    { user: 'homey', pass: '<redacted>', TIM: false },
+    [],
+  ]]);
+  assert.deepEqual(settingsWrites, [newSettings]);
+  assert.equal(oldSettings.pass, 'old-secret');
+  assert.equal(newSettings.pass, 'new-secret');
+});
+
 test('AWTRIX 3 credential settings distinguish unreachable device from invalid credentials', async () => {
   const oldSettings = { user: 'old-user', pass: 'old-pass' };
   const newSettings = { user: 'new-user', pass: 'new-pass' };
@@ -506,7 +539,7 @@ test('AWTRIX 3 onAdded uploads all bundled icons sequentially and contains failu
 
   assert.deepEqual(uploads, expectedFiles);
   assert.equal(maxActiveUploads, 1);
-  assert.equal(cacheInvalidations, expectedFiles.length - 1, 'only successful uploads invalidate the icon cache');
+  assert.equal(cacheInvalidations, 1, 'the icon cache is invalidated once after every upload was attempted');
   assert.equal(diagnostics.length, 1);
   assert.equal(diagnostics[0] instanceof AggregateError, true);
   assert.equal(diagnostics[0].errors.length, 1);
@@ -1238,4 +1271,25 @@ test('AWTRIX 3 rediscover button survives a failing ip capability write', async 
 
   assert.equal(unhandled, 0);
   assert.deepEqual(errors, [[capabilityError]], 'the capability failure is logged, not thrown');
+});
+
+test('AWTRIX 3 onDeleted stops polling and clears the icon cache timer', async () => {
+  const calls = [];
+  const context = {
+    log() {},
+    poll: {
+      stop() {
+        calls.push('poll.stop');
+      },
+    },
+    icons: {
+      invalidate() {
+        calls.push('icons.invalidate');
+      },
+    },
+  };
+
+  await AwtrixLightDevice.prototype.onDeleted.call(context);
+
+  assert.deepEqual(calls, ['poll.stop', 'icons.invalidate']);
 });
