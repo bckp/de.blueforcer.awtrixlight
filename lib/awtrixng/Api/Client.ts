@@ -119,7 +119,7 @@ export default class AwtrixNgClient {
   playRtttl(rtttl: string): Promise<AwtrixNgApiOkResponse> {
     return this.#request<AwtrixNgApiOkResponse, AwtrixNgApiSoundPlayPayload>({
       method: 'POST',
-      path: '/api/v1/sounds/play',
+      path: '/api/v1/audio/play',
       body: { rtttl },
     });
   }

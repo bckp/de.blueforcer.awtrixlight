@@ -58,12 +58,18 @@ Aktuální NG driver podporuje samostatné NG flow karty pro:
 | Weather overlay | capability picker `awtrixng_weather_overlay` a flow action `weatherOverlay` registrovaná app-level a omezená přes device filter na AWTRIX NG driver | `GET /api/v1/display`, `PATCH /api/v1/display` |
 | Indikátory | společná flow karta `indicator` | `PUT /api/v1/indicators/{id}` |
 | Smazání indikátoru | společná flow karta `indicatorDismiss` | `DELETE /api/v1/indicators/{id}` |
-| RTTTL melodie | společná flow karta `playRTTTL` | `POST /api/v1/sounds/play` |
+| RTTTL melodie | společná flow karta `playRTTTL`; vyžaduje firmware 1.1.0 nebo novější | `POST /api/v1/audio/play` |
 | Custom/pushed app | `application`; JSON options jsou volitelné; duration se nastavuje přes Homey `Add duration`, případně přes JSON options `durationMs` | `PUT /api/v1/apps/pushed/{name}` |
 | Raw custom/pushed app | `applicationRaw`, přijímá pouze NG-shaped raw JSON object | `PUT /api/v1/apps/pushed/{name}` |
 | Odstranění custom app | společná flow karta `applicationRemove`; legacy AWTRIX 3 karta `removeCustomApp` zůstává deprecated | `DELETE /api/v1/apps/{name}` |
 | Další/předchozí app | Homey device tlačítka `button_next`, `button_prev`; samostatné AWTRIX NG flow karty se nepoužívají | `POST /api/v1/apps/next`, `POST /api/v1/apps/previous` |
 | Ikony | autocomplete a upload do `/ICONS` | `GET/POST /api/v1/files?dir=/ICONS` |
+
+Verze firmwaru se průběžně přebírá z odpovědi `GET /api/v1/device` při běžném
+obnovení stavu zařízení. Ostatní funkce driveru nejsou minimální verzí 1.1.0
+omezené; kontrola se provede až při použití RTTTL flow karty. Starší nebo dosud
+nezjištěná verze skončí jednotnou chybou `AwtrixNgUnsupportedVersionError` a
+audio endpoint se nezavolá.
 
 ## Custom apps a názvy
 

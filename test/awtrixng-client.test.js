@@ -256,7 +256,7 @@ test('AWTRIX NG client maps sounds, apps and reboot routes', async () => {
 
   assert.deepEqual(transport.calls, [{
     method: 'POST',
-    path: '/api/v1/sounds/play',
+    path: '/api/v1/audio/play',
     body: {
       rtttl: 'beep:d=4,o=5,b=120:c',
     },

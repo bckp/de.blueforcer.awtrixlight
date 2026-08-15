@@ -5,6 +5,7 @@ const AwtrixNgApi = require('../.homeybuild/lib/awtrixng/Api/Api').default;
 const AwtrixNgClient = require('../.homeybuild/lib/awtrixng/Api/Client').default;
 const { AwtrixNgDeviceIdentityMismatchError } = require('../.homeybuild/lib/awtrixng/Api/IdentityMismatchError');
 const { AwtrixNgInvalidResponseError } = require('../.homeybuild/lib/awtrixng/Api/InvalidResponseError');
+const { AwtrixNgUnsupportedVersionError } = require('../.homeybuild/lib/awtrixng/Api/UnsupportedVersionError');
 const { AwtrixNgBuiltinAppUnavailableError } = require('../.homeybuild/lib/awtrixng/Services/Apps');
 
 const BaseUrl = 'http://192.168.1.44:8080';
@@ -116,6 +117,57 @@ test('setMatrixPower rejects non-boolean values without touching the device', as
   const { api, transport } = createApi();
 
   await assert.rejects(api.setMatrixPower('on'), /must be a boolean/);
+  assert.equal(transport.calls.length, 0);
+});
+
+test('playRtttl uses the cached device version and the audio endpoint on firmware 1.1.0', async () => {
+  const { api, transport } = createApi({
+    'GET /api/v1/device': { ...deviceStateResponse, version: '1.1.0' },
+    'POST /api/v1/audio/play': { ok: true },
+  });
+
+  await api.probe();
+  await api.playRtttl('beep:d=4,o=5,b=120:c');
+
+  assert.deepEqual(
+    transport.calls.map((call) => `${call.method} ${call.path}`),
+    ['GET /api/v1/device', 'POST /api/v1/audio/play'],
+  );
+  assert.deepEqual(transport.calls[1].body, { rtttl: 'beep:d=4,o=5,b=120:c' });
+});
+
+test('playRtttl rejects cached firmware below 1.1.0 without calling the audio endpoint', async () => {
+  const { api, transport } = createApi({
+    'GET /api/v1/device': deviceStateResponse,
+  });
+
+  await api.probe();
+
+  await assert.rejects(api.playRtttl('beep:d=4,o=5,b=120:c'), (error) => {
+    assert.ok(error instanceof AwtrixNgUnsupportedVersionError);
+    assert.equal(error.name, 'AwtrixNgUnsupportedVersionError');
+    assert.equal(error.currentVersion, '1.0.14');
+    assert.equal(error.minimumVersion, '1.1.0');
+    assert.match(error.message, /requires AWTRIX NG firmware 1\.1\.0 or newer/);
+    return true;
+  });
+
+  assert.deepEqual(
+    transport.calls.map((call) => `${call.method} ${call.path}`),
+    ['GET /api/v1/device'],
+  );
+});
+
+test('playRtttl rejects with the same version error when no device version is known yet', async () => {
+  const { api, transport } = createApi();
+
+  await assert.rejects(api.playRtttl('beep:d=4,o=5,b=120:c'), (error) => {
+    assert.ok(error instanceof AwtrixNgUnsupportedVersionError);
+    assert.equal(error.currentVersion, undefined);
+    assert.equal(error.minimumVersion, '1.1.0');
+    return true;
+  });
+
   assert.equal(transport.calls.length, 0);
 });
 

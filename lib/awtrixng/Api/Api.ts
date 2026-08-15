@@ -29,6 +29,8 @@ import {
 import { AwtrixNgCapabilityUpdatePlan, createAwtrixNgCapabilityUpdatePlan } from '../Device/State';
 import AwtrixNgIcons, { AwtrixNgIconsOptions } from '../Services/Icons';
 import { isPlainObject } from '../Support/Guards';
+import isAwtrixNgFirmwareVersionSupported from './FirmwareVersion';
+import { AwtrixNgUnsupportedVersionError } from './UnsupportedVersionError';
 import {
   AwtrixNgApiDeviceStateResponse,
   AwtrixNgApiDisplayPatch,
@@ -41,6 +43,7 @@ import {
 // Re-exported facade surface: device.ts consumes these alongside AwtrixNgApi so it does
 // not have to import the individual lib modules the facade already wraps.
 export { AwtrixNgDeviceIdentityMismatchError } from './IdentityMismatchError';
+export { AwtrixNgUnsupportedVersionError } from './UnsupportedVersionError';
 export { formatAwtrixNgErrorDetails } from '../Device/Availability';
 export { AwtrixNgWeatherOverlayCapabilityId } from '../Services/Display';
 export type { AwtrixNgBasicAuthOptions } from '../Http/Transport';
@@ -49,6 +52,7 @@ export type { AwtrixNgDeviceProbeResult } from '../Discovery/Detection';
 const DeviceEndpoint = '/api/v1/device';
 const SettingsEndpoint = '/api/v1/settings';
 const AppsEndpoint = '/api/v1/apps';
+const RtttlMinimumFirmwareVersion = '1.1.0';
 
 export interface AwtrixNgConnectionOptions {
   baseUrl: string;
@@ -95,6 +99,8 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
   readonly icons: AwtrixNgIcons;
 
   readonly #client: AwtrixNgClient;
+
+  #firmwareVersion?: string;
 
   /**
    * Production code constructs the facade through fromConnection(); the constructor stays
@@ -143,8 +149,14 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
 
   // ---- identity / availability -------------------------------------------
 
-  probe(): Promise<AwtrixNgDeviceProbeResult> {
-    return probeAwtrixNgDevice(this.#client);
+  async probe(): Promise<AwtrixNgDeviceProbeResult> {
+    const result = await probeAwtrixNgDevice(this.#client);
+
+    if (result.status === 'detected') {
+      this.#firmwareVersion = result.device.version;
+    }
+
+    return result;
   }
 
   /**
@@ -176,8 +188,10 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
 
   // ---- state reads (sync into Homey) ---------------------------------------
 
-  getDeviceState(): Promise<AwtrixNgApiDeviceStateResponse> {
-    return this.#client.getDevice();
+  async getDeviceState(): Promise<AwtrixNgApiDeviceStateResponse> {
+    const state = await this.#client.getDevice();
+    this.#firmwareVersion = state.version;
+    return state;
   }
 
   /** Returns the Homey settings update derived from the device settings, or undefined when in sync. */
@@ -301,7 +315,8 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     return this.#client.patchDisplay(patch);
   }
 
-  playRtttl(rtttl: string): Promise<AwtrixNgApiOkResponse> {
+  async playRtttl(rtttl: string): Promise<AwtrixNgApiOkResponse> {
+    this.#requireFirmwareVersion(RtttlMinimumFirmwareVersion);
     return this.#client.playRtttl(rtttl);
   }
 
@@ -319,6 +334,18 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
 
   deleteApp(name: string): Promise<AwtrixNgApiOkResponse> {
     return this.#client.deleteApp(name);
+  }
+
+  #requireFirmwareVersion(minimumVersion: string): void {
+    if (
+      this.#firmwareVersion === undefined
+      || !isAwtrixNgFirmwareVersionSupported(this.#firmwareVersion, minimumVersion)
+    ) {
+      throw new AwtrixNgUnsupportedVersionError({
+        currentVersion: this.#firmwareVersion,
+        minimumVersion,
+      });
+    }
   }
 
 }
