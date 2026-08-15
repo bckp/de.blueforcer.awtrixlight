@@ -124,5 +124,8 @@
   },
   "2.2.3": {
     "en": "Fixed wrong name for generic alert"
+  },
+  "2.2.4": {
+    "en": "Fix: RTTTL use new API (min awtrixNG v1.1.0)"
   }
 }
