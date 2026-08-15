@@ -5,7 +5,9 @@
   "scripts": {
     "build": "tsc && node scripts/copy-driver-assets.js",
     "lint": "eslint --ext .js,.ts --ignore-path .gitignore .",
-    "test": "npm run build && node --test test/*.test.js"
+    "test": "npm run build && node --test test/*.test.js",
+    "publish-app": "homey app publish && node scripts/sync-version.js",
+    "sync-version": "node scripts/sync-version.js"
   },
   "engines": {
     "node": ">=22.0.0"
