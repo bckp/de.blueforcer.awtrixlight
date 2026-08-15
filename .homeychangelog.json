@@ -130,5 +130,8 @@
   },
   "2.2.5": {
     "en": "Small code fixes"
+  },
+  "2.2.6": {
+    "en": "Optimized memory consumption"
   }
 }
