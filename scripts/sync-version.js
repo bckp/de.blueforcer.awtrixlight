@@ -9,19 +9,19 @@ const packageJson = require('../package.json');
 const packageJsonPath = path.join(__dirname, '../package.json');
 
 if (appJson.version !== packageJson.version) {
-  console.log(`Verze nesouhlasí. Synchronizuji package.json z ${packageJson.version} na ${appJson.version}...`);
+  console.log(`Versions do not match. Synchronizing package.json from ${packageJson.version} to ${appJson.version}...`);
   packageJson.version = appJson.version;
 
-  // Zachováme stejné formátování (2 mezery) a prázdný řádek na konci
+  // Keep the same formatting (2 spaces) and add a trailing newline
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 
-  console.log('Aktualizuji package-lock.json pomocí npm install...');
+  console.log('Updating package-lock.json using npm install...');
   execSync('npm install --package-lock-only', {
     stdio: 'inherit',
     cwd: path.join(__dirname, '..'),
   });
 
-  console.log('Verze byla úspěšně synchronizována! 🎉');
+  console.log('Version synchronized successfully! 🎉');
 } else {
-  console.log(`Verze jsou aktuálně synchronizované (${appJson.version}). Žádná akce není potřeba.`);
+  console.log(`Versions are already synchronized (${appJson.version}). No action required.`);
 }
