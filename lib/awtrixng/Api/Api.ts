@@ -12,7 +12,10 @@ import {
   writeAwtrixNgSettingsPatch,
 } from '../Services/Settings';
 import {
+  AwtrixNgBuiltinAppSettingIds,
   AwtrixNgBuiltinAppSettings,
+  AwtrixNgBuiltinAppSettingsApplyResult,
+  applyAwtrixNgBuiltinAppSettingsChange,
   isAwtrixNgBuiltinAppSetting,
   prepareAwtrixNgBuiltinAppSettingsChange,
   toAwtrixNgBuiltinAppSettingsUpdate,
@@ -232,6 +235,21 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     const update = toAwtrixNgBuiltinAppSettingsUpdate(apps, current);
 
     return Object.keys(update).length > 0 ? update : undefined;
+  }
+
+  /**
+   * Reapplies Homey's complete built-in app preference after a firmware change.
+   * The apps inventory is read first so the Apps service can preserve every non-built-in
+   * app, its order and its disabled state while replacing only the five managed entries.
+   */
+  async reapplyBuiltinAppSettings(
+    settings: AwtrixNgHomeySettings,
+  ): Promise<AwtrixNgBuiltinAppSettingsApplyResult> {
+    return applyAwtrixNgBuiltinAppSettingsChange(
+      this.#client,
+      settings,
+      AwtrixNgBuiltinAppSettingIds,
+    );
   }
 
   planCapabilityUpdate(

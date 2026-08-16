@@ -6,6 +6,15 @@ const { createFakeHomey } = require('./helpers/fake-homey');
 
 const expectedUid = '48e7291211d8';
 
+const deferred = () => {
+  let resolve;
+  const promise = new Promise((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+
+  return { promise, resolve };
+};
+
 const createDeviceState = () => ({
   uid: expectedUid,
   version: '1.0.4-dev',
@@ -450,6 +459,290 @@ test('AWTRIX NG onInit synchronises settings, display and built-in apps from the
   assert.equal(harness.device.available, true);
   assert.equal(harness.device.poll.isActive(), true);
   assert.deepEqual(harness.errors, []);
+});
+
+test('AWTRIX NG onInit reapplies Homey built-in apps when the firmware version changed', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'],
+      ['address', '192.0.2.10'],
+      ['port', 80],
+      ['version', '1.0.3'],
+    ],
+    settings: {
+      address: '192.0.2.10',
+      port: 80,
+      showBuiltinTime: false,
+      showBuiltinDate: true,
+      showBuiltinTemperature: false,
+      showBuiltinHumidity: false,
+      showBuiltinBattery: false,
+    },
+    responses: {
+      'GET /api/v1/device': () => jsonResponse({
+        ...createDeviceState(),
+        version: '1.0.4',
+      }),
+      'GET /api/v1/apps': () => jsonResponse([
+        {
+          name: 'Time', origin: 'builtin', present: true, enabled: true, slot: 0,
+        },
+        {
+          name: 'Date', origin: 'builtin', present: true, enabled: true, slot: 1,
+        },
+        {
+          name: 'weather', origin: 'pushed', present: true, enabled: true, slot: 2,
+        },
+        {
+          name: 'clock', origin: 'script', present: true, enabled: false, slot: null,
+        },
+      ]),
+    },
+  });
+
+  await harness.device.onInit();
+
+  assert.deepEqual(harness.requestLog(), [
+    'GET /api/v1/device',
+    'GET /api/v1/settings',
+    'GET /api/v1/display',
+    'GET /api/v1/apps',
+    'PUT /api/v1/apps/order',
+  ]);
+  assert.deepEqual(harness.transport.calls.at(-1).body, {
+    order: ['Date', 'weather'],
+    disabled: ['clock', 'Time', 'Temperature', 'Humidity', 'Battery'],
+  });
+  assert.equal(
+    harness.setSettingsCalls.some((update) => Object.keys(update).some((key) => key.startsWith('showBuiltin'))),
+    false,
+    'the reset firmware inventory must not overwrite Homey preferences',
+  );
+  assert.equal(harness.store.get('builtinAppsFirmwareVersion'), '1.0.4');
+  assert.equal(harness.store.get('version'), '1.0.4');
+  assert.equal(harness.store.get('builtinAppsInitialized'), true);
+});
+
+test('AWTRIX NG first pairing establishes a device baseline even if firmware changed before onInit', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'],
+      ['version', '1.0.3'],
+      ['builtinAppsInitialized', false],
+    ],
+    settings: {
+      showBuiltinTime: false,
+      showBuiltinDate: false,
+      showBuiltinTemperature: false,
+      showBuiltinHumidity: false,
+      showBuiltinBattery: false,
+    },
+    responses: {
+      'GET /api/v1/device': () => jsonResponse({
+        ...createDeviceState(),
+        version: '1.0.4',
+      }),
+    },
+  });
+
+  await harness.device.onInit();
+
+  assert.equal(harness.requestLog().includes('PUT /api/v1/apps/order'), false);
+  assert.deepEqual(harness.setSettingsCalls.at(-1), { showBuiltinTime: true });
+  assert.equal(harness.store.get('builtinAppsFirmwareVersion'), '1.0.4');
+  assert.equal(harness.store.get('builtinAppsInitialized'), true);
+});
+
+test('AWTRIX NG poll reapplies built-in apps once after a running firmware update', async () => {
+  let firmwareVersion = '1.0.4';
+  let apps = [
+    {
+      name: 'Time', origin: 'builtin', present: true, enabled: false, slot: null,
+    },
+    {
+      name: 'Date', origin: 'builtin', present: true, enabled: true, slot: 0,
+    },
+  ];
+  const harness = createSettingsHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'],
+      ['version', firmwareVersion],
+      ['builtinAppsFirmwareVersion', firmwareVersion],
+      ['builtinAppsInitialized', true],
+    ],
+    settings: {
+      showBuiltinTime: false,
+      showBuiltinDate: true,
+      showBuiltinTemperature: false,
+      showBuiltinHumidity: false,
+      showBuiltinBattery: false,
+    },
+    responses: {
+      'GET /api/v1/device': () => jsonResponse({
+        ...createDeviceState(),
+        version: firmwareVersion,
+      }),
+      'GET /api/v1/apps': () => jsonResponse(apps),
+    },
+  });
+
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+  harness.setSettingsCalls.length = 0;
+  firmwareVersion = '1.0.5';
+  apps = [
+    {
+      name: 'Time', origin: 'builtin', present: true, enabled: true, slot: 0,
+    },
+    {
+      name: 'Date', origin: 'builtin', present: true, enabled: true, slot: 1,
+    },
+  ];
+
+  await harness.device.homey.tick(60000);
+
+  assert.deepEqual(harness.requestLog(), [
+    'GET /api/v1/device',
+    'GET /api/v1/apps',
+    'PUT /api/v1/apps/order',
+  ]);
+  assert.equal(harness.store.get('builtinAppsFirmwareVersion'), '1.0.5');
+  assert.deepEqual(harness.setSettingsCalls, []);
+
+  harness.transport.calls.length = 0;
+  await harness.device.homey.tick(60000);
+  assert.deepEqual(harness.requestLog(), ['GET /api/v1/device'], 'the applied version is not written twice');
+});
+
+test('AWTRIX NG firmware reconciliation preserves the old marker and retries API failures', async () => {
+  let firmwareVersion = '1.0.4';
+  const sourceError = new Error('apps order rejected after firmware update');
+  const harness = createSettingsHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'],
+      ['version', firmwareVersion],
+      ['builtinAppsFirmwareVersion', firmwareVersion],
+      ['builtinAppsInitialized', true],
+    ],
+    settings: {
+      showBuiltinTime: false,
+      showBuiltinDate: true,
+      showBuiltinTemperature: false,
+      showBuiltinHumidity: false,
+      showBuiltinBattery: false,
+    },
+    responses: {
+      'GET /api/v1/device': () => jsonResponse({
+        ...createDeviceState(),
+        version: firmwareVersion,
+      }),
+      'PUT /api/v1/apps/order': () => {
+        throw sourceError;
+      },
+    },
+  });
+
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+  harness.errors.length = 0;
+  firmwareVersion = '1.0.5';
+
+  await harness.device.homey.tick(60000);
+  await harness.device.homey.tick(60000);
+
+  assert.equal(
+    harness.requestLog().filter((request) => request === 'PUT /api/v1/apps/order').length,
+    2,
+    'each poll retries while the version marker remains stale',
+  );
+  assert.equal(harness.store.get('builtinAppsFirmwareVersion'), '1.0.4');
+  assert.equal(harness.errors.length, 2);
+  assert.equal(harness.errors[0][0], sourceError);
+  assert.equal(harness.errors[1][0], sourceError);
+});
+
+test('AWTRIX NG serializes a Homey app change with firmware reconciliation', async () => {
+  let firmwareVersion = '1.0.4';
+  let blockAppsRead = false;
+  const appsReadStarted = deferred();
+  const releaseAppsRead = deferred();
+  const apps = [
+    {
+      name: 'Time', origin: 'builtin', present: true, enabled: false, slot: null,
+    },
+    {
+      name: 'Date', origin: 'builtin', present: true, enabled: true, slot: 0,
+    },
+  ];
+  const harness = createSettingsHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'],
+      ['version', firmwareVersion],
+      ['builtinAppsFirmwareVersion', firmwareVersion],
+      ['builtinAppsInitialized', true],
+    ],
+    settings: {
+      showBuiltinTime: false,
+      showBuiltinDate: true,
+      showBuiltinTemperature: false,
+      showBuiltinHumidity: false,
+      showBuiltinBattery: false,
+    },
+    responses: {
+      'GET /api/v1/device': () => jsonResponse({
+        ...createDeviceState(),
+        version: firmwareVersion,
+      }),
+      'GET /api/v1/apps': async () => {
+        if (blockAppsRead) {
+          appsReadStarted.resolve();
+          await releaseAppsRead.promise;
+        }
+
+        return jsonResponse(apps);
+      },
+    },
+  });
+
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+  blockAppsRead = true;
+
+  const settingsWrite = harness.device.onSettings({
+    oldSettings: { ...harness.settings },
+    newSettings: { ...harness.settings, showBuiltinDate: false },
+    changedKeys: ['showBuiltinDate'],
+  });
+  await appsReadStarted.promise;
+
+  firmwareVersion = '1.0.5';
+  const polling = harness.device.homey.tick(60000);
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+
+  assert.equal(
+    harness.requestLog().filter((request) => request === 'GET /api/v1/apps').length,
+    1,
+    'the firmware reconciliation waits behind the in-flight Homey settings write',
+  );
+
+  blockAppsRead = false;
+  releaseAppsRead.resolve();
+  await Promise.all([settingsWrite, polling]);
+
+  assert.deepEqual(harness.requestLog(), [
+    'GET /api/v1/apps',
+    'GET /api/v1/device',
+    'PUT /api/v1/apps/order',
+    'GET /api/v1/apps',
+    'PUT /api/v1/apps/order',
+  ]);
+  assert.deepEqual(harness.transport.calls.at(-1).body, {
+    order: [],
+    disabled: ['Time', 'Date', 'Temperature', 'Humidity', 'Battery'],
+  }, 'the queued reconciliation uses the newest submitted Homey values');
+  assert.equal(harness.store.get('builtinAppsFirmwareVersion'), '1.0.5');
 });
 
 test('AWTRIX NG onInit registers capability listeners and polls even without a stored connection', async () => {

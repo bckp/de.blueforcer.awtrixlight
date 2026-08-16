@@ -31,6 +31,7 @@ interface AwtrixNgPairDeviceStore {
   uid: string;
   hostname?: string;
   version: string;
+  builtinAppsInitialized: false;
 }
 
 interface AwtrixNgPairDeviceCredentials {
@@ -558,6 +559,7 @@ class AwtrixNgDriver extends Driver {
         uid: input.device.uid,
         hostname: input.hostname,
         version: input.device.version,
+        builtinAppsInitialized: false,
       },
       settings: {
         address: input.address,

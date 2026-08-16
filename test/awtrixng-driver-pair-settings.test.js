@@ -58,6 +58,8 @@ test('AWTRIX NG unauthenticated pairing pre-fills connection settings', () => {
     authUser: '',
     authPass: '',
   });
+  assert.equal(pairDevice.store.version, '1.0.4-dev');
+  assert.equal(pairDevice.store.builtinAppsInitialized, false);
 });
 
 test('AWTRIX NG authenticated pairing keeps credentials next to connection settings', () => {

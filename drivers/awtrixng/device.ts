@@ -18,6 +18,9 @@ const PollIntervalMs = 60000;
 const BundledIconsDirectory = path.join(__dirname, 'assets/images/icons');
 const MaxConcurrentIconUploads = 3;
 const RedactedSettingValue = '<redacted>';
+const BuiltinAppsInitializedStoreKey = 'builtinAppsInitialized';
+const BuiltinAppsFirmwareVersionStoreKey = 'builtinAppsFirmwareVersion';
+const FirmwareVersionStoreKey = 'version';
 
 // Hard-failing wrapper: the connection cannot be built without a usable port.
 const toConnectionPort = (value: unknown): number => {
@@ -34,6 +37,9 @@ interface AwtrixNgDeviceStore {
   baseUrl?: string;
   address?: string;
   port?: number;
+  version?: string;
+  builtinAppsFirmwareVersion?: string;
+  builtinAppsInitialized?: boolean;
 }
 
 interface AwtrixNgDeviceSettings extends AwtrixNgHomeySettings {
@@ -84,6 +90,12 @@ class AwtrixNgDevice extends Device {
   /** Resolves once the deferred Homey settings sync scheduled by onSettings() has finished. */
   pendingSettingsSync?: Promise<void>;
 
+  /** Serializes Homey settings writes and firmware-triggered app-order reconciliation. */
+  private builtinAppsOperation: Promise<void> = Promise.resolve();
+
+  /** Latest Homey snapshot, including a settings submission that has not been persisted yet. */
+  private homeySettingsSnapshot?: AwtrixNgHomeySettings;
+
   /**
    * The flow actions (drivers/awtrixng/flow-actions.ts) reach the API through `client`
    * and the shared icon autocomplete (drivers/shared-flow-actions.ts) through `icons`;
@@ -113,7 +125,9 @@ class AwtrixNgDevice extends Device {
       return;
     }
 
-    this.configureApi(baseUrl, await this.getSettings() as AwtrixNgDeviceSettings);
+    const initialSettings = await this.getSettings() as AwtrixNgDeviceSettings;
+    this.homeySettingsSnapshot = initialSettings;
+    this.configureApi(baseUrl, initialSettings);
 
     try {
       const deviceStateResult = await this.refreshDeviceState({ allowAddCapabilities: true });
@@ -121,7 +135,7 @@ class AwtrixNgDevice extends Device {
       if (deviceStateResult?.status === 'detected') {
         await this.refreshSettingsFromDevice();
         await this.refreshDisplayFromDevice();
-        await this.refreshAppsFromDevice();
+        await this.synchronizeBuiltinAppsForFirmware(deviceStateResult.device.version, true, true);
       }
     } catch (error: unknown) {
       this.error(error);
@@ -184,13 +198,25 @@ class AwtrixNgDevice extends Device {
 
     // Pure validation first: an invalid key or value must fail before any request is made.
     AwtrixNgApi.validateSettingsChange(newSettings, changedKeys);
+    const previousSettingsSnapshot = this.homeySettingsSnapshot;
+    this.homeySettingsSnapshot = {
+      ...(previousSettingsSnapshot ?? oldSettings),
+      ...newSettings,
+    };
 
-    if (hasAwtrixNgLocalSettingsChange(changedKeys)) {
-      await this.applySettingsChangesWithCandidateConnection(newSettings as AwtrixNgDeviceSettings, changedKeys);
-      return;
+    try {
+      if (hasAwtrixNgLocalSettingsChange(changedKeys)) {
+        await this.applySettingsChangesWithCandidateConnection(newSettings as AwtrixNgDeviceSettings, changedKeys);
+        return;
+      }
+
+      await this.runBuiltinAppsOperation(async () => {
+        await this.getApi().applySettingsChange(newSettings, changedKeys);
+      });
+    } catch (error: unknown) {
+      this.homeySettingsSnapshot = previousSettingsSnapshot;
+      throw error;
     }
-
-    await this.getApi().applySettingsChange(newSettings, changedKeys);
   }
 
   /**
@@ -266,7 +292,11 @@ class AwtrixNgDevice extends Device {
 
   private initializePoll(): Poll {
     const poll = new Poll(async () => {
-      await this.refreshDeviceState({ allowAddCapabilities: false });
+      const result = await this.refreshDeviceState({ allowAddCapabilities: false });
+
+      if (result?.status === 'detected') {
+        await this.synchronizeBuiltinAppsForFirmware(result.device.version, false, true);
+      }
     }, this.homey, {
       intervalMs: PollIntervalMs,
       onError: (error: unknown) => this.error(error),
@@ -322,7 +352,69 @@ class AwtrixNgDevice extends Device {
 
     if (homeySettingsUpdate !== undefined) {
       await this.setSettings(homeySettingsUpdate);
+      this.homeySettingsSnapshot = {
+        ...currentSettings,
+        ...homeySettingsUpdate,
+      };
+      return;
     }
+
+    this.homeySettingsSnapshot = currentSettings;
+  }
+
+  /**
+   * Keeps the normal device-to-Homey sync direction until a firmware version change is
+   * observed. On that one transition Homey's persisted built-in app settings are reapplied
+   * before the new version is committed, so a failed write is retried by the next poll.
+   */
+  private async synchronizeBuiltinAppsForFirmware(
+    detectedVersion: string,
+    syncFromDeviceWhenUnchanged: boolean,
+    initializeBaseline: boolean,
+  ): Promise<void> {
+    await this.runBuiltinAppsOperation(async () => {
+      const store = this.getStoreSnapshot();
+      const lastAppliedVersion = store.builtinAppsFirmwareVersion ?? store.version;
+      const isNewPairingBaseline = store.builtinAppsInitialized === false;
+      const isLegacyBaseline = store.builtinAppsInitialized === undefined
+        && (lastAppliedVersion === undefined || lastAppliedVersion === detectedVersion);
+
+      if (isNewPairingBaseline || isLegacyBaseline) {
+        if (!initializeBaseline) {
+          return;
+        }
+
+        await this.refreshAppsFromDevice();
+        await this.commitBuiltinAppsFirmwareVersion(detectedVersion);
+        return;
+      }
+
+      if (lastAppliedVersion !== detectedVersion) {
+        const currentSettings = this.homeySettingsSnapshot ?? await this.getSettings() as AwtrixNgHomeySettings;
+
+        await this.getApi().reapplyBuiltinAppSettings(currentSettings);
+        await this.commitBuiltinAppsFirmwareVersion(detectedVersion);
+        return;
+      }
+
+      if (syncFromDeviceWhenUnchanged) {
+        await this.refreshAppsFromDevice();
+      }
+    });
+  }
+
+  private async commitBuiltinAppsFirmwareVersion(version: string): Promise<void> {
+    await this.setStoreValue(BuiltinAppsFirmwareVersionStoreKey, version);
+    await this.setStoreValue(FirmwareVersionStoreKey, version);
+    await this.setStoreValue(BuiltinAppsInitializedStoreKey, true);
+  }
+
+  private runBuiltinAppsOperation<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.builtinAppsOperation.then(operation, operation);
+
+    this.builtinAppsOperation = result.then(() => undefined, () => undefined);
+
+    return result;
   }
 
   private async applyDeviceState(
@@ -460,7 +552,9 @@ class AwtrixNgDevice extends Device {
     const { connection, syncAddressIntoSettings } = this.getConnectionCandidateFromSettings(newSettings, changedKeys);
     const api = await this.verifyCandidateConnection(connection.baseUrl, connection.auth);
 
-    await api.applySettingsChange(newSettings, changedKeys);
+    await this.runBuiltinAppsOperation(async () => {
+      await api.applySettingsChange(newSettings, changedKeys);
+    });
 
     await this.commitConnection(connection, api, false);
 
@@ -514,6 +608,10 @@ class AwtrixNgDevice extends Device {
     this.ensurePollingStarted();
 
     const result = await this.refreshDeviceState({ allowAddCapabilities: false });
+
+    if (result?.status === 'detected') {
+      await this.synchronizeBuiltinAppsForFirmware(result.device.version, false, false);
+    }
 
     return result?.status === 'detected';
   }
@@ -602,11 +700,20 @@ class AwtrixNgDevice extends Device {
     const baseUrl = this.getStoreValue('baseUrl') as unknown;
     const address = this.getStoreValue('address') as unknown;
     const port = this.getStoreValue('port') as unknown;
+    const version = this.getStoreValue(FirmwareVersionStoreKey) as unknown;
+    const builtinAppsFirmwareVersion = this.getStoreValue(BuiltinAppsFirmwareVersionStoreKey) as unknown;
+    const builtinAppsInitialized = this.getStoreValue(BuiltinAppsInitializedStoreKey) as unknown;
 
     return {
       baseUrl: typeof baseUrl === 'string' && baseUrl.length > 0 ? baseUrl : undefined,
       address: typeof address === 'string' && address.length > 0 ? address : undefined,
       port: typeof port === 'number' ? port : undefined,
+      version: typeof version === 'string' && version.length > 0 ? version : undefined,
+      builtinAppsFirmwareVersion: typeof builtinAppsFirmwareVersion === 'string'
+        && builtinAppsFirmwareVersion.length > 0
+        ? builtinAppsFirmwareVersion
+        : undefined,
+      builtinAppsInitialized: typeof builtinAppsInitialized === 'boolean' ? builtinAppsInitialized : undefined,
     };
   }
 

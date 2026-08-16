@@ -278,6 +278,40 @@ test('applySettingsChange fails before any write when a built-in app is unavaila
   );
 });
 
+test('reapplyBuiltinAppSettings restores Homey truth while preserving every other app', async () => {
+  const { api, transport } = createApi({
+    'GET /api/v1/apps': [
+      builtinApp('Time', { slot: 0 }),
+      builtinApp('Date', { slot: 1 }),
+      {
+        name: 'weather', origin: 'pushed', present: true, enabled: true, slot: 2,
+      },
+      {
+        name: 'clock', origin: 'script', present: true, enabled: false, slot: null,
+      },
+    ],
+    'PUT /api/v1/apps/order': { ok: true },
+  });
+
+  const result = await api.reapplyBuiltinAppSettings({
+    showBuiltinTime: false,
+    showBuiltinDate: true,
+    showBuiltinTemperature: false,
+    showBuiltinHumidity: false,
+    showBuiltinBattery: false,
+  });
+
+  assert.deepEqual(
+    transport.calls.map((call) => `${call.method} ${call.path}`),
+    ['GET /api/v1/apps', 'PUT /api/v1/apps/order'],
+  );
+  assert.deepEqual(transport.calls[1].body, {
+    order: ['Date', 'weather'],
+    disabled: ['clock', 'Time', 'Temperature', 'Humidity', 'Battery'],
+  });
+  assert.deepEqual(result, transport.calls[1].body);
+});
+
 test('readSettings returns undefined when Homey settings are already in sync', async () => {
   const { api } = createApi({
     'GET /api/v1/settings': { uppercase: true, autoBrightness: false },
