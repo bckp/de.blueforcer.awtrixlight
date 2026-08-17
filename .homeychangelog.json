@@ -133,5 +133,8 @@
   },
   "2.2.6": {
     "en": "Optimized memory consumption"
+  },
+  "2.2.7": {
+    "en": "Fix: app list after awtrixng update is desynchronized"
   }
 }
