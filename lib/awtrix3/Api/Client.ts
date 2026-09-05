@@ -227,7 +227,8 @@ export default class Client {
     // Device did not respond in time
     if (error.name === 'AbortError' || error.message === 'Request Timeout') {
       return {
-        status: Status.NotFound,
+        status: Status.Timeout,
+        message: 'Request Timeout',
       };
     }
 

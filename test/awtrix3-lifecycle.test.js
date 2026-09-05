@@ -390,6 +390,7 @@ test('AWTRIX 3 credential settings distinguish unreachable device from invalid c
   for (const { status, messageKey } of [
     { status: Status.Error, messageKey: 'states.deviceUnreachable' },
     { status: Status.NotFound, messageKey: 'states.deviceUnreachable' },
+    { status: Status.Timeout, messageKey: 'states.deviceUnreachable' },
     { status: Status.AuthRequired, messageKey: 'states.invalidCredentials' },
     { status: Status.AuthFailed, messageKey: 'states.invalidCredentials' },
   ]) {
@@ -1292,4 +1293,72 @@ test('AWTRIX 3 onDeleted stops polling and clears the icon cache timer', async (
   await AwtrixLightDevice.prototype.onDeleted.call(context);
 
   assert.deepEqual(calls, ['poll.stop', 'icons.invalidate']);
+});
+
+test('AWTRIX 3 discovery address change logs a store failure instead of rejecting the Homey hook', async () => {
+  const errors = [];
+  const context = {
+    api: {
+      setIp() {},
+    },
+    error(...args) {
+      errors.push(args);
+    },
+    log() {},
+    async setStoreValue() {
+      throw new Error('store unavailable');
+    },
+    async setCapabilityValue() {
+      throw new Error('must not be reached');
+    },
+    async testDevice() {
+      return Status.Ok;
+    },
+  };
+
+  const result = await AwtrixLightDevice.prototype.onDiscoveryAddressChanged.call(context, {
+    id: 'awtrix-1',
+    address: '192.0.2.20',
+  });
+
+  assert.equal(result, false);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0][0].message, 'store unavailable');
+});
+
+test('AWTRIX 3 refresh diagnostics stay out of the log unless DEBUG=1', async () => {
+  const stats = { bat: 90, uptime: 42 };
+  const createContext = () => {
+    const logs = [];
+    return {
+      logs,
+      log(...args) {
+        logs.push(args);
+      },
+      async cmdGetStats() {
+        return stats;
+      },
+      setCapabilityValues: asyncNoop,
+      setStoreValue: asyncNoop,
+    };
+  };
+  const originalDebug = process.env.DEBUG;
+
+  try {
+    delete process.env.DEBUG;
+    const quiet = createContext();
+    await AwtrixLightDevice.prototype.refreshCapabilities.call(quiet);
+    assert.deepEqual(quiet.logs, []);
+
+    process.env.DEBUG = '1';
+    const verbose = createContext();
+    await AwtrixLightDevice.prototype.refreshCapabilities.call(verbose);
+    assert.deepEqual(verbose.logs, [['refreshCapabilities', stats]]);
+  } finally {
+    if (originalDebug === undefined) {
+      delete process.env.DEBUG;
+    } else {
+      process.env.DEBUG = originalDebug;
+    }
+  }
 });

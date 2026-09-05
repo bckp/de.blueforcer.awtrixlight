@@ -1,0 +1,71 @@
+{
+  "states": {
+    "loading": "Initialisierung...",
+    "unavailable": "keine Antwort vom Gerät",
+    "invalidCredentials": "Benutzername oder Passwort ist ungültig",
+    "deviceUnreachable": "Gerät ist nicht erreichbar, bitte später erneut versuchen",
+    "unknownError": "Unbekannter Fehler",
+    "awtrixNg": {
+      "connectionNotConfigured": "Die Geräteadresse ist noch nicht konfiguriert.",
+      "initialSynchronizationFailed": "Die erste Synchronisierung des Geräts ist fehlgeschlagen",
+      "authenticationRequired": "Authentifizierung erforderlich",
+      "invalidResponse": "Das Gerät hat keine gültige Antwort geliefert.",
+      "offline": "Gerät ist offline",
+      "rediscoveryFailed": "Es konnte keine neue Adresse für dieses Gerät gefunden werden."
+    }
+  },
+  "list": {
+    "icons": {
+      "empty": {
+        "name": "Leer",
+        "description": "Ohne Symbol"
+      }
+    }
+  },
+  "api": {
+    "error": {
+      "loginRequired": "Authentifizierung erforderlich!",
+      "loginFailed": "Authentifizierung fehlgeschlagen!",
+      "commandFailed": "Gerätebefehl fehlgeschlagen!",
+      "iconsUnavailable": "Symbole konnten nicht vom Gerät geladen werden!",
+      "unknownError": "Das Gerät hat nicht geantwortet!"
+    }
+  },
+  "pair": {
+    "manual": {
+      "title": "Manuell hinzufügen",
+      "subtitle": "Geben Sie Adresse und Port Ihres Geräts ein.",
+      "connectionLegend": "Verbindung",
+      "addressLabel": "Adresse oder Hostname",
+      "portLabel": "Port",
+      "addButton": "Gerät hinzufügen",
+      "addingButton": "Gerät wird hinzugefügt...",
+      "errors": {
+        "addressRequired": "Adresse ist erforderlich.",
+        "invalidAddress": "Geben Sie einen Hostnamen oder eine IP-Adresse ohne Protokoll und Pfad ein.",
+        "invalidPort": "Der Port muss eine Zahl zwischen 1 und 65535 sein.",
+        "notSupported": "Das Gerät hat geantwortet, scheint aber kein unterstütztes Gerät zu sein.",
+        "notReachable": "Das Gerät kann nicht erreicht werden."
+      }
+    },
+    "credentials": {
+      "title": "Authentifizierung erforderlich",
+      "subtitle": "Dieses Gerät erfordert eine Authentifizierung.",
+      "legend": "Zugangsdaten",
+      "usernameLabel": "Benutzername",
+      "passwordLabel": "Passwort",
+      "addButton": "Gerät hinzufügen",
+      "addingButton": "Gerät wird hinzugefügt...",
+      "errors": {
+        "required": "Benutzername und Passwort sind erforderlich.",
+        "invalid": "Ungültiger Benutzername oder ungültiges Passwort.",
+        "notSupported": "Das Gerät hat geantwortet, scheint aber kein unterstütztes Gerät zu sein.",
+        "notReachable": "Das Gerät kann nicht erreicht werden."
+      }
+    },
+    "router": {
+      "title": "Gerät koppeln",
+      "preparing": "Kopplung wird vorbereitet..."
+    }
+  }
+}

@@ -25,6 +25,17 @@ const isInDesiredOrder = (capabilities: string[], desiredOrder: string[]): boole
   (capability, index) => index === 0 || capabilities.indexOf(desiredOrder[index - 1]) < capabilities.indexOf(capability),
 );
 
+/**
+ * Verbose per-poll diagnostics. Gated by the same DEBUG=1 switch as the HTTP client so a
+ * healthy device does not write to the Homey log every minute. A free function (not a
+ * method) so it works on the partial device contexts the lifecycle tests run against.
+ */
+const debugLog = (device: { log(...args: unknown[]): void }, ...args: unknown[]): void => {
+  if (process.env.DEBUG === '1') {
+    device.log(...args);
+  }
+};
+
 const redactSettingsForLog = (settings: Record<string, unknown>): Record<string, unknown> => ({
   ...settings,
   ...(typeof settings.pass === 'string' && settings.pass.length > 0
@@ -76,7 +87,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     // Setup polling
     this.poll = new Poll(
       async () => {
-        this.log('polling...');
+        debugLog(this, 'polling...');
         await this.refreshCapabilities();
 
         if (!this.getAvailable()) {
@@ -254,26 +265,30 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     return discoveryResult.id === this.getData().id;
   }
 
+  // Homey ignores the resolved value of the discovery hooks but reports rejections as unhandled,
+  // so failures are logged and reported as "not reconnected" - parity with the AWTRIX NG driver.
   async onDiscoveryAvailable(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {
-    if ('address' in discoveryResult && this.getStoreValue('address') !== discoveryResult.address) {
-      if (await this.onDiscoveryAddressChanged(discoveryResult)) {
-        await this.setAvailable();
-        return true;
+    try {
+      if ('address' in discoveryResult && this.getStoreValue('address') !== discoveryResult.address) {
+        if (await this.onDiscoveryAddressChanged(discoveryResult)) {
+          await this.setAvailable();
+          return true;
+        }
       }
+    } catch (error: unknown) {
+      this.error(error);
     }
     return false;
   }
 
   async onDiscoveryAddressChanged(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {
-    // Set IP
-    this.api.setIp(discoveryResult.address);
-    await this.setStoreValue('address', discoveryResult.address);
-    await this.setCapabilityValue('ip', discoveryResult.address);
-
-    // Verify
     try {
+      this.api.setIp(discoveryResult.address);
+      await this.setStoreValue('address', discoveryResult.address);
+      await this.setCapabilityValue('ip', discoveryResult.address);
+
       return await this.testDevice() === Status.Ok;
-    } catch (error) {
+    } catch (error: unknown) {
       this.error(error);
     }
     return false;
@@ -317,7 +332,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   // Refresh device capabilities, this is expensive so we do not want to poll too often
   async refreshCapabilities(): Promise<void> {
     const stats = await this.cmdGetStats();
-    this.log('refreshCapabilities', stats);
+    debugLog(this, 'refreshCapabilities', stats);
     if (!stats) {
       this.log('status endpoint failed');
       return;

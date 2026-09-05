@@ -86,10 +86,12 @@ it. Re-reporting them as findings wastes a review cycle.
 **Tooling and process**
 
 - Use native `fetch` and `FormData` (requires Node.js 18+). The use of `axios` and `form-data` packages is explicitly forbidden for all new and existing code, as it was removed to optimize the project.
-- ESLint is pinned to 8.57.1 + typescript-eslint 8 via `package.json` overrides because
-  `eslint-config-athom` (3.1.5) still targets the ESLint 7 era through transitive pins.
-  ESLint 8 is upstream EOL; the ESLint 9 upgrade waits for a new `eslint-config-athom`
-  release - do not force it through more overrides.
+- ESLint stays on 8.57.1: `eslint-config-athom` 4.0.2 (September 2026) ships typescript-eslint 8
+  and TypeScript 6 itself, which removed the former `package.json` overrides, but its peer range
+  is still `eslint <9`. ESLint 8 is upstream EOL; the ESLint 9 upgrade waits for an
+  `eslint-config-athom` release that supports it - do not force it through overrides. Keep the
+  project `typescript` range aligned with the one athom depends on so only one compiler copy is
+  installed.
 - Diagnostic messages (the identity mismatch error, the legacy `applicationIcon` adapter
   hints) are English-only on purpose: they are logs, not user-facing UI. Localize only if
   users ask for it.

@@ -183,6 +183,10 @@ export default class Api {
         await this.processUnavailability(this.device.homey.__('api.error.loginFailed'));
         return;
 
+      case Status.Timeout:
+        await this.processUnavailability(this.device.homey.__('states.deviceUnreachable'));
+        return;
+
       default:
         await this.processUnavailability(message ?? this.device.homey.__('api.error.unknownError'));
     }

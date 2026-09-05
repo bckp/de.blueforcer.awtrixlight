@@ -1,0 +1,71 @@
+{
+  "states": {
+    "loading": "initialiseren...",
+    "unavailable": "geen reactie van apparaat",
+    "invalidCredentials": "Gebruikersnaam of wachtwoord is ongeldig",
+    "deviceUnreachable": "Apparaat is niet bereikbaar, probeer het later opnieuw",
+    "unknownError": "Onbekende fout",
+    "awtrixNg": {
+      "connectionNotConfigured": "Het adres van het apparaat is nog niet ingesteld.",
+      "initialSynchronizationFailed": "De eerste synchronisatie van het apparaat is mislukt",
+      "authenticationRequired": "Authenticatie is vereist",
+      "invalidResponse": "Het apparaat gaf geen geldig antwoord.",
+      "offline": "Apparaat is offline",
+      "rediscoveryFailed": "Er kon geen nieuw adres voor dit apparaat worden gevonden."
+    }
+  },
+  "list": {
+    "icons": {
+      "empty": {
+        "name": "Leeg",
+        "description": "Zonder pictogram"
+      }
+    }
+  },
+  "api": {
+    "error": {
+      "loginRequired": "Authenticatie vereist!",
+      "loginFailed": "Authenticatie mislukt!",
+      "commandFailed": "Opdracht voor apparaat mislukt!",
+      "iconsUnavailable": "Pictogrammen konden niet van het apparaat worden geladen!",
+      "unknownError": "Het apparaat heeft niet gereageerd!"
+    }
+  },
+  "pair": {
+    "manual": {
+      "title": "Handmatig toevoegen",
+      "subtitle": "Voer het adres en de poort van je apparaat in.",
+      "connectionLegend": "Verbinding",
+      "addressLabel": "Adres of hostnaam",
+      "portLabel": "Poort",
+      "addButton": "Apparaat toevoegen",
+      "addingButton": "Apparaat wordt toegevoegd...",
+      "errors": {
+        "addressRequired": "Adres is verplicht.",
+        "invalidAddress": "Voer een hostnaam of IP-adres in zonder protocol of pad.",
+        "invalidPort": "De poort moet een getal tussen 1 en 65535 zijn.",
+        "notSupported": "Het apparaat reageerde, maar lijkt geen ondersteund apparaat te zijn.",
+        "notReachable": "Het apparaat kan niet worden bereikt."
+      }
+    },
+    "credentials": {
+      "title": "Authenticatie vereist",
+      "subtitle": "Dit apparaat vereist authenticatie.",
+      "legend": "Inloggegevens",
+      "usernameLabel": "Gebruikersnaam",
+      "passwordLabel": "Wachtwoord",
+      "addButton": "Apparaat toevoegen",
+      "addingButton": "Apparaat wordt toegevoegd...",
+      "errors": {
+        "required": "Gebruikersnaam en wachtwoord zijn verplicht.",
+        "invalid": "Ongeldige gebruikersnaam of ongeldig wachtwoord.",
+        "notSupported": "Het apparaat reageerde, maar lijkt geen ondersteund apparaat te zijn.",
+        "notReachable": "Het apparaat kan niet worden bereikt."
+      }
+    },
+    "router": {
+      "title": "Apparaat koppelen",
+      "preparing": "Koppelen wordt voorbereid..."
+    }
+  }
+}

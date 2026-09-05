@@ -1,0 +1,71 @@
+{
+  "states": {
+    "loading": "inicializace...",
+    "unavailable": "zařízení neodpovídá",
+    "invalidCredentials": "Uživatelské jméno nebo heslo není platné",
+    "deviceUnreachable": "Zařízení není dostupné, zkuste to později",
+    "unknownError": "Neznámá chyba",
+    "awtrixNg": {
+      "connectionNotConfigured": "Adresa zařízení ještě není nastavena.",
+      "initialSynchronizationFailed": "Úvodní synchronizace zařízení se nezdařila",
+      "authenticationRequired": "Je vyžadováno přihlášení",
+      "invalidResponse": "Zařízení nevrátilo platnou odpověď.",
+      "offline": "Zařízení je offline",
+      "rediscoveryFailed": "Nepodařilo se najít novou adresu tohoto zařízení."
+    }
+  },
+  "list": {
+    "icons": {
+      "empty": {
+        "name": "Prázdné",
+        "description": "Bez ikony"
+      }
+    }
+  },
+  "api": {
+    "error": {
+      "loginRequired": "Je vyžadováno přihlášení!",
+      "loginFailed": "Přihlášení se nezdařilo!",
+      "commandFailed": "Příkaz pro zařízení se nezdařil!",
+      "iconsUnavailable": "Nepodařilo se načíst ikony ze zařízení!",
+      "unknownError": "Zařízení neodpovědělo!"
+    }
+  },
+  "pair": {
+    "manual": {
+      "title": "Přidat ručně",
+      "subtitle": "Zadejte adresu a port zařízení.",
+      "connectionLegend": "Připojení",
+      "addressLabel": "Adresa nebo název hostitele",
+      "portLabel": "Port",
+      "addButton": "Přidat zařízení",
+      "addingButton": "Přidávání zařízení...",
+      "errors": {
+        "addressRequired": "Adresa je povinná.",
+        "invalidAddress": "Zadejte název hostitele nebo IP adresu bez protokolu a cesty.",
+        "invalidPort": "Port musí být číslo v rozsahu 1 až 65535.",
+        "notSupported": "Zařízení odpovědělo, ale nevypadá jako podporované zařízení.",
+        "notReachable": "Zařízení se nepodařilo kontaktovat."
+      }
+    },
+    "credentials": {
+      "title": "Je vyžadováno přihlášení",
+      "subtitle": "Toto zařízení vyžaduje přihlášení.",
+      "legend": "Přihlašovací údaje",
+      "usernameLabel": "Uživatelské jméno",
+      "passwordLabel": "Heslo",
+      "addButton": "Přidat zařízení",
+      "addingButton": "Přidávání zařízení...",
+      "errors": {
+        "required": "Uživatelské jméno a heslo jsou povinné.",
+        "invalid": "Neplatné uživatelské jméno nebo heslo.",
+        "notSupported": "Zařízení odpovědělo, ale nevypadá jako podporované zařízení.",
+        "notReachable": "Zařízení se nepodařilo kontaktovat."
+      }
+    },
+    "router": {
+      "title": "Párování zařízení",
+      "preparing": "Příprava párování..."
+    }
+  }
+}

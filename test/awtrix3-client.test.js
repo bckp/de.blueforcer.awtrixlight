@@ -170,3 +170,21 @@ test('AWTRIX 3 client brackets IPv6 URLs without treating host ports as IPv6', a
     global.fetch = originalFetch;
   }
 });
+
+test('AWTRIX 3 client reports a request timeout as Status.Timeout, not as NotFound', async () => {
+  const originalFetch = global.fetch;
+  const fetchMock = createRecordingFetch();
+  const abortError = new Error('This operation was aborted');
+  abortError.name = 'AbortError';
+  fetchMock.error = abortError;
+  global.fetch = fetchMock;
+
+  try {
+    const response = await new Client({ ip: '192.0.2.10' }).get('stats');
+
+    assert.equal(response.status, Status.Timeout);
+    assert.notEqual(response.status, Status.NotFound);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

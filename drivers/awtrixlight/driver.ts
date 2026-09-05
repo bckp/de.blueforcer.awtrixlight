@@ -93,14 +93,16 @@ export default class UlanziAwtrix extends Driver {
   }
 
   async onPair(session: PairSession) {
-    this.log('onPair', session);
+    this.log('onPair');
 
     const discoveryStrategy = this.getDiscoveryStrategy();
 
     session.setHandler('list_devices', async () => {
       const discoveryResults = discoveryStrategy.getDiscoveryResults();
 
-      this.log(discoveryResults);
+      if (process.env.DEBUG === '1') {
+        this.log(discoveryResults);
+      }
 
       const devices = Object.values(discoveryResults).flatMap((discoveryResult) => {
         const address = typeof discoveryResult?.address === 'string' ? discoveryResult.address.trim() : '';
@@ -124,7 +126,7 @@ export default class UlanziAwtrix extends Driver {
         }];
       });
 
-      this.log(devices);
+      this.log(`Found ${devices.length} AWTRIX 3 device(s)`);
       return devices;
     });
 
