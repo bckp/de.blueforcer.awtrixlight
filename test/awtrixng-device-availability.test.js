@@ -413,6 +413,7 @@ test('AWTRIX NG onAdded uploads bundled icons with bounded parallelism and repor
   const uploads = [];
   let activeUploads = 0;
   let maximumActiveUploads = 0;
+  let notifyConcurrencyChange = () => {};
   const { awtrixNgDevice, calls } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
 
   // device.icons is a read-only view of device.api.icons since update-plan-3 (M3).
@@ -423,10 +424,28 @@ test('AWTRIX NG onAdded uploads bundled icons with bounded parallelism and repor
         uploads.push(fileName);
         activeUploads += 1;
         maximumActiveUploads = Math.max(maximumActiveUploads, activeUploads);
-        await new Promise((resolve) => {
-          setImmediate(resolve);
-        });
+        notifyConcurrencyChange();
+
+        if (maximumActiveUploads < 2 && uploads.length < expectedFiles.length) {
+          await new Promise((resolve) => {
+            const timer = setTimeout(resolve, 50);
+            const previousNotify = notifyConcurrencyChange;
+            notifyConcurrencyChange = () => {
+              previousNotify();
+              if (activeUploads > 1) {
+                clearTimeout(timer);
+                resolve();
+              }
+            };
+          });
+        } else {
+          await new Promise((resolve) => {
+            setImmediate(resolve);
+          });
+        }
+
         activeUploads -= 1;
+        notifyConcurrencyChange();
 
         if (fileName === 'homey.jpg') {
           throw uploadError;
