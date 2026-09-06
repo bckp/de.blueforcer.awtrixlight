@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Send a raw notification"
+    "en": "Send a raw notification",
+    "de": "Raw-Benachrichtigung senden",
+    "nl": "Raw-notificatie verzenden",
+    "cs": "Odeslat raw oznámení"
   },
   "titleFormatted": {
-    "en": "Send raw notification [[options]]"
+    "en": "Send raw notification [[options]]",
+    "de": "Raw-Benachrichtigung [[options]] senden",
+    "nl": "Verzend raw-notificatie [[options]]",
+    "cs": "Odeslat raw oznámení [[options]]"
   },
   "hint": {
-    "en": "Send a notification using a device-specific raw JSON payload. For AWTRIX NG, use NG-shaped JSON fields such as text and durationMs. For AWTRIX 3, use AWTRIX 3-shaped JSON fields such as text and duration."
+    "en": "Send a notification using a device-specific raw JSON payload. For AWTRIX NG, use NG-shaped JSON fields such as text and durationMs. For AWTRIX 3, use AWTRIX 3-shaped JSON fields such as text and duration.",
+    "de": "Sendet eine Benachrichtigung über eine gerätespezifische direkte JSON-Payload. Für AWTRIX NG verwenden Sie NG-spezifische Felder wie text und durationMs. Für AWTRIX 3 verwenden Sie AWTRIX 3-spezifische Felder wie text und duration.",
+    "nl": "Verzend een notificatie met een apparaatspecifieke directe JSON-payload. Gebruik voor AWTRIX NG NG-velden zoals text en durationMs. Gebruik voor AWTRIX 3 AWTRIX 3-velden zoals text en duration.",
+    "cs": "Odešle oznámení pomocí přímého JSON payloadu specifického pro zařízení. Pro AWTRIX NG použijte pole NG jako text a durationMs. Pro AWTRIX 3 použijte pole AWTRIX 3 jako text a duration."
   },
   "args": [
     {
@@ -19,7 +28,10 @@
       "name": "options",
       "value": "{\"text\":\"Hello\"}",
       "placeholder": {
-        "en": "raw JSON payload"
+        "en": "raw JSON payload",
+        "de": "Raw JSON-Payload",
+        "nl": "raw JSON-payload",
+        "cs": "přímý JSON payload"
       }
     }
   ]

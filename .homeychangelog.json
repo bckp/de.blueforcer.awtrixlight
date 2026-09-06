@@ -139,5 +139,8 @@
   },
   "2.2.8": {
     "en": "Added Czech, German and Dutch translations, clearer unavailability reason when the device times out, less log noise for AWTRIX 3 devices"
+  },
+  "2.2.9": {
+    "en": "Added even more translated texts"
   }
 }

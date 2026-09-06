@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Remove an application"
+    "en": "Remove an application",
+    "de": "Applikation entfernen",
+    "nl": "Applicatie verwijderen",
+    "cs": "Odebrat aplikaci"
   },
   "titleFormatted": {
-    "en": "Remove application [[name]]"
+    "en": "Remove application [[name]]",
+    "de": "Applikation [[name]] entfernen",
+    "nl": "Applicatie [[name]] verwijderen",
+    "cs": "Odebrat aplikaci [[name]]"
   },
   "hint": {
-    "en": "Remove application from device"
+    "en": "Remove application from device",
+    "de": "Applikation vom Gerät entfernen",
+    "nl": "Applicatie van het apparaat verwijderen",
+    "cs": "Odebrat aplikaci ze zařízení"
   },
   "args": [
     {
@@ -18,7 +27,10 @@
       "type": "text",
       "name": "name",
       "placeholder": {
-        "en": "app name"
+        "en": "app name",
+        "de": "App-Name",
+        "nl": "appnaam",
+        "cs": "název aplikace"
       }
     }
   ]

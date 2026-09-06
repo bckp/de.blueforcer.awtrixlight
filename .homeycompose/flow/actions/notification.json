@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Send a notification"
+    "en": "Send a notification",
+    "de": "Benachrichtigung senden",
+    "nl": "Notificatie verzenden",
+    "cs": "Odeslat oznámení"
   },
   "titleFormatted": {
-    "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
+    "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color",
+    "de": "Benachrichtigung [[msg]] mit Symbol [[icon]] und Farbe [[color]] senden",
+    "nl": "Verzend notificatie [[msg]] met pictogram [[icon]] en kleur [[color]]",
+    "cs": "Odeslat oznámení [[msg]] s ikonou [[icon]] a barvou [[color]]"
   },
   "hint": {
-    "en": "Send a notification. Use Homey's Add duration option to override the device default duration."
+    "en": "Send a notification. Use Homey's Add duration option to override the device default duration.",
+    "de": "Eine Benachrichtigung senden. Verwenden Sie Homeys Option Dauer hinzufügen, um die Standarddauer des Geräts zu überschreiben.",
+    "nl": "Verzend een notificatie. Gebruik Homey's optie Duur toevoegen om de standaardduur van het apparaat te overschrijven.",
+    "cs": "Odešle oznámení. Použijte možnost Přidat dobu trvání v Homey pro přepsání výchozí doby trvání zařízení."
   },
   "duration": true,
   "args": [
@@ -19,7 +28,10 @@
       "type": "text",
       "name": "msg",
       "placeholder": {
-        "en": "message"
+        "en": "message",
+        "de": "Nachricht",
+        "nl": "bericht",
+        "cs": "zpráva"
       }
     },
     {
@@ -27,16 +39,28 @@
       "name": "icon",
       "required": false,
       "title": {
-        "en": "icon"
+        "en": "icon",
+        "de": "Symbol",
+        "nl": "pictogram",
+        "cs": "ikona"
       },
       "placeholder": {
-        "en": "icon"
+        "en": "icon",
+        "de": "Symbol",
+        "nl": "pictogram",
+        "cs": "ikona"
       }
     },
     {
       "type": "color",
       "name": "color",
-      "value": "#eeeeee"
+      "value": "#eeeeee",
+      "title": {
+        "en": "color",
+        "de": "Farbe",
+        "nl": "kleur",
+        "cs": "barva"
+      }
     }
   ]
 }

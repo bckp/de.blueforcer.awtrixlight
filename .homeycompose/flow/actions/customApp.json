@@ -1,13 +1,22 @@
 {
   "deprecated": true,
   "title": {
-    "en": "Create a custom app"
+    "en": "Create a custom app",
+    "de": "Benutzerdefinierte App erstellen",
+    "nl": "Aangepaste app maken",
+    "cs": "Vytvořit vlastní aplikaci"
   },
   "titleFormatted": {
-    "en": "Create custom app [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]]"
+    "en": "Create custom app [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]]",
+    "de": "Benutzerdefinierte App [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]] erstellen",
+    "nl": "Aangepaste app [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]] maken",
+    "cs": "Vytvořit vlastní aplikaci [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]]"
   },
   "hint": {
-    "en": "Create custom app on device with icon (from device) and color"
+    "en": "Create custom app on device with icon (from device) and color",
+    "de": "Benutzerdefinierte App auf dem Gerät mit Symbol (vom Gerät) und Farbe erstellen",
+    "nl": "Aangepaste app op het apparaat maken met pictogram (van apparaat) en kleur",
+    "cs": "Vytvoří vlastní aplikaci na zařízení s ikonou (ze zařízení) a barvou"
   },
   "duration": true,
   "args": [
@@ -20,7 +29,10 @@
       "type": "text",
       "name": "name",
       "placeholder": {
-        "en": "name"
+        "en": "name",
+        "de": "Name",
+        "nl": "naam",
+        "cs": "název"
       }
     },
     {
@@ -28,7 +40,10 @@
       "name": "msg",
       "required": false,
       "placeholder": {
-        "en": "message"
+        "en": "message",
+        "de": "Nachricht",
+        "nl": "bericht",
+        "cs": "zpráva"
       }
     },
     {
@@ -36,24 +51,39 @@
       "name": "icon",
       "required": false,
       "title": {
-        "en": "icon"
+        "en": "icon",
+        "de": "Symbol",
+        "nl": "pictogram",
+        "cs": "ikona"
       },
       "placeholder": {
-        "en": "icon"
+        "en": "icon",
+        "de": "Symbol",
+        "nl": "pictogram",
+        "cs": "ikona"
       }
     },
     {
       "type": "color",
       "name": "color",
       "required": false,
-      "value": "#eeeeee"
+      "value": "#eeeeee",
+      "title": {
+        "en": "color",
+        "de": "Farbe",
+        "nl": "kleur",
+        "cs": "barva"
+      }
     },
     {
       "type": "range",
       "name": "duration",
       "value": 5,
       "title": {
-        "en": "app duration"
+        "en": "app duration",
+        "de": "App-Dauer",
+        "nl": "appduur",
+        "cs": "doba zobrazení aplikace"
       },
       "min": 1,
       "max": 30,
@@ -67,7 +97,10 @@
       "name": "options",
       "value": "{}",
       "placeholder": {
-        "en": "JSON options"
+        "en": "JSON options",
+        "de": "JSON-Optionen",
+        "nl": "JSON-opties",
+        "cs": "JSON volby"
       }
     }
   ]

@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Create or update an application with an icon (experimental)"
+    "en": "Create or update an application with an icon (experimental)",
+    "de": "Applikation mit Symbol erstellen oder aktualisieren (experimentell)",
+    "nl": "Applicatie met pictogram maken of bijwerken (experimenteel)",
+    "cs": "Vytvořit nebo aktualizovat aplikaci s ikonou (experimentální)"
   },
   "titleFormatted": {
-    "en": "Create/update application [[name]], set [[msg]] with [[icon]] and [[options]] in json format (experimental)"
+    "en": "Create/update application [[name]], set [[msg]] with [[icon]] and [[options]] in json format (experimental)",
+    "de": "Applikation [[name]] erstellen/aktualisieren, [[msg]] mit [[icon]] und [[options]] im JSON-Format festlegen (experimentell)",
+    "nl": "Applicatie [[name]] maken/bijwerken, stel [[msg]] met [[icon]] en [[options]] in JSON-formaat in (experimenteel)",
+    "cs": "Vytvořit/aktualizovat aplikaci [[name]], nastavit [[msg]] s [[icon]] a [[options]] ve formátu JSON (experimentální)"
   },
   "hint": {
-    "en": "Create/update application, give you ability to set custom options in form of JSON format"
+    "en": "Create/update application, give you ability to set custom options in form of JSON format",
+    "de": "Erstellt/aktualisiert eine Applikation mit benutzerdefinierten Optionen im JSON-Format",
+    "nl": "Maak of werk een applicatie bij met aangepaste opties in JSON-formaat",
+    "cs": "Vytvoří/aktualizuje aplikaci s možností nastavení vlastních voleb ve formátu JSON"
   },
   "deprecated": true,
   "args": [
@@ -19,31 +28,46 @@
       "type": "text",
       "name": "msg",
       "placeholder": {
-        "en": "message"
+        "en": "message",
+        "de": "Nachricht",
+        "nl": "bericht",
+        "cs": "zpráva"
       }
     },
     {
       "type": "autocomplete",
       "name": "name",
       "placeholder": {
-        "en": "app name"
+        "en": "app name",
+        "de": "App-Name",
+        "nl": "appnaam",
+        "cs": "název aplikace"
       }
     },
     {
       "type": "autocomplete",
       "name": "icon",
       "title": {
-        "en": "icon"
+        "en": "icon",
+        "de": "Symbol",
+        "nl": "pictogram",
+        "cs": "ikona"
       },
       "placeholder": {
-        "en": "icon"
+        "en": "icon",
+        "de": "Symbol",
+        "nl": "pictogram",
+        "cs": "ikona"
       }
     },
     {
       "type": "text",
       "name": "options",
       "placeholder": {
-        "en": "options JSON"
+        "en": "options JSON",
+        "de": "Optionen JSON",
+        "nl": "opties JSON",
+        "cs": "JSON volby"
       }
     }
   ]

@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Send a notification with an icon"
+    "en": "Send a notification with an icon",
+    "de": "Benachrichtigung mit Symbol senden",
+    "nl": "Notificatie met pictogram verzenden",
+    "cs": "Odeslat oznámení s ikonou"
   },
   "titleFormatted": {
-    "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
+    "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color",
+    "de": "Benachrichtigung [[msg]] mit Symbol [[icon]] und Farbe [[color]] senden",
+    "nl": "Verzend notificatie [[msg]] met pictogram [[icon]] en kleur [[color]]",
+    "cs": "Odeslat oznámení [[msg]] s ikonou [[icon]] a barvou [[color]]"
   },
   "hint": {
-    "en": "Deprecated. Use Send notification instead."
+    "en": "Deprecated. Use Send notification instead.",
+    "de": "Veraltet. Verwenden Sie stattdessen Benachrichtigung senden.",
+    "nl": "Verouderd. Gebruik in plaats daarvan Notificatie verzenden.",
+    "cs": "Zastaralé. Použijte místo toho Odeslat oznámení."
   },
   "deprecated": true,
   "duration": true,
@@ -20,23 +29,38 @@
       "type": "text",
       "name": "msg",
       "placeholder": {
-        "en": "message"
+        "en": "message",
+        "de": "Nachricht",
+        "nl": "bericht",
+        "cs": "zpráva"
       }
     },
     {
       "type": "autocomplete",
       "name": "icon",
       "title": {
-        "en": "icon"
+        "en": "icon",
+        "de": "Symbol",
+        "nl": "pictogram",
+        "cs": "ikona"
       },
       "placeholder": {
-        "en": "icon"
+        "en": "icon",
+        "de": "Symbol",
+        "nl": "pictogram",
+        "cs": "ikona"
       }
     },
     {
       "type": "color",
       "name": "color",
-      "value": "#eeeeee"
+      "value": "#eeeeee",
+      "title": {
+        "en": "color",
+        "de": "Farbe",
+        "nl": "kleur",
+        "cs": "barva"
+      }
     }
   ]
 }

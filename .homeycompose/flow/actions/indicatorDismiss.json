@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Hide an indicator"
+    "en": "Hide an indicator",
+    "de": "Indikator ausblenden",
+    "nl": "Indicator verbergen",
+    "cs": "Skrýt indikátor"
   },
   "titleFormatted": {
-    "en": "Hide [[indicator]] indicator"
+    "en": "Hide [[indicator]] indicator",
+    "de": "Indikator [[indicator]] ausblenden",
+    "nl": "Verberg [[indicator]] indicator",
+    "cs": "Skrýt indikátor [[indicator]]"
   },
   "hint": {
-    "en": "Disable identificator"
+    "en": "Disable identificator",
+    "de": "Indikator deaktivieren",
+    "nl": "Indicator uitschakelen",
+    "cs": "Deaktivuje indikátor"
   },
   "args": [
     {
@@ -19,25 +28,37 @@
       "name": "indicator",
       "value": "1",
       "title": {
-        "en": "identificator number"
+        "en": "identificator number",
+        "de": "Indikatornummer",
+        "nl": "indicatornummer",
+        "cs": "číslo indikátoru"
       },
       "values": [
         {
           "id": "1",
           "title": {
-            "en": "top right"
+            "en": "top right",
+            "de": "oben rechts",
+            "nl": "rechtsboven",
+            "cs": "vpravo nahoře"
           }
         },
         {
           "id": "2",
           "title": {
-            "en": "right"
+            "en": "right",
+            "de": "rechts",
+            "nl": "rechts",
+            "cs": "vpravo"
           }
         },
         {
           "id": "3",
           "title": {
-            "en": "bottom right"
+            "en": "bottom right",
+            "de": "unten rechts",
+            "nl": "rechtsonder",
+            "cs": "vpravo dole"
           }
         }
       ]

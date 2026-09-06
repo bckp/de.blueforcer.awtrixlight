@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "de.blueforcer.awtrixlight",
-  "version": "2.2.8",
+  "version": "2.2.9",
   "compatibility": ">=12.9.0",
   "sdk": 3,
   "brandColor": "#222222",
@@ -40,13 +40,22 @@
     "actions": [
       {
         "title": {
-          "en": "Create or update an application"
+          "en": "Create or update an application",
+          "de": "Applikation erstellen oder aktualisieren",
+          "nl": "Applicatie maken of bijwerken",
+          "cs": "Vytvořit nebo aktualizovat aplikaci"
         },
         "titleFormatted": {
-          "en": "Create/update application [[name]] [[msg]] [[icon]] [[color]] [[options]]"
+          "en": "Create/update application [[name]] [[msg]] [[icon]] [[color]] [[options]]",
+          "de": "Applikation [[name]] [[msg]] [[icon]] [[color]] [[options]] erstellen/aktualisieren",
+          "nl": "Applicatie [[name]] [[msg]] [[icon]] [[color]] [[options]] maken/bijwerken",
+          "cs": "Vytvořit/aktualizovat aplikaci [[name]] [[msg]] [[icon]] [[color]] [[options]]"
         },
         "hint": {
-          "en": "Create or update an application. Name must match A-Z, a-z, 0-9, _ or - and be at most 26 characters. Optional options must be device-specific JSON. Use Homey's Add duration option to override the JSON options or the device default duration."
+          "en": "Create or update an application. Name must match A-Z, a-z, 0-9, _ or - and be at most 26 characters. Optional options must be device-specific JSON. Use Homey's Add duration option to override the JSON options or the device default duration.",
+          "de": "Erstellt oder aktualisiert eine Applikation. Der Name darf nur A-Z, a-z, 0-9, _ oder - enthalten und maximal 26 Zeichen lang sein. Optionale Optionen müssen gerätespezifisches JSON sein. Verwenden Sie Homeys Option Dauer hinzufügen, um die JSON-Optionen oder die Standarddauer des Geräts zu überschreiben.",
+          "nl": "Maak of werk een applicatie bij. De naam mag alleen A-Z, a-z, 0-9, _ of - bevatten en mag maximaal 26 tekens lang zijn. Optionele opties moeten apparaatspecifieke JSON zijn. Gebruik Homey's optie Duur toevoegen om de JSON-opties of de standaardduur van het apparaat te overschrijven.",
+          "cs": "Vytvoří nebo aktualizuje aplikaci. Název smí obsahovat pouze A-Z, a-z, 0-9, _ nebo - a mít nejvýše 26 znaků. Volitelné parametry musí být ve formátu JSON specifickém pro zařízení. Použijte možnost Přidat dobu trvání v Homey pro přepsání JSON voleb nebo výchozí doby trvání zařízení."
         },
         "duration": true,
         "args": [
@@ -59,7 +68,10 @@
             "type": "text",
             "name": "name",
             "placeholder": {
-              "en": "app name"
+              "en": "app name",
+              "de": "App-Name",
+              "nl": "appnaam",
+              "cs": "název aplikace"
             }
           },
           {
@@ -67,7 +79,10 @@
             "name": "msg",
             "required": false,
             "placeholder": {
-              "en": "message"
+              "en": "message",
+              "de": "Nachricht",
+              "nl": "bericht",
+              "cs": "zpráva"
             }
           },
           {
@@ -75,10 +90,16 @@
             "name": "icon",
             "required": false,
             "title": {
-              "en": "icon"
+              "en": "icon",
+              "de": "Symbol",
+              "nl": "pictogram",
+              "cs": "ikona"
             },
             "placeholder": {
-              "en": "icon"
+              "en": "icon",
+              "de": "Symbol",
+              "nl": "pictogram",
+              "cs": "ikona"
             }
           },
           {
@@ -87,7 +108,10 @@
             "required": false,
             "value": "#eeeeee",
             "title": {
-              "en": "color"
+              "en": "color",
+              "de": "Farbe",
+              "nl": "kleur",
+              "cs": "barva"
             }
           },
           {
@@ -95,7 +119,10 @@
             "name": "options",
             "required": false,
             "placeholder": {
-              "en": "JSON options"
+              "en": "JSON options",
+              "de": "JSON-Optionen",
+              "nl": "JSON-opties",
+              "cs": "JSON volby"
             }
           }
         ],
@@ -103,13 +130,22 @@
       },
       {
         "title": {
-          "en": "Create or update an application with an icon (experimental)"
+          "en": "Create or update an application with an icon (experimental)",
+          "de": "Applikation mit Symbol erstellen oder aktualisieren (experimentell)",
+          "nl": "Applicatie met pictogram maken of bijwerken (experimenteel)",
+          "cs": "Vytvořit nebo aktualizovat aplikaci s ikonou (experimentální)"
         },
         "titleFormatted": {
-          "en": "Create/update application [[name]], set [[msg]] with [[icon]] and [[options]] in json format (experimental)"
+          "en": "Create/update application [[name]], set [[msg]] with [[icon]] and [[options]] in json format (experimental)",
+          "de": "Applikation [[name]] erstellen/aktualisieren, [[msg]] mit [[icon]] und [[options]] im JSON-Format festlegen (experimentell)",
+          "nl": "Applicatie [[name]] maken/bijwerken, stel [[msg]] met [[icon]] en [[options]] in JSON-formaat in (experimenteel)",
+          "cs": "Vytvořit/aktualizovat aplikaci [[name]], nastavit [[msg]] s [[icon]] a [[options]] ve formátu JSON (experimentální)"
         },
         "hint": {
-          "en": "Create/update application, give you ability to set custom options in form of JSON format"
+          "en": "Create/update application, give you ability to set custom options in form of JSON format",
+          "de": "Erstellt/aktualisiert eine Applikation mit benutzerdefinierten Optionen im JSON-Format",
+          "nl": "Maak of werk een applicatie bij met aangepaste opties in JSON-formaat",
+          "cs": "Vytvoří/aktualizuje aplikaci s možností nastavení vlastních voleb ve formátu JSON"
         },
         "deprecated": true,
         "args": [
@@ -122,31 +158,46 @@
             "type": "text",
             "name": "msg",
             "placeholder": {
-              "en": "message"
+              "en": "message",
+              "de": "Nachricht",
+              "nl": "bericht",
+              "cs": "zpráva"
             }
           },
           {
             "type": "autocomplete",
             "name": "name",
             "placeholder": {
-              "en": "app name"
+              "en": "app name",
+              "de": "App-Name",
+              "nl": "appnaam",
+              "cs": "název aplikace"
             }
           },
           {
             "type": "autocomplete",
             "name": "icon",
             "title": {
-              "en": "icon"
+              "en": "icon",
+              "de": "Symbol",
+              "nl": "pictogram",
+              "cs": "ikona"
             },
             "placeholder": {
-              "en": "icon"
+              "en": "icon",
+              "de": "Symbol",
+              "nl": "pictogram",
+              "cs": "ikona"
             }
           },
           {
             "type": "text",
             "name": "options",
             "placeholder": {
-              "en": "options JSON"
+              "en": "options JSON",
+              "de": "Optionen JSON",
+              "nl": "opties JSON",
+              "cs": "JSON volby"
             }
           }
         ],
@@ -154,13 +205,22 @@
       },
       {
         "title": {
-          "en": "Create or update a raw application"
+          "en": "Create or update a raw application",
+          "de": "Raw-Applikation erstellen oder aktualisieren",
+          "nl": "Raw-applicatie maken of bijwerken",
+          "cs": "Vytvořit nebo aktualizovat raw aplikaci"
         },
         "titleFormatted": {
-          "en": "Create/update raw application [[name]] [[options]]"
+          "en": "Create/update raw application [[name]] [[options]]",
+          "de": "Raw-Applikation [[name]] [[options]] erstellen/aktualisieren",
+          "nl": "Raw-applicatie [[name]] [[options]] maken/bijwerken",
+          "cs": "Vytvořit/aktualizovat raw aplikaci [[name]] [[options]]"
         },
         "hint": {
-          "en": "Create or update an application using a raw JSON payload. Enter the app name without the internal homey- prefix. This card is for advanced users and accepts only fields supported by the selected device."
+          "en": "Create or update an application using a raw JSON payload. Enter the app name without the internal homey- prefix. This card is for advanced users and accepts only fields supported by the selected device.",
+          "de": "Erstellt oder aktualisiert eine Applikation über eine direkte JSON-Payload. Geben Sie den App-Namen ohne das interne Präfix homey- ein. Diese Karte ist für fortgeschrittene Benutzer und akzeptiert nur vom ausgewählten Gerät unterstützte Felder.",
+          "nl": "Maak of werk een applicatie bij met een directe JSON-payload. Voer de appnaam in zonder het interne homey- voorvoegsel. Deze kaart is voor gevorderde gebruikers en accepteert alleen velden die door het geselecteerde apparaat worden ondersteund.",
+          "cs": "Vytvoří nebo aktualizuje aplikaci pomocí přímého JSON payloadu. Zadejte název aplikace bez interní předpony homey-. Tato karta je pro pokročilé uživatele a přijímá pouze pole podporovaná vybraným zařízením."
         },
         "args": [
           {
@@ -172,7 +232,10 @@
             "type": "text",
             "name": "name",
             "placeholder": {
-              "en": "app name"
+              "en": "app name",
+              "de": "App-Name",
+              "nl": "appnaam",
+              "cs": "název aplikace"
             }
           },
           {
@@ -180,7 +243,10 @@
             "name": "options",
             "value": "{\"text\":\"Hello\"}",
             "placeholder": {
-              "en": "raw JSON payload"
+              "en": "raw JSON payload",
+              "de": "Raw JSON-Payload",
+              "nl": "raw JSON-payload",
+              "cs": "přímý JSON payload"
             }
           }
         ],
@@ -188,13 +254,22 @@
       },
       {
         "title": {
-          "en": "Remove an application"
+          "en": "Remove an application",
+          "de": "Applikation entfernen",
+          "nl": "Applicatie verwijderen",
+          "cs": "Odebrat aplikaci"
         },
         "titleFormatted": {
-          "en": "Remove application [[name]]"
+          "en": "Remove application [[name]]",
+          "de": "Applikation [[name]] entfernen",
+          "nl": "Applicatie [[name]] verwijderen",
+          "cs": "Odebrat aplikaci [[name]]"
         },
         "hint": {
-          "en": "Remove application from device"
+          "en": "Remove application from device",
+          "de": "Applikation vom Gerät entfernen",
+          "nl": "Applicatie van het apparaat verwijderen",
+          "cs": "Odebrat aplikaci ze zařízení"
         },
         "args": [
           {
@@ -206,7 +281,10 @@
             "type": "text",
             "name": "name",
             "placeholder": {
-              "en": "app name"
+              "en": "app name",
+              "de": "App-Name",
+              "nl": "appnaam",
+              "cs": "název aplikace"
             }
           }
         ],
@@ -215,13 +293,22 @@
       {
         "deprecated": true,
         "title": {
-          "en": "Create a custom app"
+          "en": "Create a custom app",
+          "de": "Benutzerdefinierte App erstellen",
+          "nl": "Aangepaste app maken",
+          "cs": "Vytvořit vlastní aplikaci"
         },
         "titleFormatted": {
-          "en": "Create custom app [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]]"
+          "en": "Create custom app [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]]",
+          "de": "Benutzerdefinierte App [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]] erstellen",
+          "nl": "Aangepaste app [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]] maken",
+          "cs": "Vytvořit vlastní aplikaci [[name]] [[icon]] [[msg]] [[color]] [[duration]] [[options]]"
         },
         "hint": {
-          "en": "Create custom app on device with icon (from device) and color"
+          "en": "Create custom app on device with icon (from device) and color",
+          "de": "Benutzerdefinierte App auf dem Gerät mit Symbol (vom Gerät) und Farbe erstellen",
+          "nl": "Aangepaste app op het apparaat maken met pictogram (van apparaat) en kleur",
+          "cs": "Vytvoří vlastní aplikaci na zařízení s ikonou (ze zařízení) a barvou"
         },
         "duration": true,
         "args": [
@@ -234,7 +321,10 @@
             "type": "text",
             "name": "name",
             "placeholder": {
-              "en": "name"
+              "en": "name",
+              "de": "Name",
+              "nl": "naam",
+              "cs": "název"
             }
           },
           {
@@ -242,7 +332,10 @@
             "name": "msg",
             "required": false,
             "placeholder": {
-              "en": "message"
+              "en": "message",
+              "de": "Nachricht",
+              "nl": "bericht",
+              "cs": "zpráva"
             }
           },
           {
@@ -250,24 +343,39 @@
             "name": "icon",
             "required": false,
             "title": {
-              "en": "icon"
+              "en": "icon",
+              "de": "Symbol",
+              "nl": "pictogram",
+              "cs": "ikona"
             },
             "placeholder": {
-              "en": "icon"
+              "en": "icon",
+              "de": "Symbol",
+              "nl": "pictogram",
+              "cs": "ikona"
             }
           },
           {
             "type": "color",
             "name": "color",
             "required": false,
-            "value": "#eeeeee"
+            "value": "#eeeeee",
+            "title": {
+              "en": "color",
+              "de": "Farbe",
+              "nl": "kleur",
+              "cs": "barva"
+            }
           },
           {
             "type": "range",
             "name": "duration",
             "value": 5,
             "title": {
-              "en": "app duration"
+              "en": "app duration",
+              "de": "App-Dauer",
+              "nl": "appduur",
+              "cs": "doba zobrazení aplikace"
             },
             "min": 1,
             "max": 30,
@@ -281,7 +389,10 @@
             "name": "options",
             "value": "{}",
             "placeholder": {
-              "en": "JSON options"
+              "en": "JSON options",
+              "de": "JSON-Optionen",
+              "nl": "JSON-opties",
+              "cs": "JSON volby"
             }
           }
         ],
@@ -289,13 +400,22 @@
       },
       {
         "title": {
-          "en": "Set display power"
+          "en": "Set display power",
+          "de": "Display-Status einstellen",
+          "nl": "Displayschakelaar instellen",
+          "cs": "Nastavit stav displeje"
         },
         "titleFormatted": {
-          "en": "Set display [[power]]"
+          "en": "Set display [[power]]",
+          "de": "Display auf [[power]] setzen",
+          "nl": "Display op [[power]] zetten",
+          "cs": "Nastavit displej na [[power]]"
         },
         "hint": {
-          "en": "Enable or disable display"
+          "en": "Enable or disable display",
+          "de": "Display ein- oder ausschalten",
+          "nl": "Display in- of uitschakelen",
+          "cs": "Zapnout nebo vypnout displej"
         },
         "args": [
           {
@@ -307,19 +427,28 @@
             "type": "dropdown",
             "name": "power",
             "title": {
-              "en": "state"
+              "en": "state",
+              "de": "Status",
+              "nl": "status",
+              "cs": "stav"
             },
             "values": [
               {
                 "id": "1",
                 "title": {
-                  "en": "on"
+                  "en": "on",
+                  "de": "ein",
+                  "nl": "aan",
+                  "cs": "zapnuto"
                 }
               },
               {
                 "id": "0",
                 "title": {
-                  "en": "off"
+                  "en": "off",
+                  "de": "aus",
+                  "nl": "uit",
+                  "cs": "vypnuto"
                 }
               }
             ]
@@ -329,13 +458,22 @@
       },
       {
         "title": {
-          "en": "Show indicator with color and effect for a period of time"
+          "en": "Show indicator with color and effect for a period of time",
+          "de": "Indikator mit Farbe und Effekt für eine bestimmte Zeit anzeigen",
+          "nl": "Indicator met kleur en effect voor een bepaalde tijd tonen",
+          "cs": "Zobrazit indikátor s barvou a efektem po stanovenou dobu"
         },
         "titleFormatted": {
-          "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect for [[duration]]"
+          "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect for [[duration]]",
+          "de": "Indikator [[indicator]] mit Farbe [[color]] und Effekt [[effect]] für [[duration]] anzeigen",
+          "nl": "Toon [[indicator]] indicator met kleur [[color]] en effect [[effect]] gedurende [[duration]]",
+          "cs": "Zobrazit indikátor [[indicator]] s barvou [[color]] a efektem [[effect]] po dobu [[duration]]"
         },
         "hint": {
-          "en": "Set an indicator. Effect duration is in milliseconds."
+          "en": "Set an indicator. Effect duration is in milliseconds.",
+          "de": "Einen Indikator einstellen. Effektdauer in Millisekunden.",
+          "nl": "Stel een indicator in. Effectduur is in milliseconden.",
+          "cs": "Nastaví indikátor. Doba trvání efektu je v milisekundách."
         },
         "args": [
           {
@@ -347,7 +485,10 @@
             "type": "color",
             "name": "color",
             "title": {
-              "en": "color"
+              "en": "color",
+              "de": "Farbe",
+              "nl": "kleur",
+              "cs": "barva"
             }
           },
           {
@@ -355,25 +496,37 @@
             "name": "indicator",
             "value": "1",
             "title": {
-              "en": "indicator number"
+              "en": "indicator number",
+              "de": "Indikatornummer",
+              "nl": "indicatornummer",
+              "cs": "číslo indikátoru"
             },
             "values": [
               {
                 "id": "1",
                 "title": {
-                  "en": "top right"
+                  "en": "top right",
+                  "de": "oben rechts",
+                  "nl": "rechtsboven",
+                  "cs": "vpravo nahoře"
                 }
               },
               {
                 "id": "2",
                 "title": {
-                  "en": "right"
+                  "en": "right",
+                  "de": "rechts",
+                  "nl": "rechts",
+                  "cs": "vpravo"
                 }
               },
               {
                 "id": "3",
                 "title": {
-                  "en": "bottom right"
+                  "en": "bottom right",
+                  "de": "unten rechts",
+                  "nl": "rechtsonder",
+                  "cs": "vpravo dole"
                 }
               }
             ]
@@ -383,25 +536,37 @@
             "name": "effect",
             "value": "fade",
             "title": {
-              "en": "effect"
+              "en": "effect",
+              "de": "Effekt",
+              "nl": "effect",
+              "cs": "efekt"
             },
             "values": [
               {
                 "id": "-",
                 "title": {
-                  "en": "no"
+                  "en": "no",
+                  "de": "keiner",
+                  "nl": "geen",
+                  "cs": "žádný"
                 }
               },
               {
                 "id": "blink",
                 "title": {
-                  "en": "blink"
+                  "en": "blink",
+                  "de": "blinken",
+                  "nl": "knipperen",
+                  "cs": "blikání"
                 }
               },
               {
                 "id": "fade",
                 "title": {
-                  "en": "fade"
+                  "en": "fade",
+                  "de": "überblenden",
+                  "nl": "faden",
+                  "cs": "prolínání"
                 }
               }
             ]
@@ -411,7 +576,10 @@
             "name": "duration",
             "value": 1000,
             "title": {
-              "en": "effect duration"
+              "en": "effect duration",
+              "de": "Effektdauer",
+              "nl": "effectduur",
+              "cs": "doba trvání efektu"
             },
             "min": 500,
             "max": 10000,
@@ -425,13 +593,22 @@
       },
       {
         "title": {
-          "en": "Hide an indicator"
+          "en": "Hide an indicator",
+          "de": "Indikator ausblenden",
+          "nl": "Indicator verbergen",
+          "cs": "Skrýt indikátor"
         },
         "titleFormatted": {
-          "en": "Hide [[indicator]] indicator"
+          "en": "Hide [[indicator]] indicator",
+          "de": "Indikator [[indicator]] ausblenden",
+          "nl": "Verberg [[indicator]] indicator",
+          "cs": "Skrýt indikátor [[indicator]]"
         },
         "hint": {
-          "en": "Disable identificator"
+          "en": "Disable identificator",
+          "de": "Indikator deaktivieren",
+          "nl": "Indicator uitschakelen",
+          "cs": "Deaktivuje indikátor"
         },
         "args": [
           {
@@ -444,25 +621,37 @@
             "name": "indicator",
             "value": "1",
             "title": {
-              "en": "identificator number"
+              "en": "identificator number",
+              "de": "Indikatornummer",
+              "nl": "indicatornummer",
+              "cs": "číslo indikátoru"
             },
             "values": [
               {
                 "id": "1",
                 "title": {
-                  "en": "top right"
+                  "en": "top right",
+                  "de": "oben rechts",
+                  "nl": "rechtsboven",
+                  "cs": "vpravo nahoře"
                 }
               },
               {
                 "id": "2",
                 "title": {
-                  "en": "right"
+                  "en": "right",
+                  "de": "rechts",
+                  "nl": "rechts",
+                  "cs": "vpravo"
                 }
               },
               {
                 "id": "3",
                 "title": {
-                  "en": "bottom right"
+                  "en": "bottom right",
+                  "de": "unten rechts",
+                  "nl": "rechtsonder",
+                  "cs": "vpravo dole"
                 }
               }
             ]
@@ -472,13 +661,22 @@
       },
       {
         "title": {
-          "en": "Send a notification"
+          "en": "Send a notification",
+          "de": "Benachrichtigung senden",
+          "nl": "Notificatie verzenden",
+          "cs": "Odeslat oznámení"
         },
         "titleFormatted": {
-          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color",
+          "de": "Benachrichtigung [[msg]] mit Symbol [[icon]] und Farbe [[color]] senden",
+          "nl": "Verzend notificatie [[msg]] met pictogram [[icon]] en kleur [[color]]",
+          "cs": "Odeslat oznámení [[msg]] s ikonou [[icon]] a barvou [[color]]"
         },
         "hint": {
-          "en": "Send a notification. Use Homey's Add duration option to override the device default duration."
+          "en": "Send a notification. Use Homey's Add duration option to override the device default duration.",
+          "de": "Eine Benachrichtigung senden. Verwenden Sie Homeys Option Dauer hinzufügen, um die Standarddauer des Geräts zu überschreiben.",
+          "nl": "Verzend een notificatie. Gebruik Homey's optie Duur toevoegen om de standaardduur van het apparaat te overschrijven.",
+          "cs": "Odešle oznámení. Použijte možnost Přidat dobu trvání v Homey pro přepsání výchozí doby trvání zařízení."
         },
         "duration": true,
         "args": [
@@ -491,7 +689,10 @@
             "type": "text",
             "name": "msg",
             "placeholder": {
-              "en": "message"
+              "en": "message",
+              "de": "Nachricht",
+              "nl": "bericht",
+              "cs": "zpráva"
             }
           },
           {
@@ -499,29 +700,50 @@
             "name": "icon",
             "required": false,
             "title": {
-              "en": "icon"
+              "en": "icon",
+              "de": "Symbol",
+              "nl": "pictogram",
+              "cs": "ikona"
             },
             "placeholder": {
-              "en": "icon"
+              "en": "icon",
+              "de": "Symbol",
+              "nl": "pictogram",
+              "cs": "ikona"
             }
           },
           {
             "type": "color",
             "name": "color",
-            "value": "#eeeeee"
+            "value": "#eeeeee",
+            "title": {
+              "en": "color",
+              "de": "Farbe",
+              "nl": "kleur",
+              "cs": "barva"
+            }
           }
         ],
         "id": "notification"
       },
       {
         "title": {
-          "en": "Dismiss a notification"
+          "en": "Dismiss a notification",
+          "de": "Benachrichtigung verwerfen",
+          "nl": "Notificatie sluiten",
+          "cs": "Zavřít oznámení"
         },
         "titleFormatted": {
-          "en": "Dismiss notification"
+          "en": "Dismiss notification",
+          "de": "Benachrichtigung verwerfen",
+          "nl": "Notificatie sluiten",
+          "cs": "Zavřít oznámení"
         },
         "hint": {
-          "en": "Dismiss permanent notification"
+          "en": "Dismiss permanent notification",
+          "de": "Dauerhafte Benachrichtigung verwerfen",
+          "nl": "Permanente notificatie sluiten",
+          "cs": "Zavře trvalé oznámení"
         },
         "args": [
           {
@@ -534,13 +756,22 @@
       },
       {
         "title": {
-          "en": "Send a notification with an icon"
+          "en": "Send a notification with an icon",
+          "de": "Benachrichtigung mit Symbol senden",
+          "nl": "Notificatie met pictogram verzenden",
+          "cs": "Odeslat oznámení s ikonou"
         },
         "titleFormatted": {
-          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color"
+          "en": "Send notification [[msg]] with [[icon]] icon and [[color]] color",
+          "de": "Benachrichtigung [[msg]] mit Symbol [[icon]] und Farbe [[color]] senden",
+          "nl": "Verzend notificatie [[msg]] met pictogram [[icon]] en kleur [[color]]",
+          "cs": "Odeslat oznámení [[msg]] s ikonou [[icon]] a barvou [[color]]"
         },
         "hint": {
-          "en": "Deprecated. Use Send notification instead."
+          "en": "Deprecated. Use Send notification instead.",
+          "de": "Veraltet. Verwenden Sie stattdessen Benachrichtigung senden.",
+          "nl": "Verouderd. Gebruik in plaats daarvan Notificatie verzenden.",
+          "cs": "Zastaralé. Použijte místo toho Odeslat oznámení."
         },
         "deprecated": true,
         "duration": true,
@@ -554,36 +785,60 @@
             "type": "text",
             "name": "msg",
             "placeholder": {
-              "en": "message"
+              "en": "message",
+              "de": "Nachricht",
+              "nl": "bericht",
+              "cs": "zpráva"
             }
           },
           {
             "type": "autocomplete",
             "name": "icon",
             "title": {
-              "en": "icon"
+              "en": "icon",
+              "de": "Symbol",
+              "nl": "pictogram",
+              "cs": "ikona"
             },
             "placeholder": {
-              "en": "icon"
+              "en": "icon",
+              "de": "Symbol",
+              "nl": "pictogram",
+              "cs": "ikona"
             }
           },
           {
             "type": "color",
             "name": "color",
-            "value": "#eeeeee"
+            "value": "#eeeeee",
+            "title": {
+              "en": "color",
+              "de": "Farbe",
+              "nl": "kleur",
+              "cs": "barva"
+            }
           }
         ],
         "id": "notificationIcon"
       },
       {
         "title": {
-          "en": "Send a notification with JSON options"
+          "en": "Send a notification with JSON options",
+          "de": "Benachrichtigung mit JSON-Optionen senden",
+          "nl": "Notificatie met JSON-opties verzenden",
+          "cs": "Odeslat oznámení s JSON volbami"
         },
         "titleFormatted": {
-          "en": "Send notification [[msg]] with [[options]]"
+          "en": "Send notification [[msg]] with [[options]]",
+          "de": "Benachrichtigung [[msg]] mit [[options]] senden",
+          "nl": "Verzend notificatie [[msg]] met [[options]]",
+          "cs": "Odeslat oznámení [[msg]] s [[options]]"
         },
         "hint": {
-          "en": "Legacy notification JSON flow for AWTRIX 3. Use Send raw notification for new flows."
+          "en": "Legacy notification JSON flow for AWTRIX 3. Use Send raw notification for new flows.",
+          "de": "Veralteter JSON-Benachrichtigungs-Flow für AWTRIX 3. Verwenden Sie Raw-Benachrichtigung senden für neue Flows.",
+          "nl": "Verouderde JSON-notificatie flow voor AWTRIX 3. Gebruik Raw-notificatie verzenden voor nieuwe flows.",
+          "cs": "Zastaralý JSON flow oznámení pro AWTRIX 3. Pro nové flow použijte Odeslat raw oznámení."
         },
         "deprecated": true,
         "duration": true,
@@ -598,7 +853,10 @@
             "name": "msg",
             "required": false,
             "placeholder": {
-              "en": "message"
+              "en": "message",
+              "de": "Nachricht",
+              "nl": "bericht",
+              "cs": "zpráva"
             }
           },
           {
@@ -606,7 +864,10 @@
             "name": "options",
             "value": "{}",
             "placeholder": {
-              "en": "JSON options"
+              "en": "JSON options",
+              "de": "JSON-Optionen",
+              "nl": "JSON-opties",
+              "cs": "JSON volby"
             }
           }
         ],
@@ -614,13 +875,22 @@
       },
       {
         "title": {
-          "en": "Send a raw notification"
+          "en": "Send a raw notification",
+          "de": "Raw-Benachrichtigung senden",
+          "nl": "Raw-notificatie verzenden",
+          "cs": "Odeslat raw oznámení"
         },
         "titleFormatted": {
-          "en": "Send raw notification [[options]]"
+          "en": "Send raw notification [[options]]",
+          "de": "Raw-Benachrichtigung [[options]] senden",
+          "nl": "Verzend raw-notificatie [[options]]",
+          "cs": "Odeslat raw oznámení [[options]]"
         },
         "hint": {
-          "en": "Send a notification using a device-specific raw JSON payload. For AWTRIX NG, use NG-shaped JSON fields such as text and durationMs. For AWTRIX 3, use AWTRIX 3-shaped JSON fields such as text and duration."
+          "en": "Send a notification using a device-specific raw JSON payload. For AWTRIX NG, use NG-shaped JSON fields such as text and durationMs. For AWTRIX 3, use AWTRIX 3-shaped JSON fields such as text and duration.",
+          "de": "Sendet eine Benachrichtigung über eine gerätespezifische direkte JSON-Payload. Für AWTRIX NG verwenden Sie NG-spezifische Felder wie text und durationMs. Für AWTRIX 3 verwenden Sie AWTRIX 3-spezifische Felder wie text und duration.",
+          "nl": "Verzend een notificatie met een apparaatspecifieke directe JSON-payload. Gebruik voor AWTRIX NG NG-velden zoals text en durationMs. Gebruik voor AWTRIX 3 AWTRIX 3-velden zoals text en duration.",
+          "cs": "Odešle oznámení pomocí přímého JSON payloadu specifického pro zařízení. Pro AWTRIX NG použijte pole NG jako text a durationMs. Pro AWTRIX 3 použijte pole AWTRIX 3 jako text a duration."
         },
         "args": [
           {
@@ -633,7 +903,10 @@
             "name": "options",
             "value": "{\"text\":\"Hello\"}",
             "placeholder": {
-              "en": "raw JSON payload"
+              "en": "raw JSON payload",
+              "de": "Raw JSON-Payload",
+              "nl": "raw JSON-payload",
+              "cs": "přímý JSON payload"
             }
           }
         ],
@@ -641,13 +914,22 @@
       },
       {
         "title": {
-          "en": "Send a sticky notification"
+          "en": "Send a sticky notification",
+          "de": "Dauerhafte Benachrichtigung senden",
+          "nl": "Permanente notificatie verzenden",
+          "cs": "Odeslat trvalé oznámení"
         },
         "titleFormatted": {
-          "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color"
+          "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color",
+          "de": "Dauerhafte Benachrichtigung [[msg]] mit Symbol [[icon]] und Farbe [[color]] senden",
+          "nl": "Verzend permanente notificatie [[msg]] met pictogram [[icon]] en kleur [[color]]",
+          "cs": "Odeslat trvalé oznámení [[msg]] s ikonou [[icon]] a barvou [[color]]"
         },
         "hint": {
-          "en": "Send sticky notification to device with optional icon and color"
+          "en": "Send sticky notification to device with optional icon and color",
+          "de": "Dauerhafte Benachrichtigung an das Gerät mit optionalem Symbol und Farbe senden",
+          "nl": "Verzend een permanente notificatie naar het apparaat met optioneel pictogram en kleur",
+          "cs": "Odešle trvalé oznámení na zařízení s volitelnou ikonou a barvou"
         },
         "args": [
           {
@@ -659,7 +941,10 @@
             "type": "text",
             "name": "msg",
             "placeholder": {
-              "en": "message"
+              "en": "message",
+              "de": "Nachricht",
+              "nl": "bericht",
+              "cs": "zpráva"
             }
           },
           {
@@ -667,29 +952,50 @@
             "name": "icon",
             "required": false,
             "title": {
-              "en": "icon"
+              "en": "icon",
+              "de": "Symbol",
+              "nl": "pictogram",
+              "cs": "ikona"
             },
             "placeholder": {
-              "en": "icon"
+              "en": "icon",
+              "de": "Symbol",
+              "nl": "pictogram",
+              "cs": "ikona"
             }
           },
           {
             "type": "color",
             "name": "color",
-            "value": "#eeeeee"
+            "value": "#eeeeee",
+            "title": {
+              "en": "color",
+              "de": "Farbe",
+              "nl": "kleur",
+              "cs": "barva"
+            }
           }
         ],
         "id": "notificationSticky"
       },
       {
         "title": {
-          "en": "Play an RTTTL melody"
+          "en": "Play an RTTTL melody",
+          "de": "RTTTL-Melodie abspielen",
+          "nl": "RTTTL-melodie afspelen",
+          "cs": "Přehrát RTTTL melodii"
         },
         "titleFormatted": {
-          "en": "Play [[rtttl]] melody"
+          "en": "Play [[rtttl]] melody",
+          "de": "RTTTL-Melodie [[rtttl]] abspielen",
+          "nl": "Speel [[rtttl]] melodie af",
+          "cs": "Přehrát melodii [[rtttl]]"
         },
         "hint": {
-          "en": "Play RTTTL melody"
+          "en": "Play RTTTL melody",
+          "de": "RTTTL-Melodie abspielen",
+          "nl": "RTTTL-melodie afspelen",
+          "cs": "Přehrát melodii ve formátu RTTTL"
         },
         "args": [
           {
@@ -701,7 +1007,10 @@
             "type": "text",
             "name": "rtttl",
             "placeholder": {
-              "en": "melody"
+              "en": "melody",
+              "de": "Melodie",
+              "nl": "melodie",
+              "cs": "melodie"
             }
           }
         ],
@@ -709,13 +1018,22 @@
       },
       {
         "title": {
-          "en": "Remove a custom app"
+          "en": "Remove a custom app",
+          "de": "Benutzerdefinierte App entfernen",
+          "nl": "Aangepaste app verwijderen",
+          "cs": "Odebrat vlastní aplikaci"
         },
         "titleFormatted": {
-          "en": "Remove custom app [[name]]"
+          "en": "Remove custom app [[name]]",
+          "de": "Benutzerdefinierte App [[name]] entfernen",
+          "nl": "Aangepaste app [[name]] verwijderen",
+          "cs": "Odebrat vlastní aplikaci [[name]]"
         },
         "hint": {
-          "en": "Legacy AWTRIX 3 remove custom app flow. Use Remove application for new flows."
+          "en": "Legacy AWTRIX 3 remove custom app flow. Use Remove application for new flows.",
+          "de": "Veralteter Flow zum Entfernen einer benutzerdefinierten App für AWTRIX 3. Verwenden Sie Applikation entfernen für neue Flows.",
+          "nl": "Verouderde flow voor het verwijderen van een aangepaste app voor AWTRIX 3. Gebruik Applicatie verwijderen voor nieuwe flows.",
+          "cs": "Zastaralý flow pro odebrání vlastní aplikace pro AWTRIX 3. Pro nové flow použijte Odebrat aplikaci."
         },
         "deprecated": true,
         "args": [
@@ -728,7 +1046,10 @@
             "type": "text",
             "name": "name",
             "placeholder": {
-              "en": "app name"
+              "en": "app name",
+              "de": "App-Name",
+              "nl": "appnaam",
+              "cs": "název aplikace"
             }
           }
         ],
@@ -736,13 +1057,22 @@
       },
       {
         "title": {
-          "en": "Set the weather overlay"
+          "en": "Set the weather overlay",
+          "de": "Wetter-Overlay festlegen",
+          "nl": "Weer-overlay instellen",
+          "cs": "Nastavit překrytí počasí"
         },
         "titleFormatted": {
-          "en": "Set weather overlay [[overlay]]"
+          "en": "Set weather overlay [[overlay]]",
+          "de": "Wetter-Overlay auf [[overlay]] setzen",
+          "nl": "Stel weer-overlay in op [[overlay]]",
+          "cs": "Nastavit překrytí počasí na [[overlay]]"
         },
         "hint": {
-          "en": "Set the weather overlay shown on the display."
+          "en": "Set the weather overlay shown on the display.",
+          "de": "Das auf dem Display angezeigte Wetter-Overlay festlegen.",
+          "nl": "Stel de weer-overlay in die op het display wordt getoond.",
+          "cs": "Nastaví překrytí počasí zobrazované na displeji."
         },
         "args": [
           {
@@ -754,49 +1084,73 @@
             "type": "dropdown",
             "name": "overlay",
             "title": {
-              "en": "overlay"
+              "en": "overlay",
+              "de": "Overlay",
+              "nl": "overlay",
+              "cs": "překrytí"
             },
             "values": [
               {
                 "id": "none",
                 "title": {
-                  "en": "None"
+                  "en": "None",
+                  "de": "Keines",
+                  "nl": "Geen",
+                  "cs": "Žádné"
                 }
               },
               {
                 "id": "drizzle",
                 "title": {
-                  "en": "Drizzle"
+                  "en": "Drizzle",
+                  "de": "Nieselregen",
+                  "nl": "Motregen",
+                  "cs": "Mrholení"
                 }
               },
               {
                 "id": "frost",
                 "title": {
-                  "en": "Frost"
+                  "en": "Frost",
+                  "de": "Frost",
+                  "nl": "Vorst",
+                  "cs": "Mráz"
                 }
               },
               {
                 "id": "rain",
                 "title": {
-                  "en": "Rain"
+                  "en": "Rain",
+                  "de": "Regen",
+                  "nl": "Regen",
+                  "cs": "Déšť"
                 }
               },
               {
                 "id": "snow",
                 "title": {
-                  "en": "Snow"
+                  "en": "Snow",
+                  "de": "Schnee",
+                  "nl": "Sneeuw",
+                  "cs": "Sníh"
                 }
               },
               {
                 "id": "storm",
                 "title": {
-                  "en": "Storm"
+                  "en": "Storm",
+                  "de": "Sturm",
+                  "nl": "Storm",
+                  "cs": "Bouře"
                 }
               },
               {
                 "id": "thunder",
                 "title": {
-                  "en": "Thunder"
+                  "en": "Thunder",
+                  "de": "Gewitter",
+                  "nl": "Onweer",
+                  "cs": "Hromobití"
                 }
               }
             ]

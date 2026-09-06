@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Create or update an application"
+    "en": "Create or update an application",
+    "de": "Applikation erstellen oder aktualisieren",
+    "nl": "Applicatie maken of bijwerken",
+    "cs": "Vytvořit nebo aktualizovat aplikaci"
   },
   "titleFormatted": {
-    "en": "Create/update application [[name]] [[msg]] [[icon]] [[color]] [[options]]"
+    "en": "Create/update application [[name]] [[msg]] [[icon]] [[color]] [[options]]",
+    "de": "Applikation [[name]] [[msg]] [[icon]] [[color]] [[options]] erstellen/aktualisieren",
+    "nl": "Applicatie [[name]] [[msg]] [[icon]] [[color]] [[options]] maken/bijwerken",
+    "cs": "Vytvořit/aktualizovat aplikaci [[name]] [[msg]] [[icon]] [[color]] [[options]]"
   },
   "hint": {
-    "en": "Create or update an application. Name must match A-Z, a-z, 0-9, _ or - and be at most 26 characters. Optional options must be device-specific JSON. Use Homey's Add duration option to override the JSON options or the device default duration."
+    "en": "Create or update an application. Name must match A-Z, a-z, 0-9, _ or - and be at most 26 characters. Optional options must be device-specific JSON. Use Homey's Add duration option to override the JSON options or the device default duration.",
+    "de": "Erstellt oder aktualisiert eine Applikation. Der Name darf nur A-Z, a-z, 0-9, _ oder - enthalten und maximal 26 Zeichen lang sein. Optionale Optionen müssen gerätespezifisches JSON sein. Verwenden Sie Homeys Option Dauer hinzufügen, um die JSON-Optionen oder die Standarddauer des Geräts zu überschreiben.",
+    "nl": "Maak of werk een applicatie bij. De naam mag alleen A-Z, a-z, 0-9, _ of - bevatten en mag maximaal 26 tekens lang zijn. Optionele opties moeten apparaatspecifieke JSON zijn. Gebruik Homey's optie Duur toevoegen om de JSON-opties of de standaardduur van het apparaat te overschrijven.",
+    "cs": "Vytvoří nebo aktualizuje aplikaci. Název smí obsahovat pouze A-Z, a-z, 0-9, _ nebo - a mít nejvýše 26 znaků. Volitelné parametry musí být ve formátu JSON specifickém pro zařízení. Použijte možnost Přidat dobu trvání v Homey pro přepsání JSON voleb nebo výchozí doby trvání zařízení."
   },
   "duration": true,
   "args": [
@@ -19,7 +28,10 @@
       "type": "text",
       "name": "name",
       "placeholder": {
-        "en": "app name"
+        "en": "app name",
+        "de": "App-Name",
+        "nl": "appnaam",
+        "cs": "název aplikace"
       }
     },
     {
@@ -27,7 +39,10 @@
       "name": "msg",
       "required": false,
       "placeholder": {
-        "en": "message"
+        "en": "message",
+        "de": "Nachricht",
+        "nl": "bericht",
+        "cs": "zpráva"
       }
     },
     {
@@ -35,10 +50,16 @@
       "name": "icon",
       "required": false,
       "title": {
-        "en": "icon"
+        "en": "icon",
+        "de": "Symbol",
+        "nl": "pictogram",
+        "cs": "ikona"
       },
       "placeholder": {
-        "en": "icon"
+        "en": "icon",
+        "de": "Symbol",
+        "nl": "pictogram",
+        "cs": "ikona"
       }
     },
     {
@@ -47,7 +68,10 @@
       "required": false,
       "value": "#eeeeee",
       "title": {
-        "en": "color"
+        "en": "color",
+        "de": "Farbe",
+        "nl": "kleur",
+        "cs": "barva"
       }
     },
     {
@@ -55,7 +79,10 @@
       "name": "options",
       "required": false,
       "placeholder": {
-        "en": "JSON options"
+        "en": "JSON options",
+        "de": "JSON-Optionen",
+        "nl": "JSON-opties",
+        "cs": "JSON volby"
       }
     }
   ]

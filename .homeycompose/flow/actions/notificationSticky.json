@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Send a sticky notification"
+    "en": "Send a sticky notification",
+    "de": "Dauerhafte Benachrichtigung senden",
+    "nl": "Permanente notificatie verzenden",
+    "cs": "Odeslat trvalé oznámení"
   },
   "titleFormatted": {
-    "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color"
+    "en": "Send sticky notification [[msg]] with [[icon]] icon and [[color]] color",
+    "de": "Dauerhafte Benachrichtigung [[msg]] mit Symbol [[icon]] und Farbe [[color]] senden",
+    "nl": "Verzend permanente notificatie [[msg]] met pictogram [[icon]] en kleur [[color]]",
+    "cs": "Odeslat trvalé oznámení [[msg]] s ikonou [[icon]] a barvou [[color]]"
   },
   "hint": {
-    "en": "Send sticky notification to device with optional icon and color"
+    "en": "Send sticky notification to device with optional icon and color",
+    "de": "Dauerhafte Benachrichtigung an das Gerät mit optionalem Symbol und Farbe senden",
+    "nl": "Verzend een permanente notificatie naar het apparaat met optioneel pictogram en kleur",
+    "cs": "Odešle trvalé oznámení na zařízení s volitelnou ikonou a barvou"
   },
   "args": [
     {
@@ -18,7 +27,10 @@
       "type": "text",
       "name": "msg",
       "placeholder": {
-        "en": "message"
+        "en": "message",
+        "de": "Nachricht",
+        "nl": "bericht",
+        "cs": "zpráva"
       }
     },
     {
@@ -26,16 +38,28 @@
       "name": "icon",
       "required": false,
       "title": {
-        "en": "icon"
+        "en": "icon",
+        "de": "Symbol",
+        "nl": "pictogram",
+        "cs": "ikona"
       },
       "placeholder": {
-        "en": "icon"
+        "en": "icon",
+        "de": "Symbol",
+        "nl": "pictogram",
+        "cs": "ikona"
       }
     },
     {
       "type": "color",
       "name": "color",
-      "value": "#eeeeee"
+      "value": "#eeeeee",
+      "title": {
+        "en": "color",
+        "de": "Farbe",
+        "nl": "kleur",
+        "cs": "barva"
+      }
     }
   ]
 }

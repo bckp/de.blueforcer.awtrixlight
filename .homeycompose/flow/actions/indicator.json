@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Show indicator with color and effect for a period of time"
+    "en": "Show indicator with color and effect for a period of time",
+    "de": "Indikator mit Farbe und Effekt für eine bestimmte Zeit anzeigen",
+    "nl": "Indicator met kleur en effect voor een bepaalde tijd tonen",
+    "cs": "Zobrazit indikátor s barvou a efektem po stanovenou dobu"
   },
   "titleFormatted": {
-    "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect for [[duration]]"
+    "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect for [[duration]]",
+    "de": "Indikator [[indicator]] mit Farbe [[color]] und Effekt [[effect]] für [[duration]] anzeigen",
+    "nl": "Toon [[indicator]] indicator met kleur [[color]] en effect [[effect]] gedurende [[duration]]",
+    "cs": "Zobrazit indikátor [[indicator]] s barvou [[color]] a efektem [[effect]] po dobu [[duration]]"
   },
   "hint": {
-    "en": "Set an indicator. Effect duration is in milliseconds."
+    "en": "Set an indicator. Effect duration is in milliseconds.",
+    "de": "Einen Indikator einstellen. Effektdauer in Millisekunden.",
+    "nl": "Stel een indicator in. Effectduur is in milliseconden.",
+    "cs": "Nastaví indikátor. Doba trvání efektu je v milisekundách."
   },
   "args": [
     {
@@ -18,7 +27,10 @@
       "type": "color",
       "name": "color",
       "title": {
-        "en": "color"
+        "en": "color",
+        "de": "Farbe",
+        "nl": "kleur",
+        "cs": "barva"
       }
     },
     {
@@ -26,25 +38,37 @@
       "name": "indicator",
       "value": "1",
       "title": {
-        "en": "indicator number"
+        "en": "indicator number",
+        "de": "Indikatornummer",
+        "nl": "indicatornummer",
+        "cs": "číslo indikátoru"
       },
       "values": [
         {
           "id": "1",
           "title": {
-            "en": "top right"
+            "en": "top right",
+            "de": "oben rechts",
+            "nl": "rechtsboven",
+            "cs": "vpravo nahoře"
           }
         },
         {
           "id": "2",
           "title": {
-            "en": "right"
+            "en": "right",
+            "de": "rechts",
+            "nl": "rechts",
+            "cs": "vpravo"
           }
         },
         {
           "id": "3",
           "title": {
-            "en": "bottom right"
+            "en": "bottom right",
+            "de": "unten rechts",
+            "nl": "rechtsonder",
+            "cs": "vpravo dole"
           }
         }
       ]
@@ -54,25 +78,37 @@
       "name": "effect",
       "value": "fade",
       "title": {
-        "en": "effect"
+        "en": "effect",
+        "de": "Effekt",
+        "nl": "effect",
+        "cs": "efekt"
       },
       "values": [
         {
           "id": "-",
           "title": {
-            "en": "no"
+            "en": "no",
+            "de": "keiner",
+            "nl": "geen",
+            "cs": "žádný"
           }
         },
         {
           "id": "blink",
           "title": {
-            "en": "blink"
+            "en": "blink",
+            "de": "blinken",
+            "nl": "knipperen",
+            "cs": "blikání"
           }
         },
         {
           "id": "fade",
           "title": {
-            "en": "fade"
+            "en": "fade",
+            "de": "überblenden",
+            "nl": "faden",
+            "cs": "prolínání"
           }
         }
       ]
@@ -82,7 +118,10 @@
       "name": "duration",
       "value": 1000,
       "title": {
-        "en": "effect duration"
+        "en": "effect duration",
+        "de": "Effektdauer",
+        "nl": "effectduur",
+        "cs": "doba trvání efektu"
       },
       "min": 500,
       "max": 10000,
