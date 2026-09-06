@@ -1,7 +1,10 @@
 {
   "type": "string",
   "title": {
-    "en": "IP Address"
+    "en": "IP Address",
+    "nl": "IP-adres",
+    "de": "IP-Adresse",
+    "cs": "IP adresa"
   },
   "getable": true,
   "setable": false,

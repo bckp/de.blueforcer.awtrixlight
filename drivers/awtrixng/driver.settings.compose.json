@@ -2,31 +2,46 @@
   {
     "type": "group",
     "label": {
-      "en": "Connection"
+      "en": "Connection",
+      "nl": "Verbinding",
+      "de": "Verbindung",
+      "cs": "Připojení"
     },
     "children": [
       {
         "id": "address",
         "type": "text",
         "label": {
-          "en": "Address or hostname"
+          "en": "Address or hostname",
+          "nl": "Adres of hostnaam",
+          "de": "Adresse oder Hostname",
+          "cs": "Adresa nebo název hostitele"
         },
         "value": "",
         "hint": {
-          "en": "Usually filled automatically during pairing or discovery. Enter an IP address or hostname without protocol or path."
+          "en": "Usually filled automatically during pairing or discovery. Enter an IP address or hostname without protocol or path.",
+          "nl": "Wordt meestal automatisch ingevuld tijdens koppelen of ontdekken. Voer een IP-adres of hostnaam in zonder protocol of pad.",
+          "de": "Wird normalerweise beim Koppeln oder bei der Erkennung automatisch ausgefüllt. Geben Sie eine IP-Adresse oder einen Hostnamen ohne Protokoll oder Pfad ein.",
+          "cs": "Obvykle se vyplní automaticky během párování nebo vyhledávání. Zadejte IP adresu nebo název hostitele bez protokolu nebo cesty."
         }
       },
       {
         "id": "port",
         "type": "number",
         "label": {
-          "en": "Port"
+          "en": "Port",
+          "nl": "Poort",
+          "de": "Port",
+          "cs": "Port"
         },
         "value": 80,
         "min": 1,
         "max": 65535,
         "hint": {
-          "en": "Usually filled automatically during pairing or discovery."
+          "en": "Usually filled automatically during pairing or discovery.",
+          "nl": "Wordt meestal automatisch ingevuld tijdens koppelen of ontdekken.",
+          "de": "Wird normalerweise beim Koppeln oder bei der Erkennung automatisch ausgefüllt.",
+          "cs": "Obvykle se vyplní automaticky během párování nebo vyhledávání."
         }
       }
     ]
@@ -34,29 +49,44 @@
   {
     "type": "group",
     "label": {
-      "en": "Login details"
+      "en": "Login details",
+      "nl": "Logingegevens",
+      "de": "Anmeldedaten",
+      "cs": "Přihlašovací údaje"
     },
     "children": [
       {
         "id": "authUser",
         "type": "text",
         "label": {
-          "en": "Username"
+          "en": "Username",
+          "nl": "Gebruikersnaam",
+          "de": "Benutzername",
+          "cs": "Uživatelské jméno"
         },
         "value": "",
         "hint": {
-          "en": "The API username. Leave empty when authentication is disabled. This is stored in Homey and is not sent as a device setting."
+          "en": "The API username. Leave empty when authentication is disabled. This is stored in Homey and is not sent as a device setting.",
+          "nl": "De API-gebruikersnaam. Laat leeg als authenticatie is uitgeschakeld. Dit wordt opgeslagen in Homey en niet naar het apparaat gestuurd.",
+          "de": "Der API-Benutzername. Leer lassen, wenn die Authentifizierung deaktiviert ist. Dies wird in Homey gespeichert und nicht als Geräteeinstellung gesendet.",
+          "cs": "Uživatelské jméno API. Ponechte prázdné, pokud je ověřování zakázáno. Ukládá se v Homey a neodesílá se jako nastavení zařízení."
         }
       },
       {
         "id": "authPass",
         "type": "password",
         "label": {
-          "en": "Password"
+          "en": "Password",
+          "nl": "Wachtwoord",
+          "de": "Passwort",
+          "cs": "Heslo"
         },
         "value": "",
         "hint": {
-          "en": "The API password. Leave empty when authentication is disabled. This is stored in Homey and is not sent as a device setting."
+          "en": "The API password. Leave empty when authentication is disabled. This is stored in Homey and is not sent as a device setting.",
+          "nl": "Het API-wachtwoord. Laat leeg als authenticatie is uitgeschakeld. Dit wordt opgeslagen in Homey en niet naar het apparaat gestuurd.",
+          "de": "Das API-Passwort. Leer lassen, wenn die Authentifizierung deaktiviert ist. Dies wird in Homey gespeichert und nicht als Geräteeinstellung gesendet.",
+          "cs": "Heslo API. Ponechte prázdné, pokud je ověřování zakázáno. Ukládá se v Homey a neodesílá se jako nastavení zařízení."
         }
       }
     ]
@@ -64,7 +94,10 @@
   {
     "type": "group",
     "label": {
-      "en": "Device settings"
+      "en": "Device settings",
+      "nl": "Apparaatinstellingen",
+      "de": "Geräteeinstellungen",
+      "cs": "Nastavení zařízení"
     },
     "children": [
       {
@@ -72,7 +105,10 @@
         "type": "checkbox",
         "value": false,
         "label": {
-          "en": "Auto-brightness"
+          "en": "Auto-brightness",
+          "nl": "Automatische helderheid",
+          "de": "Automatische Helligkeit",
+          "cs": "Automatický jas"
         }
       },
       {
@@ -80,7 +116,10 @@
         "type": "checkbox",
         "value": true,
         "label": {
-          "en": "Auto-cycle"
+          "en": "Auto-cycle",
+          "nl": "Automatisch wisselen",
+          "de": "Automatischer Wechsel",
+          "cs": "Automatické přepínání"
         }
       },
       {
@@ -88,7 +127,10 @@
         "type": "checkbox",
         "value": false,
         "label": {
-          "en": "Block buttons"
+          "en": "Block buttons",
+          "nl": "Knoppen blokkeren",
+          "de": "Tasten sperren",
+          "cs": "Blokovat tlačítka"
         }
       },
       {
@@ -96,7 +138,10 @@
         "type": "checkbox",
         "value": true,
         "label": {
-          "en": "Uppercase text"
+          "en": "Uppercase text",
+          "nl": "Tekst in hoofdletters",
+          "de": "Großbuchstaben",
+          "cs": "Text velkými písmeny"
         }
       },
       {
@@ -104,142 +149,214 @@
         "type": "dropdown",
         "value": "Rain",
         "label": {
-          "en": "Transition effect"
+          "en": "Transition effect",
+          "nl": "Overgangseffect",
+          "de": "Übergangseffekt",
+          "cs": "Přechodový efekt"
         },
         "hint": {
-          "en": "Static list from the documented capabilities."
+          "en": "Static list from the documented capabilities.",
+          "nl": "Vaste lijst van de gedocumenteerde mogelijkheden.",
+          "de": "Statische Liste aus den dokumentierten Funktionen.",
+          "cs": "Statický seznam z dokumentovaných schopností."
         },
         "values": [
           {
             "id": "Random",
             "label": {
-              "en": "Random"
+              "en": "Random",
+              "nl": "Willekeurig",
+              "de": "Zufällig",
+              "cs": "Náhodný"
             }
           },
           {
             "id": "Slide",
             "label": {
-              "en": "Slide"
+              "en": "Slide",
+              "nl": "Schuiven",
+              "de": "Schieben",
+              "cs": "Posunutí"
             }
           },
           {
             "id": "Dim",
             "label": {
-              "en": "Dim"
+              "en": "Dim",
+              "nl": "Dimmen",
+              "de": "Dimmen",
+              "cs": "Ztlumení"
             }
           },
           {
             "id": "Zoom",
             "label": {
-              "en": "Zoom"
+              "en": "Zoom",
+              "nl": "Zoomen",
+              "de": "Zoomen",
+              "cs": "Přiblížení"
             }
           },
           {
             "id": "Rotate",
             "label": {
-              "en": "Rotate"
+              "en": "Rotate",
+              "nl": "Draaien",
+              "de": "Drehen",
+              "cs": "Otočení"
             }
           },
           {
             "id": "Pixelate",
             "label": {
-              "en": "Pixelate"
+              "en": "Pixelate",
+              "nl": "Pixeleren",
+              "de": "Verpixeln",
+              "cs": "Pixelizace"
             }
           },
           {
             "id": "Curtain",
             "label": {
-              "en": "Curtain"
+              "en": "Curtain",
+              "nl": "Gordijn",
+              "de": "Vorhang",
+              "cs": "Opona"
             }
           },
           {
             "id": "Ripple",
             "label": {
-              "en": "Ripple"
+              "en": "Ripple",
+              "nl": "Rimpeling",
+              "de": "Wellen",
+              "cs": "Zvlnění"
             }
           },
           {
             "id": "Blink",
             "label": {
-              "en": "Blink"
+              "en": "Blink",
+              "nl": "Knipperen",
+              "de": "Blinken",
+              "cs": "Blikání"
             }
           },
           {
             "id": "Reload",
             "label": {
-              "en": "Reload"
+              "en": "Reload",
+              "nl": "Herladen",
+              "de": "Neu laden",
+              "cs": "Znovu načíst"
             }
           },
           {
             "id": "Fade",
             "label": {
-              "en": "Fade"
+              "en": "Fade",
+              "nl": "Vervagen",
+              "de": "Überblenden",
+              "cs": "Prolnutí"
             }
           },
           {
             "id": "Cover",
             "label": {
-              "en": "Cover"
+              "en": "Cover",
+              "nl": "Bedekken",
+              "de": "Abdecken",
+              "cs": "Překrytí"
             }
           },
           {
             "id": "Uncover",
             "label": {
-              "en": "Uncover"
+              "en": "Uncover",
+              "nl": "Onthullen",
+              "de": "Aufdecken",
+              "cs": "Odkrytí"
             }
           },
           {
             "id": "Split",
             "label": {
-              "en": "Split"
+              "en": "Split",
+              "nl": "Splitsen",
+              "de": "Teilen",
+              "cs": "Rozdělení"
             }
           },
           {
             "id": "Blinds",
             "label": {
-              "en": "Blinds"
+              "en": "Blinds",
+              "nl": "Jaloezieën",
+              "de": "Jalousie",
+              "cs": "Žaluzie"
             }
           },
           {
             "id": "Blocks",
             "label": {
-              "en": "Blocks"
+              "en": "Blocks",
+              "nl": "Blokken",
+              "de": "Blöcke",
+              "cs": "Bloky"
             }
           },
           {
             "id": "Flash",
             "label": {
-              "en": "Flash"
+              "en": "Flash",
+              "nl": "Flits",
+              "de": "Blitz",
+              "cs": "Záblesk"
             }
           },
           {
             "id": "Diamond",
             "label": {
-              "en": "Diamond"
+              "en": "Diamond",
+              "nl": "Ruit",
+              "de": "Raute",
+              "cs": "Kosočtverec"
             }
           },
           {
             "id": "Wave",
             "label": {
-              "en": "Wave"
+              "en": "Wave",
+              "nl": "Golf",
+              "de": "Welle",
+              "cs": "Vlna"
             }
           },
           {
             "id": "Rain",
             "label": {
-              "en": "Rain"
+              "en": "Rain",
+              "nl": "Regen",
+              "de": "Regen",
+              "cs": "Déšť"
             }
           },
           {
             "id": "Melt",
             "label": {
-              "en": "Melt"
+              "en": "Melt",
+              "nl": "Smelten",
+              "de": "Schmelzen",
+              "cs": "Roztavení"
             }
           },
           {
             "id": "Interlace",
             "label": {
-              "en": "Interlace"
+              "en": "Interlace",
+              "nl": "Vervlechten",
+              "de": "Zeilensprung",
+              "cs": "Prokládání"
             }
           }
         ]
@@ -249,7 +366,10 @@
   {
     "type": "group",
     "label": {
-      "en": "Default apps"
+      "en": "Default apps",
+      "nl": "Standaard apps",
+      "de": "Standard-Apps",
+      "cs": "Výchozí aplikace"
     },
     "children": [
       {
@@ -257,7 +377,10 @@
         "type": "checkbox",
         "value": false,
         "label": {
-          "en": "Time"
+          "en": "Time",
+          "nl": "Tijd",
+          "de": "Uhrzeit",
+          "cs": "Čas"
         }
       },
       {
@@ -265,7 +388,10 @@
         "type": "checkbox",
         "value": false,
         "label": {
-          "en": "Date"
+          "en": "Date",
+          "nl": "Datum",
+          "de": "Datum",
+          "cs": "Datum"
         }
       },
       {
@@ -273,7 +399,10 @@
         "type": "checkbox",
         "value": false,
         "label": {
-          "en": "Temperature"
+          "en": "Temperature",
+          "nl": "Temperatuur",
+          "de": "Temperatur",
+          "cs": "Teplota"
         }
       },
       {
@@ -281,7 +410,10 @@
         "type": "checkbox",
         "value": false,
         "label": {
-          "en": "Humidity"
+          "en": "Humidity",
+          "nl": "Luchtvochtigheid",
+          "de": "Luftfeuchtigkeit",
+          "cs": "Vlhkost"
         }
       },
       {
@@ -289,7 +421,10 @@
         "type": "checkbox",
         "value": false,
         "label": {
-          "en": "Battery"
+          "en": "Battery",
+          "nl": "Batterij",
+          "de": "Batterie",
+          "cs": "Baterie"
         }
       }
     ]

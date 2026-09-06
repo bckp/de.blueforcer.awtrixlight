@@ -1,7 +1,10 @@
 {
   "type": "number",
   "title": {
-    "en": "Signal strength"
+    "en": "Signal strength",
+    "nl": "Signaalsterkte",
+    "de": "Signalstärke",
+    "cs": "Síla signálu"
   },
   "getable": true,
   "setable": false,

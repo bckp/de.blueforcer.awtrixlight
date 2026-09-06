@@ -1,7 +1,10 @@
 {
   "type": "enum",
   "title": {
-    "en": "Weather overlay"
+    "en": "Weather overlay",
+    "nl": "Weer-overlay",
+    "de": "Wetter-Overlay",
+    "cs": "Překryv počasí"
   },
   "getable": true,
   "setable": true,
@@ -11,43 +14,64 @@
     {
       "id": "none",
       "title": {
-        "en": "None"
+        "en": "None",
+        "nl": "Geen",
+        "de": "Keine",
+        "cs": "Žádný"
       }
     },
     {
       "id": "drizzle",
       "title": {
-        "en": "Drizzle"
+        "en": "Drizzle",
+        "nl": "Motregen",
+        "de": "Nieselregen",
+        "cs": "Mrholení"
       }
     },
     {
       "id": "frost",
       "title": {
-        "en": "Frost"
+        "en": "Frost",
+        "nl": "Vorst",
+        "de": "Frost",
+        "cs": "Mráz"
       }
     },
     {
       "id": "rain",
       "title": {
-        "en": "Rain"
+        "en": "Rain",
+        "nl": "Regen",
+        "de": "Regen",
+        "cs": "Déšť"
       }
     },
     {
       "id": "snow",
       "title": {
-        "en": "Snow"
+        "en": "Snow",
+        "nl": "Sneeuw",
+        "de": "Schnee",
+        "cs": "Sníh"
       }
     },
     {
       "id": "storm",
       "title": {
-        "en": "Storm"
+        "en": "Storm",
+        "nl": "Storm",
+        "de": "Sturm",
+        "cs": "Bouře"
       }
     },
     {
       "id": "thunder",
       "title": {
-        "en": "Thunder"
+        "en": "Thunder",
+        "nl": "Onweer",
+        "de": "Gewitter",
+        "cs": "Hrom"
       }
     }
   ]

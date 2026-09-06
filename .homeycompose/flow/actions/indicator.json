@@ -8,7 +8,7 @@
   "titleFormatted": {
     "en": "Show [[indicator]] indicator with [[color]] color and [[effect]] effect for [[duration]]",
     "de": "Indikator [[indicator]] mit Farbe [[color]] und Effekt [[effect]] für [[duration]] anzeigen",
-    "nl": "Toon [[indicator]] indicator met kleur [[color]] en effect [[effect]] gedurende [[duration]]",
+    "nl": "Toon indicator [[indicator]] met kleur [[color]] en effect [[effect]] gedurende [[duration]]",
     "cs": "Zobrazit indikátor [[indicator]] s barvou [[color]] a efektem [[effect]] po dobu [[duration]]"
   },
   "hint": {
@@ -38,10 +38,10 @@
       "name": "indicator",
       "value": "1",
       "title": {
-        "en": "indicator number",
-        "de": "Indikatornummer",
-        "nl": "indicatornummer",
-        "cs": "číslo indikátoru"
+        "en": "indicator location",
+        "de": "Indikatorposition",
+        "nl": "indicatorlocatie",
+        "cs": "umístění indikátoru"
       },
       "values": [
         {

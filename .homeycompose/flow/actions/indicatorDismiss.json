@@ -8,11 +8,11 @@
   "titleFormatted": {
     "en": "Hide [[indicator]] indicator",
     "de": "Indikator [[indicator]] ausblenden",
-    "nl": "Verberg [[indicator]] indicator",
+    "nl": "Verberg indicator [[indicator]]",
     "cs": "Skrýt indikátor [[indicator]]"
   },
   "hint": {
-    "en": "Disable identificator",
+    "en": "Disable indicator",
     "de": "Indikator deaktivieren",
     "nl": "Indicator uitschakelen",
     "cs": "Deaktivuje indikátor"
@@ -28,10 +28,10 @@
       "name": "indicator",
       "value": "1",
       "title": {
-        "en": "identificator number",
-        "de": "Indikatornummer",
-        "nl": "indicatornummer",
-        "cs": "číslo indikátoru"
+        "en": "indicator location",
+        "de": "Indikatorposition",
+        "nl": "indicatorlocatie",
+        "cs": "umístění indikátoru"
       },
       "values": [
         {

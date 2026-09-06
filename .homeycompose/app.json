@@ -1,6 +1,6 @@
 {
   "id": "de.blueforcer.awtrixlight",
-  "version": "2.2.9",
+  "version": "2.2.11",
   "compatibility": ">=12.9.0",
   "sdk": 3,
   "brandColor": "#222222",
@@ -32,6 +32,11 @@
     "developers": [
       {
         "name": "Dennie de Groot"
+      }
+    ],
+    "translators": [
+      {
+        "name": "SunBeech"
       }
     ]
   }

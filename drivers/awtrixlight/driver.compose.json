@@ -30,43 +30,80 @@
     "alarm_generic.indicator1": {
       "preventInsights": true,
       "title": {
-        "en": "Indicator top"
+        "en": "Indicator top",
+        "nl": "Indicator boven",
+        "de": "Indikator oben",
+        "cs": "Indikátor nahoře"
       },
       "insightsTitleTrue": {
-        "en": "Top indicator turned on"
+        "en": "Top indicator turned on",
+        "nl": "Indicator boven aangezet",
+        "de": "Oberer Indikator eingeschaltet",
+        "cs": "Horní indikátor zapnut"
       },
       "insightsTitleFalse": {
-        "en": "Top indicator turned off"
+        "en": "Top indicator turned off",
+        "nl": "Indicator boven uitgezet",
+        "de": "Oberer Indikator ausgeschaltet",
+        "cs": "Horní indikátor vypnut"
       }
     },
     "alarm_generic.indicator2": {
       "preventInsights": true,
       "title": {
-        "en": "Indicator middle"
+        "en": "Indicator middle",
+        "nl": "Indicator midden",
+        "de": "Indikator mitte",
+        "cs": "Indikátor uprostřed"
       },
       "insightsTitleTrue": {
-        "en": "Middle indicator turned on"
+        "en": "Middle indicator turned on",
+        "nl": "Indicator midden aangezet",
+        "de": "Mittlerer Indikator eingeschaltet",
+        "cs": "Prostřední indikátor zapnut"
       },
       "insightsTitleFalse": {
-        "en": "Middle indicator turned off"
+        "en": "Middle indicator turned off",
+        "nl": "Indicator midden uitgezet",
+        "de": "Mittlerer Indikator ausgeschaltet",
+        "cs": "Prostřední indikátor vypnut"
       }
     },
     "alarm_generic.indicator3": {
       "preventInsights": true,
       "title": {
-        "en": "Indicator bottom"
+        "en": "Indicator bottom",
+        "nl": "Indicator onder",
+        "de": "Indikator unten",
+        "cs": "Indikátor dole"
       },
       "insightsTitleTrue": {
-        "en": "Bottom indicator turned on"
+        "en": "Bottom indicator turned on",
+        "nl": "Indicator onder aangezet",
+        "de": "Unterer Indikator eingeschaltet",
+        "cs": "Dolní indikátor zapnut"
       },
       "insightsTitleFalse": {
-        "en": "Bottom indicator turned off"
+        "en": "Bottom indicator turned off",
+        "nl": "Indicator onder uitgezet",
+        "de": "Unterer Indikator ausgeschaltet",
+        "cs": "Dolní indikátor vypnut"
       }
     },
     "button.rediscover": {
       "maintenanceAction": true,
-      "title": { "en": "Try to discover" },
-      "desc": { "en": "Start discovery process for new IP of device." }
+      "title": {
+        "en": "Try to discover",
+        "nl": "Probeer te zoeken",
+        "de": "Suche versuchen",
+        "cs": "Zkusit vyhledat"
+      },
+      "desc": {
+        "en": "Start discovery process for new IP of device.",
+        "nl": "Start zoeken naar nieuw IP-adres van het apparaat.",
+        "de": "Suchvorgang nach neuer IP-Adresse des Geräts starten.",
+        "cs": "Spustit vyhledávání nové IP adresy zařízení."
+      }
     }
   },
   "discovery": "awtrix-mdns",
