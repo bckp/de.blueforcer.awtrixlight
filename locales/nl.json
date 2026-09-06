@@ -28,7 +28,7 @@
       "loginFailed": "Authenticatie mislukt!",
       "commandFailed": "Opdracht voor apparaat mislukt!",
       "iconsUnavailable": "Pictogrammen konden niet van het apparaat worden geladen!",
-      "unknownError": "Het apparaat heeft niet gereageerd!"
+      "unknownError": "Het apparaat reageerde niet!"
     }
   },
   "pair": {
