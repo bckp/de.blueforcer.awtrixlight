@@ -148,5 +148,8 @@
   },
   "2.2.11": {
     "en": "Polished translations"
+  },
+  "2.2.12": {
+    "en": "Added support fro button callbacks (require AwtrixNG 1.1.1+)"
   }
 }
