@@ -1,0 +1,28 @@
+meta {
+  name: 05 Right press
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{homey_base_url}}/api/app/de.blueforcer.awtrixlight/awtrixng/button/{{device_uid}}/{{callback_token}}
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  button: right
+  state: 1
+  uid: {{device_uid}}
+}
+
+tests {
+  test("Homey accepts the form-urlencoded right press", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.eql({ ok: true });
+  });
+}
+
+docs {
+  Expected result: HTTP 200 with {"ok":true} and exactly one run of the Flow using "Right button was pressed" for this device.
+}

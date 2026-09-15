@@ -200,6 +200,20 @@ export interface AwtrixNgApiSettingsResponse {
 
 export type AwtrixNgApiSettingsPatch = Partial<AwtrixNgApiSettingsResponse>;
 
+/** The sole documented system field this app writes. */
+export interface AwtrixNgApiSystemPatch {
+  buttonCallback: string;
+}
+
+/**
+ * The system endpoint has many firmware-owned fields.  Keep that surface structural: this
+ * integration only relies on (and runtime-validates) buttonCallback.
+ */
+export interface AwtrixNgApiSystemResponse {
+  buttonCallback: string;
+  [key: string]: unknown;
+}
+
 export interface AwtrixNgApiOverlaySettings {
   speed?: number;
   palette?: AwtrixNgApiPalette;

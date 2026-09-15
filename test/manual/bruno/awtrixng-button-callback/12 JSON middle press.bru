@@ -1,0 +1,30 @@
+meta {
+  name: 12 JSON middle press
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{homey_base_url}}/api/app/de.blueforcer.awtrixlight/awtrixng/button/{{device_uid}}/{{callback_token}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "button": "middle",
+    "state": 1,
+    "uid": "{{device_uid}}"
+  }
+}
+
+tests {
+  test("Homey accepts a JSON middle press", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.eql({ ok: true });
+  });
+}
+
+docs {
+  Expected result: HTTP 200 with {"ok":true} and exactly one run of the middle-button Flow.
+}

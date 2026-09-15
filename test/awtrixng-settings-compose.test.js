@@ -81,11 +81,27 @@ test('AWTRIX NG settings compose exposes only local connection/auth and document
     'showBuiltinTemperature',
     'showBuiltinHumidity',
     'showBuiltinBattery',
+    'buttonCallbackEnabled',
   ]);
   assert.equal(ids.includes('brightness'), false);
   assert.equal(ids.includes('batteryPercent'), false);
   assert.equal(ids.includes('ABRI'), false);
   assert.equal(ids.includes('TEFF'), false);
+});
+
+test('AWTRIX NG settings compose exposes an opt-in local button callback checkbox', () => {
+  const settings = readJson('drivers/awtrixng/driver.settings.compose.json');
+  const setting = findSetting(settings, 'buttonCallbackEnabled');
+
+  assert.ok(setting);
+  assert.equal(setting.type, 'checkbox');
+  assert.equal(setting.value, false);
+  assert.equal(setting.label.en, 'Enable button callbacks');
+  for (const hint of Object.values(setting.hint)) {
+    assert.match(hint, /1\.1\.1/);
+  }
+  assert.match(setting.hint.en, /local HTTP/i);
+  assert.match(setting.hint.en, /same LAN/i);
 });
 
 test('AWTRIX NG settings compose exposes editable connection fields with safe port bounds', () => {

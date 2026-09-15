@@ -113,6 +113,71 @@ test('facade delegates flow client and control methods to the client endpoints',
   assert.deepEqual(transport.calls[1].body, { power: true });
 });
 
+test('facade delegates callback reads and verified writes on firmware 1.1.1', async () => {
+  const { api, transport } = createApi({
+    'GET /api/v1/device': { ...deviceStateResponse, version: '1.1.1' },
+    'GET /api/v1/system': { buttonCallback: '' },
+    'PUT /api/v1/system': (request) => ({ buttonCallback: request.body.buttonCallback }),
+  });
+
+  await api.probe();
+  assert.equal(await api.readButtonCallback(), '');
+  await api.writeButtonCallback('http://homey.local/callback');
+  assert.deepEqual(transport.calls.map((call) => `${call.method} ${call.path}`), [
+    'GET /api/v1/device', 'GET /api/v1/system', 'PUT /api/v1/system',
+  ]);
+});
+
+test('facade rejects nonempty callback writes on firmware 1.1.0 but permits read and cleanup', async () => {
+  const { api, transport } = createApi({
+    'GET /api/v1/device': { ...deviceStateResponse, version: '1.1.0' },
+    'GET /api/v1/system': { buttonCallback: 'http://previous/callback' },
+    'PUT /api/v1/system': (request) => ({ buttonCallback: request.body.buttonCallback }),
+  });
+  await api.probe();
+
+  assert.equal(await api.readButtonCallback(), 'http://previous/callback');
+  await assert.rejects(api.writeButtonCallback('http://homey.local/callback'), (error) => {
+    assert.equal(error.currentVersion, '1.1.0');
+    assert.equal(error.minimumVersion, '1.1.1');
+    return true;
+  });
+  await api.writeButtonCallback('');
+
+  assert.deepEqual(transport.calls.map((call) => `${call.method} ${call.path}`), [
+    'GET /api/v1/device', 'GET /api/v1/system', 'PUT /api/v1/system',
+  ]);
+  assert.deepEqual(transport.calls.at(-1).body, { buttonCallback: '' });
+});
+
+test('button callback support accepts cached firmware 1.1.1 and newer without an API request', async () => {
+  for (const version of ['1.1.1', '1.1.2']) {
+    const { api, transport } = createApi({
+      'GET /api/v1/device': { ...deviceStateResponse, version },
+    });
+    await api.probe();
+    assert.doesNotThrow(() => api.requireButtonCallbackSupport());
+    assert.deepEqual(transport.calls.map((call) => `${call.method} ${call.path}`), ['GET /api/v1/device']);
+  }
+});
+
+test('button callback support rejects firmware 1.1.0 and unknown versions without touching system', async () => {
+  for (const version of ['1.1.0', undefined]) {
+    const { api, transport } = createApi({
+      'GET /api/v1/device': { ...deviceStateResponse, version: '1.1.0' },
+    });
+    if (version !== undefined) await api.probe();
+
+    assert.throws(() => api.requireButtonCallbackSupport(), (error) => {
+      assert.ok(error instanceof AwtrixNgUnsupportedVersionError);
+      assert.equal(error.currentVersion, version);
+      assert.equal(error.minimumVersion, '1.1.1');
+      return true;
+    });
+    assert.equal(transport.calls.some((call) => call.path === '/api/v1/system'), false);
+  }
+});
+
 test('setMatrixPower rejects non-boolean values without touching the device', async () => {
   const { api, transport } = createApi();
 

@@ -11,7 +11,10 @@
       "authenticationRequired": "Je vyžadováno přihlášení",
       "invalidResponse": "Zařízení nevrátilo platnou odpověď.",
       "offline": "Zařízení je offline",
-      "rediscoveryFailed": "Nepodařilo se najít novou adresu tohoto zařízení."
+      "rediscoveryFailed": "Nepodařilo se najít novou adresu tohoto zařízení.",
+      "buttonCallbackConflict": "Callbacky tlačítek nelze zapnout: AWTRIX už má callback nastavený jinou integrací.",
+      "buttonCallbackLocalAddressInvalid": "Místní adresa Homey není podporovaná HTTP adresa pro callbacky tlačítek.",
+      "buttonCallbackSynchronizationFailed": "Synchronizace callbacků tlačítek selhala. Zkontrolujte místní adresu Homey a nastavení callbacku na AWTRIX."
     }
   },
   "list": {

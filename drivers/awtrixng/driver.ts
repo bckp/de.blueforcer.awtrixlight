@@ -1,4 +1,4 @@
-import { Driver } from 'homey';
+import { Driver, FlowCardTriggerDevice } from 'homey';
 import PairSession from 'homey/lib/PairSession';
 import AwtrixNgApi, {
   AwtrixNgBasicAuthOptions,
@@ -14,6 +14,7 @@ import {
 } from '../../lib/awtrixng/Discovery/Detection';
 import runWithConcurrencyLimit from '../../lib/shared/Concurrency';
 import { isRecord, toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
+import { AwtrixNgButton, parseAwtrixNgButtonCallback } from './button-callback';
 
 const AwtrixNgManualPairingOptionId = '__awtrixng_manual_pairing__' as const;
 const AwtrixNgAuthRequiredPairingOptionPrefix = '__awtrixng_auth_required__:' as const;
@@ -145,8 +146,56 @@ const toTxtRecord = (value: unknown): Record<string, unknown> => {
 
 class AwtrixNgDriver extends Driver {
 
+  #buttonTriggers?: Record<AwtrixNgButton, FlowCardTriggerDevice>;
+
   async onInit(): Promise<void> {
     this.log('AwtrixNgDriver has been initialized');
+    this.#buttonTriggers = {
+      left: this.homey.flow.getDeviceTriggerCard('awtrixng_button_left_pressed'),
+      middle: this.homey.flow.getDeviceTriggerCard('awtrixng_button_middle_pressed'),
+      right: this.homey.flow.getDeviceTriggerCard('awtrixng_button_right_pressed'),
+    };
+  }
+
+  /** Public adapter entrypoint used solely by the public App API route. */
+  async handleButtonCallback(input: { uid: unknown; token: unknown; body: unknown }): Promise<boolean> {
+    if (typeof input.uid !== 'string' || typeof input.token !== 'string') {
+      return false;
+    }
+
+    const event = parseAwtrixNgButtonCallback(input.body);
+    if (event === undefined || event.uid !== input.uid) {
+      return false;
+    }
+
+    let device: { acceptsButtonCallback(input: { routeUid: string; bodyUid: string; token: string }): Promise<boolean> };
+    try {
+      device = this.getDevice({ id: input.uid }) as unknown as typeof device;
+    } catch {
+      return false;
+    }
+
+    if (device === undefined || !await device.acceptsButtonCallback({
+      routeUid: input.uid,
+      bodyUid: event.uid,
+      token: input.token,
+    })) {
+      return false;
+    }
+
+    if (!event.pressed) {
+      return true;
+    }
+
+    const trigger = this.#buttonTriggers?.[event.button];
+    if (trigger === undefined) {
+      return false;
+    }
+
+    // The firmware's HTTP deadline is 300 ms. Do not await Flow execution; report a failed
+    // trigger through Homey's logger so the rejected promise is neither unhandled nor hidden.
+    trigger.trigger(device as unknown as import('homey').Device).catch(this.error.bind(this));
+    return true;
   }
 
   async onPair(session: PairSession): Promise<void> {
@@ -449,6 +498,7 @@ class AwtrixNgDriver extends Driver {
     const discoveryResults = this.getDiscoveryStrategy().getDiscoveryResults();
     const candidates = (Object.values(discoveryResults) as unknown[])
       .filter((discoveryResult): discoveryResult is AwtrixNgDiscoveryResult => this.isAwtrixNgDiscoveryResult(discoveryResult));
+
     const devices = await runWithConcurrencyLimit(
       candidates,
       MaxConcurrentDiscoveryProbes,

@@ -1,0 +1,34 @@
+meta {
+  name: 10 JSON left press
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{homey_base_url}}/api/app/de.blueforcer.awtrixlight/awtrixng/button/{{device_uid}}/{{callback_token}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "button": "left",
+    "state": 1,
+    "uid": "{{device_uid}}"
+  }
+}
+
+tests {
+  test("Homey accepts a JSON left press", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.eql({ ok: true });
+  });
+}
+
+docs {
+  Proposed firmware contract: run this before disabling button callbacks.
+
+  Expected result: HTTP 200 with {"ok":true} and exactly one run of the left-button Flow. This request uses application/json with numeric state.
+
+  If this succeeds while requests 02-05 fail, the Homey integration is valid and only the current firmware's application/x-www-form-urlencoded encoding is incompatible.
+}

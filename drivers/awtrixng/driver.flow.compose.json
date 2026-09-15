@@ -1,0 +1,31 @@
+{
+  "triggers": [
+    {
+      "id": "awtrixng_button_left_pressed",
+      "title": {
+        "en": "Left button was pressed"
+      },
+      "hint": {
+        "en": "Enable button callbacks in the AWTRIX NG device settings before using this trigger."
+      }
+    },
+    {
+      "id": "awtrixng_button_middle_pressed",
+      "title": {
+        "en": "Middle button was pressed"
+      },
+      "hint": {
+        "en": "Enable button callbacks in the AWTRIX NG device settings before using this trigger."
+      }
+    },
+    {
+      "id": "awtrixng_button_right_pressed",
+      "title": {
+        "en": "Right button was pressed"
+      },
+      "hint": {
+        "en": "Enable button callbacks in the AWTRIX NG device settings before using this trigger."
+      }
+    }
+  ]
+}

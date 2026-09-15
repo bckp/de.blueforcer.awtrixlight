@@ -8,6 +8,7 @@ const {
 const {
   applyAwtrixNgHomeySettingsChange,
   createAwtrixNgSettingsPatchFromChangedSettings,
+  hasAwtrixNgConnectionSettingsChange,
   hasAwtrixNgLocalSettingsChange,
   toAwtrixNgHomeySettingsFromApiSettings,
   toAwtrixNgHomeySettingsUpdate,
@@ -165,6 +166,13 @@ test('AWTRIX NG settings change helper ignores local connection/auth fields and 
     authUser: 'homey',
     authPass: 'secret',
   }, ['address', 'port', 'authUser', 'authPass']), undefined);
+});
+
+test('button callback checkbox is local, does not create a connection candidate, and requires a boolean', () => {
+  assert.equal(hasAwtrixNgLocalSettingsChange(['buttonCallbackEnabled']), true);
+  assert.equal(hasAwtrixNgConnectionSettingsChange(['buttonCallbackEnabled']), false);
+  assert.equal(createAwtrixNgSettingsPatchFromChangedSettings({ buttonCallbackEnabled: true }, ['buttonCallbackEnabled']), undefined);
+  assert.throws(() => createAwtrixNgSettingsPatchFromChangedSettings({ buttonCallbackEnabled: 'true' }, ['buttonCallbackEnabled']), /must be a boolean/);
 });
 
 test('AWTRIX NG settings change helper builds a patch only from changed supported NG settings', () => {

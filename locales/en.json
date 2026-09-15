@@ -11,7 +11,10 @@
       "authenticationRequired": "Authentication is required",
       "invalidResponse": "The device did not return a valid response.",
       "offline": "Device is offline",
-      "rediscoveryFailed": "Could not discover a new address for this device."
+      "rediscoveryFailed": "Could not discover a new address for this device.",
+      "buttonCallbackConflict": "Button callbacks cannot be enabled because the AWTRIX already has a callback configured by another integration.",
+      "buttonCallbackLocalAddressInvalid": "Homey's local address is not a supported HTTP address for button callbacks.",
+      "buttonCallbackSynchronizationFailed": "Button callback synchronization failed. Check the local Homey address and the AWTRIX callback configuration."
     }
   },
   "list": {

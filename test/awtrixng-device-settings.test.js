@@ -105,6 +105,8 @@ const createDefaultResponses = () => ({
     uppercase: true,
   }),
   'PUT /api/v1/apps/order': () => jsonResponse({ ok: true }),
+  'GET /api/v1/system': () => jsonResponse({ buttonCallback: '' }),
+  'PUT /api/v1/system': (request) => jsonResponse({ buttonCallback: request.body.buttonCallback }),
 });
 
 const discoveryResult = (address, port) => Object.assign(
@@ -127,6 +129,7 @@ const createSettingsHarness = ({
   const logs = [];
   const capabilityListeners = [];
   const capabilityValues = [];
+  const warnings = [];
   const responses = { ...createDefaultResponses(), ...responseOverrides };
   const transport = {
     calls: [],
@@ -146,7 +149,13 @@ const createSettingsHarness = ({
   const oldClient = { kind: 'old-client' };
 
   Object.assign(device, {
-    homey: createFakeHomey(),
+    homey: Object.assign(createFakeHomey(), {
+      cloud: {
+        async getLocalAddress() {
+          return '192.0.2.2:8080';
+        },
+      },
+    }),
     // device.client is a read-only view of device.api since update-plan-3 (M3).
     api: oldClient,
     available: true,
@@ -170,12 +179,22 @@ const createSettingsHarness = ({
       events.push({ type: 'unavailable', message });
       this.available = false;
     },
+    async setWarning(message) {
+      warnings.push(message);
+    },
+    async unsetWarning() {
+      warnings.push(undefined);
+    },
     getStoreValue(key) {
       return store.get(key);
     },
     async setStoreValue(key, value) {
       events.push({ type: 'store', key, value });
       store.set(key, value);
+    },
+    async unsetStoreValue(key) {
+      events.push({ type: 'unset-store', key });
+      store.delete(key);
     },
     async getSettings() {
       return { ...settings };
@@ -226,8 +245,17 @@ const createSettingsHarness = ({
     settings,
     store,
     transport,
+    warnings,
   };
 };
+
+const createButtonCallbackHarness = (options) => createSettingsHarness({
+  ...options,
+  responses: {
+    'GET /api/v1/device': () => jsonResponse({ ...createDeviceState(), version: '1.1.1' }),
+    ...options.responses,
+  },
+});
 
 test('AWTRIX NG settings logs redact credentials without changing the submitted settings', async () => {
   const harness = createSettingsHarness({
@@ -1066,4 +1094,550 @@ test('AWTRIX NG rediscover button contains a failing commit instead of leaking i
 
   await assert.rejects(() => rediscover.listener(), /states\.awtrixNg\.rediscoveryFailed/);
   assert.equal(harness.errors.length, 1, 'the underlying failure is logged');
+});
+
+test('AWTRIX NG does not touch system callback state on startup while the opt-in is false', async () => {
+  const harness = createButtonCallbackHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: false },
+  });
+  await harness.device.onInit();
+  assert.equal(harness.requestLog().includes('GET /api/v1/system'), false);
+  assert.equal(harness.requestLog().includes('PUT /api/v1/system'), false);
+});
+
+test('AWTRIX NG rejects callback enablement on firmware 1.1.0 before system access or token creation', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: false },
+    responses: { 'GET /api/v1/device': () => jsonResponse({ ...createDeviceState(), version: '1.1.0' }) },
+  });
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+
+  await assert.rejects(() => harness.device.onSettings({
+    oldSettings: { buttonCallbackEnabled: false },
+    newSettings: { buttonCallbackEnabled: true },
+    changedKeys: ['buttonCallbackEnabled'],
+  }), (error) => {
+    assert.equal(error.name, 'AwtrixNgUnsupportedVersionError');
+    assert.equal(error.currentVersion, '1.1.0');
+    assert.equal(error.minimumVersion, '1.1.1');
+    return true;
+  });
+
+  assert.deepEqual(harness.requestLog(), []);
+  assert.equal(harness.store.has('buttonCallbackToken'), false);
+  assert.equal(harness.store.has('managedButtonCallbackUrl'), false);
+});
+
+test('AWTRIX NG startup on firmware 1.1.0 warns but leaves existing callback state untouched', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: true },
+    responses: { 'GET /api/v1/device': () => jsonResponse({ ...createDeviceState(), version: '1.1.0' }) },
+  });
+  await harness.device.onInit();
+
+  assert.equal(harness.device.available, true);
+  assert.deepEqual(harness.warnings, ['states.awtrixNg.buttonCallbackSynchronizationFailed']);
+  assert.equal(harness.requestLog().some((entry) => entry.endsWith('/system')), false);
+  assert.equal(harness.store.has('buttonCallbackToken'), false);
+  assert.match(JSON.stringify(harness.errors), /firmware 1\.1\.1 or newer/);
+});
+
+test('AWTRIX NG can clear its own callback on firmware 1.1.0 despite the enablement guard', async () => {
+  const token = 'a'.repeat(64);
+  const ownedUrl = `http://192.0.2.2:8080/api/app/de.blueforcer.awtrixlight/awtrixng/button/${expectedUid}/${token}`;
+  const harness = createSettingsHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'], ['buttonCallbackToken', token],
+      ['managedButtonCallbackUrl', ownedUrl],
+    ],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: true },
+    responses: {
+      'GET /api/v1/device': () => jsonResponse({ ...createDeviceState(), version: '1.1.0' }),
+      'GET /api/v1/system': () => jsonResponse({ buttonCallback: ownedUrl }),
+    },
+  });
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+
+  await harness.device.onSettings({
+    oldSettings: { buttonCallbackEnabled: true },
+    newSettings: { buttonCallbackEnabled: false },
+    changedKeys: ['buttonCallbackEnabled'],
+  });
+
+  assert.deepEqual(harness.requestLog(), ['GET /api/v1/system', 'PUT /api/v1/system']);
+  assert.equal(harness.store.has('managedButtonCallbackUrl'), false);
+});
+
+test('AWTRIX NG deletion on firmware 1.1.0 clears only an owned callback', async () => {
+  const token = 'b'.repeat(64);
+  const ownedUrl = `http://192.0.2.2:8080/api/app/de.blueforcer.awtrixlight/awtrixng/button/${expectedUid}/${token}`;
+
+  for (const [currentUrl, shouldClear] of [[ownedUrl, true], ['http://foreign.example/button', false]]) {
+    const harness = createSettingsHarness({
+      storeEntries: [
+        ['baseUrl', 'http://192.0.2.10:80'], ['buttonCallbackToken', token],
+        ['managedButtonCallbackUrl', ownedUrl],
+      ],
+      settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: false },
+      responses: {
+        'GET /api/v1/device': () => jsonResponse({ ...createDeviceState(), version: '1.1.0' }),
+        'GET /api/v1/system': () => jsonResponse({ buttonCallback: currentUrl }),
+      },
+    });
+    await harness.device.onInit();
+    harness.transport.calls.length = 0;
+    await harness.device.onDeleted();
+
+    assert.deepEqual(harness.requestLog(), shouldClear
+      ? ['GET /api/v1/system', 'PUT /api/v1/system']
+      : ['GET /api/v1/system']);
+  }
+});
+
+test('AWTRIX NG rejects a combined candidate save on firmware 1.1.0 before any remote setting write', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: {
+      address: '192.0.2.10', port: 80, autoBrightness: true, buttonCallbackEnabled: false,
+    },
+    responses: { 'GET /api/v1/device': () => jsonResponse({ ...createDeviceState(), version: '1.1.0' }) },
+  });
+  await harness.device.onInit();
+  const activeApi = harness.device.api;
+  harness.transport.calls.length = 0;
+
+  await assert.rejects(() => harness.device.onSettings({
+    oldSettings: {
+      address: '192.0.2.10', port: 80, autoBrightness: true, buttonCallbackEnabled: false,
+    },
+    newSettings: {
+      address: '192.0.2.11', port: 80, autoBrightness: false, buttonCallbackEnabled: true,
+    },
+    changedKeys: ['address', 'autoBrightness', 'buttonCallbackEnabled'],
+  }), (error) => error.currentVersion === '1.1.0' && error.minimumVersion === '1.1.1');
+
+  assert.deepEqual(harness.requestLog(), ['GET /api/v1/device']);
+  assert.equal(harness.device.api, activeApi);
+  assert.equal(harness.store.get('baseUrl'), 'http://192.0.2.10:80');
+  assert.equal(harness.store.has('buttonCallbackToken'), false);
+});
+
+test('AWTRIX NG rejects candidate callback reconciliation on firmware 1.1.0 before activation', async () => {
+  const harness = createSettingsHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: true },
+    responses: { 'GET /api/v1/device': () => jsonResponse({ ...createDeviceState(), version: '1.1.0' }) },
+  });
+  await harness.device.onInit();
+  const activeApi = harness.device.api;
+  harness.transport.calls.length = 0;
+
+  await assert.rejects(() => harness.device.onSettings({
+    oldSettings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: true },
+    newSettings: { address: '192.0.2.11', port: 80, buttonCallbackEnabled: true },
+    changedKeys: ['address'],
+  }), (error) => error.currentVersion === '1.1.0' && error.minimumVersion === '1.1.1');
+
+  assert.deepEqual(harness.requestLog(), ['GET /api/v1/device']);
+  assert.equal(harness.device.api, activeApi);
+  assert.equal(harness.store.get('baseUrl'), 'http://192.0.2.10:80');
+});
+
+test('AWTRIX NG reconnect after firmware upgrade from 1.1.0 to 1.1.1 can synchronize the callback', async () => {
+  let firmwareVersion = '1.1.0';
+  const harness = createSettingsHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: true },
+    responses: {
+      'GET /api/v1/device': () => jsonResponse({ ...createDeviceState(), version: firmwareVersion }),
+    },
+  });
+  await harness.device.onInit();
+  assert.equal(harness.requestLog().some((entry) => entry.endsWith('/system')), false);
+  firmwareVersion = '1.1.1';
+  harness.transport.calls.length = 0;
+
+  assert.equal(await harness.device.onDiscoveryAddressChanged(discoveryResult('192.0.2.11', 80)), true);
+  assert.equal(harness.requestLog().includes('GET /api/v1/system'), true);
+  assert.equal(harness.requestLog().includes('PUT /api/v1/system'), true);
+  assert.match(harness.store.get('managedButtonCallbackUrl'), /^http:\/\/192\.0\.2\.2:8080\//);
+  assert.equal(harness.warnings.at(-1), undefined);
+});
+
+test('AWTRIX NG enables an empty callback with one stable token and does not log it', async () => {
+  const harness = createButtonCallbackHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: false },
+  });
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+  harness.logs.length = 0;
+
+  await harness.device.onSettings({
+    oldSettings: { buttonCallbackEnabled: false },
+    newSettings: { buttonCallbackEnabled: true },
+    changedKeys: ['buttonCallbackEnabled'],
+  });
+
+  const token = harness.store.get('buttonCallbackToken');
+  const url = harness.store.get('managedButtonCallbackUrl');
+  assert.match(token, /^[a-f0-9]{64}$/);
+  assert.match(url, /^http:\/\/192\.0\.2\.2:8080\/api\/app\/de\.blueforcer\.awtrixlight\/awtrixng\/button\/48e7291211d8\//);
+  assert.deepEqual(harness.requestLog(), ['GET /api/v1/system', 'PUT /api/v1/system']);
+  assert.equal(JSON.stringify(harness.logs).includes(token), false);
+  assert.equal(JSON.stringify(harness.logs).includes(url), false);
+
+  harness.transport.calls.length = 0;
+  await harness.device.onSettings({
+    oldSettings: { buttonCallbackEnabled: true },
+    newSettings: { buttonCallbackEnabled: true },
+    changedKeys: ['buttonCallbackEnabled'],
+  });
+  assert.equal(harness.store.get('buttonCallbackToken'), token);
+});
+
+test('AWTRIX NG refuses a foreign callback and never overwrites it', async () => {
+  const harness = createButtonCallbackHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80 },
+    responses: { 'GET /api/v1/system': () => jsonResponse({ buttonCallback: 'http://other/callback' }) },
+  });
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+  await assert.rejects(() => harness.device.onSettings({
+    oldSettings: { buttonCallbackEnabled: false },
+    newSettings: { buttonCallbackEnabled: true },
+    changedKeys: ['buttonCallbackEnabled'],
+  }), /buttonCallbackConflict/);
+  assert.deepEqual(harness.requestLog(), ['GET /api/v1/system']);
+});
+
+test('AWTRIX NG disables only a callback it owns and accepts token checks per device', async () => {
+  const token = 'a'.repeat(64);
+  const ownedUrl = `http://192.0.2.2:8080/api/app/de.blueforcer.awtrixlight/awtrixng/button/48e7291211d8/${token}`;
+  const harness = createButtonCallbackHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'],
+      ['buttonCallbackToken', token],
+      ['managedButtonCallbackUrl', ownedUrl],
+    ],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: true },
+    responses: { 'GET /api/v1/system': () => jsonResponse({ buttonCallback: ownedUrl }) },
+  });
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+  await harness.device.onSettings({
+    oldSettings: { buttonCallbackEnabled: true },
+    newSettings: { buttonCallbackEnabled: false },
+    changedKeys: ['buttonCallbackEnabled'],
+  });
+  assert.deepEqual(harness.requestLog(), ['GET /api/v1/system', 'PUT /api/v1/system']);
+  assert.equal(harness.store.get('managedButtonCallbackUrl'), undefined);
+  harness.settings.buttonCallbackEnabled = false;
+  assert.equal(await harness.device.acceptsButtonCallback({ routeUid: expectedUid, bodyUid: expectedUid, token }), false);
+});
+
+test('AWTRIX NG applies enabled callback reconciliation through a verified connection candidate', async () => {
+  const harness = createButtonCallbackHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: true },
+  });
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+  await harness.device.onSettings({
+    oldSettings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: true },
+    newSettings: { address: '192.0.2.11', port: 80, buttonCallbackEnabled: true },
+    changedKeys: ['address'],
+  });
+  assert.deepEqual(harness.requestLog(), [
+    'GET /api/v1/device',
+    'GET /api/v1/system',
+    'PUT /api/v1/system',
+    'GET /api/v1/device',
+  ]);
+  assert.equal(harness.store.get('baseUrl'), 'http://192.0.2.11:80');
+});
+
+test('AWTRIX NG callback synchronization failure becomes a warning without making the device unavailable', async () => {
+  const failure = new Error('system offline');
+  const harness = createButtonCallbackHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: true },
+    responses: {
+      'GET /api/v1/system': () => {
+        throw failure;
+      },
+    },
+  });
+  await harness.device.onInit();
+  assert.deepEqual(harness.warnings, ['states.awtrixNg.buttonCallbackSynchronizationFailed']);
+  assert.equal(harness.device.available, true);
+  assert.equal(harness.errors.some((args) => args[1] === failure.message), true);
+});
+
+test('AWTRIX NG treats an already matching callback as synchronized without a PUT', async () => {
+  const token = 'a'.repeat(64);
+  const desiredUrl = `http://192.0.2.2:8080/api/app/de.blueforcer.awtrixlight/awtrixng/button/${expectedUid}/${token}`;
+  const harness = createButtonCallbackHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80'], ['buttonCallbackToken', token]],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: false },
+    responses: { 'GET /api/v1/system': () => jsonResponse({ buttonCallback: desiredUrl }) },
+  });
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+  await harness.device.onSettings({
+    oldSettings: { buttonCallbackEnabled: false },
+    newSettings: { buttonCallbackEnabled: true },
+    changedKeys: ['buttonCallbackEnabled'],
+  });
+  assert.deepEqual(harness.requestLog(), ['GET /api/v1/system']);
+  assert.equal(harness.store.get('managedButtonCallbackUrl'), desiredUrl);
+});
+
+test('AWTRIX NG startup repairs only a previously managed callback after Homey address changes', async () => {
+  const token = 'b'.repeat(64);
+  const oldUrl = `http://192.0.2.1:8080/api/app/de.blueforcer.awtrixlight/awtrixng/button/${expectedUid}/${token}`;
+  const harness = createButtonCallbackHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'], ['buttonCallbackToken', token],
+      ['managedButtonCallbackUrl', oldUrl],
+    ],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: true },
+    responses: { 'GET /api/v1/system': () => jsonResponse({ buttonCallback: oldUrl }) },
+  });
+  await harness.device.onInit();
+  assert.deepEqual(harness.requestLog().filter((entry) => entry.endsWith('/system')), [
+    'GET /api/v1/system', 'PUT /api/v1/system',
+  ]);
+  assert.match(harness.store.get('managedButtonCallbackUrl'), /^http:\/\/192\.0\.2\.2:8080\//);
+  assert.deepEqual(harness.warnings, [undefined]);
+  assert.equal(harness.device.available, true);
+});
+
+test('AWTRIX NG disabling leaves a foreign callback untouched and forgets stale ownership', async () => {
+  const token = 'c'.repeat(64);
+  const ownedUrl = `http://192.0.2.2:8080/api/app/de.blueforcer.awtrixlight/awtrixng/button/${expectedUid}/${token}`;
+  const harness = createButtonCallbackHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'], ['buttonCallbackToken', token],
+      ['managedButtonCallbackUrl', ownedUrl],
+    ],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: false },
+    responses: { 'GET /api/v1/system': () => jsonResponse({ buttonCallback: 'http://foreign.example/button' }) },
+  });
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+  await harness.device.onSettings({
+    oldSettings: { buttonCallbackEnabled: true },
+    newSettings: { buttonCallbackEnabled: false },
+    changedKeys: ['buttonCallbackEnabled'],
+  });
+  assert.deepEqual(harness.requestLog(), ['GET /api/v1/system']);
+  assert.equal(harness.store.get('managedButtonCallbackUrl'), undefined);
+});
+
+test('AWTRIX NG disabling an empty callback does not issue a redundant PUT', async () => {
+  const harness = createButtonCallbackHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80'], ['managedButtonCallbackUrl', 'http://old/button']],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: false },
+  });
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+  await harness.device.onSettings({
+    oldSettings: { buttonCallbackEnabled: true },
+    newSettings: { buttonCallbackEnabled: false },
+    changedKeys: ['buttonCallbackEnabled'],
+  });
+  assert.deepEqual(harness.requestLog(), ['GET /api/v1/system']);
+  assert.equal(harness.store.get('managedButtonCallbackUrl'), undefined);
+});
+
+test('AWTRIX NG callback failure preserves NG error details and prevents candidate activation', async () => {
+  const { AwtrixNgHttpError } = require('../.homeybuild/lib/awtrixng/Http/Transport'); // eslint-disable-line global-require
+  const harness = createButtonCallbackHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80'], ['address', '192.0.2.10'], ['port', 80]],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: false },
+    responses: {
+      'GET /api/v1/system': () => {
+        throw new AwtrixNgHttpError({
+          method: 'GET',
+          url: 'http://192.0.2.11:80/api/v1/system',
+          status: 422,
+          message: 'Request failed with status code 422',
+          rawBody: { error: { code: 'validationFailed', message: 'callback rejected', field: 'buttonCallback' } },
+        });
+      },
+    },
+  });
+  await harness.device.onInit();
+  const activeApi = harness.device.api;
+  harness.transport.calls.length = 0;
+  await assert.rejects(() => harness.device.onSettings({
+    oldSettings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: false },
+    newSettings: { address: '192.0.2.11', port: 80, buttonCallbackEnabled: true },
+    changedKeys: ['address', 'buttonCallbackEnabled'],
+  }), (error) => {
+    assert.equal(error.httpStatus, 422);
+    assert.equal(error.code, 'validationFailed');
+    assert.equal(error.message, 'callback rejected');
+    assert.equal(error.field, 'buttonCallback');
+    return true;
+  });
+  assert.equal(harness.device.api, activeApi);
+  assert.equal(harness.store.get('baseUrl'), 'http://192.0.2.10:80');
+  assert.deepEqual(harness.requestLog(), ['GET /api/v1/device', 'GET /api/v1/system']);
+});
+
+test('AWTRIX NG combined connection and callback save uses verified candidate credentials', async () => {
+  const harness = createButtonCallbackHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80'], ['address', '192.0.2.10'], ['port', 80]],
+    settings: {
+      address: '192.0.2.10', port: 80, authUser: 'homey', authPass: 'old', buttonCallbackEnabled: false,
+    },
+  });
+  await harness.device.onInit();
+  harness.transport.calls.length = 0;
+  await harness.device.onSettings({
+    oldSettings: {
+      address: '192.0.2.10', port: 80, authUser: 'homey', authPass: 'old', buttonCallbackEnabled: false,
+    },
+    newSettings: {
+      address: '192.0.2.11', port: 80, authUser: 'homey', authPass: 'new', buttonCallbackEnabled: true,
+    },
+    changedKeys: ['address', 'authPass', 'buttonCallbackEnabled'],
+  });
+  assert.deepEqual(harness.requestLog(), [
+    'GET /api/v1/device', 'GET /api/v1/system', 'PUT /api/v1/system', 'GET /api/v1/device',
+  ]);
+  assert.equal(harness.clientCreations.at(-1).baseUrl, 'http://192.0.2.11:80');
+  assert.deepEqual(harness.clientCreations.at(-1).auth, { username: 'homey', password: 'new' });
+  assert.equal(harness.store.get('baseUrl'), 'http://192.0.2.11:80');
+});
+
+test('AWTRIX NG callback UID and token checks isolate separate paired devices', async () => {
+  const aToken = 'd'.repeat(64);
+  const bToken = 'e'.repeat(64);
+  const a = createButtonCallbackHarness({
+    storeEntries: [['buttonCallbackToken', aToken]],
+    settings: { buttonCallbackEnabled: true },
+  });
+  const b = createButtonCallbackHarness({
+    storeEntries: [['buttonCallbackToken', bToken]],
+    settings: { buttonCallbackEnabled: true },
+  });
+  b.device.getData = () => ({ id: 'bb'.repeat(6) });
+  assert.equal(await a.device.acceptsButtonCallback({ routeUid: expectedUid, bodyUid: expectedUid, token: aToken }), true);
+  assert.equal(await a.device.acceptsButtonCallback({ routeUid: expectedUid, bodyUid: expectedUid, token: bToken }), false);
+  assert.equal(await a.device.acceptsButtonCallback({ routeUid: expectedUid, bodyUid: expectedUid, token: '😀'.repeat(32) }), false);
+  assert.equal(await b.device.acceptsButtonCallback({ routeUid: 'bb'.repeat(6), bodyUid: 'bb'.repeat(6), token: bToken }), true);
+  assert.equal(await b.device.acceptsButtonCallback({ routeUid: expectedUid, bodyUid: expectedUid, token: bToken }), false);
+});
+
+test('AWTRIX NG deletion only attempts owned callback cleanup and reports offline failure', async () => {
+  const noOwner = createButtonCallbackHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: false },
+  });
+  await noOwner.device.onInit();
+  noOwner.transport.calls.length = 0;
+  await noOwner.device.onDeleted();
+  assert.deepEqual(noOwner.requestLog(), []);
+
+  const token = 'f'.repeat(64);
+  const ownedUrl = `http://192.0.2.2:8080/api/app/de.blueforcer.awtrixlight/awtrixng/button/${expectedUid}/${token}`;
+  const failure = new Error('system offline');
+  const owner = createButtonCallbackHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'], ['buttonCallbackToken', token],
+      ['managedButtonCallbackUrl', ownedUrl],
+    ],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: false },
+    responses: {
+      'GET /api/v1/system': () => jsonResponse({ buttonCallback: ownedUrl }),
+      'PUT /api/v1/system': () => {
+        throw failure;
+      },
+    },
+  });
+  await owner.device.onInit();
+  owner.transport.calls.length = 0;
+  await owner.device.onDeleted();
+  assert.deepEqual(owner.requestLog(), ['GET /api/v1/system', 'PUT /api/v1/system']);
+  assert.equal(owner.errors.some((args) => args[1] === failure.message), true);
+  assert.equal(owner.device.poll.isActive(), false);
+});
+
+test('AWTRIX NG startup callback warning retains NG diagnostics without logging a secret', async () => {
+  const { AwtrixNgHttpError } = require('../.homeybuild/lib/awtrixng/Http/Transport'); // eslint-disable-line global-require
+  const token = 'a'.repeat(64);
+  const ownedUrl = `http://192.0.2.2:8080/api/app/de.blueforcer.awtrixlight/awtrixng/button/${expectedUid}/${token}`;
+  const harness = createButtonCallbackHarness({
+    storeEntries: [
+      ['baseUrl', 'http://192.0.2.10:80'], ['buttonCallbackToken', token],
+      ['managedButtonCallbackUrl', ownedUrl],
+    ],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: true },
+    responses: {
+      'GET /api/v1/system': () => {
+        throw new AwtrixNgHttpError({
+          method: 'GET',
+          url: 'http://192.0.2.10:80/api/v1/system',
+          status: 422,
+          message: 'Request failed with status code 422',
+          rawBody: { error: { code: 'validationFailed', message: ownedUrl, field: 'buttonCallback' } },
+        });
+      },
+    },
+  });
+  await harness.device.onInit();
+  assert.equal(harness.device.available, true);
+  assert.deepEqual(harness.warnings, ['states.awtrixNg.buttonCallbackSynchronizationFailed']);
+  const report = JSON.stringify(harness.errors);
+  assert.equal(report.includes(token), false);
+  assert.equal(report.includes(ownedUrl), false);
+  assert.match(report, /HTTP status: 422/);
+  assert.match(report, /code: validationFailed/);
+  assert.match(report, /field: buttonCallback/);
+});
+
+test('AWTRIX NG callback URL builder preserves IPv6 and port but drops base path/query/fragment', async () => {
+  const harness = createButtonCallbackHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: false },
+  });
+  await harness.device.onInit();
+  harness.device.homey.cloud.getLocalAddress = async () => 'http://[2001:db8::1]:8080/old/path?secret=old#frag';
+  harness.transport.calls.length = 0;
+  await harness.device.onSettings({
+    oldSettings: { buttonCallbackEnabled: false },
+    newSettings: { buttonCallbackEnabled: true },
+    changedKeys: ['buttonCallbackEnabled'],
+  });
+  const url = new URL(harness.store.get('managedButtonCallbackUrl'));
+  assert.equal(url.origin, 'http://[2001:db8::1]:8080');
+  assert.equal(url.search, '');
+  assert.equal(url.hash, '');
+  assert.match(url.pathname, /^\/api\/app\/de\.blueforcer\.awtrixlight\/awtrixng\/button\//);
+  assert.deepEqual(harness.requestLog(), ['GET /api/v1/system', 'PUT /api/v1/system']);
+});
+
+test('AWTRIX NG refuses HTTPS local address before reading or writing system callback', async () => {
+  const harness = createButtonCallbackHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10:80']],
+    settings: { address: '192.0.2.10', port: 80, buttonCallbackEnabled: false },
+  });
+  await harness.device.onInit();
+  harness.device.homey.cloud.getLocalAddress = async () => 'https://192.0.2.2:8080';
+  harness.transport.calls.length = 0;
+  await assert.rejects(() => harness.device.onSettings({
+    oldSettings: { buttonCallbackEnabled: false },
+    newSettings: { buttonCallbackEnabled: true },
+    changedKeys: ['buttonCallbackEnabled'],
+  }), /buttonCallbackLocalAddressInvalid/);
+  assert.deepEqual(harness.requestLog(), []);
 });

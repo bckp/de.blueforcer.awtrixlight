@@ -17,6 +17,13 @@
     "appliances"
   ],
   "permissions": [],
+  "api": {
+    "awtrixNgButtonCallback": {
+      "method": "POST",
+      "path": "/awtrixng/button/:uid/:token",
+      "public": true
+    }
+  },
   "homeyCommunityTopicId": 91888,
   "source": "https://github.com/bckp/de.blueforcer.awtrixlight",
   "images": {

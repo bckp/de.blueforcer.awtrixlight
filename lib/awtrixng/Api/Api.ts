@@ -31,6 +31,7 @@ import {
 } from '../Device/Controls';
 import { AwtrixNgCapabilityUpdatePlan, createAwtrixNgCapabilityUpdatePlan } from '../Device/State';
 import AwtrixNgIcons, { AwtrixNgIconsOptions } from '../Services/Icons';
+import { readAwtrixNgButtonCallback, writeAwtrixNgButtonCallback } from '../Services/ButtonCallback';
 import { isPlainObject } from '../Support/Guards';
 import isAwtrixNgFirmwareVersionSupported from './FirmwareVersion';
 import { AwtrixNgUnsupportedVersionError } from './UnsupportedVersionError';
@@ -56,6 +57,7 @@ const DeviceEndpoint = '/api/v1/device';
 const SettingsEndpoint = '/api/v1/settings';
 const AppsEndpoint = '/api/v1/apps';
 const RtttlMinimumFirmwareVersion = '1.1.0';
+const ButtonCallbackMinimumFirmwareVersion = '1.1.1';
 
 export interface AwtrixNgConnectionOptions {
   baseUrl: string;
@@ -218,6 +220,22 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     const display = await this.#client.getDisplay();
 
     return toAwtrixNgHomeyWeatherOverlayValue(display.overlay);
+  }
+
+  async readButtonCallback(): Promise<string> {
+    return readAwtrixNgButtonCallback(this.#client);
+  }
+
+  /** Enabling needs JSON callback support; read and cleanup stay available on older firmware. */
+  requireButtonCallbackSupport(): void {
+    this.#requireFirmwareVersion(ButtonCallbackMinimumFirmwareVersion);
+  }
+
+  async writeButtonCallback(url: string): Promise<void> {
+    if (url !== '') {
+      this.requireButtonCallbackSupport();
+    }
+    await writeAwtrixNgButtonCallback(this.#client, url);
   }
 
   /** Returns the built-in app settings update derived from the app inventory, or undefined when in sync. */

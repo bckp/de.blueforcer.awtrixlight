@@ -1,0 +1,28 @@
+meta {
+  name: 08 Invalid token
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{homey_base_url}}/api/app/de.blueforcer.awtrixlight/awtrixng/button/{{device_uid}}/invalid-token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  button: left
+  state: 1
+  uid: {{device_uid}}
+}
+
+tests {
+  test("Homey rejects an invalid per-device token", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.eql({ ok: false });
+  });
+}
+
+docs {
+  Expected result: HTTP 200 with {"ok":false} and no Flow run. The public LAN endpoint must not trust the UID alone.
+}

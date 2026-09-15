@@ -1,0 +1,28 @@
+meta {
+  name: 04 Middle press
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{homey_base_url}}/api/app/de.blueforcer.awtrixlight/awtrixng/button/{{device_uid}}/{{callback_token}}
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  button: middle
+  state: 1
+  uid: {{device_uid}}
+}
+
+tests {
+  test("Homey accepts the firmware's middle button name", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.eql({ ok: true });
+  });
+}
+
+docs {
+  Expected result: HTTP 200 with {"ok":true} and exactly one run of the "Middle button was pressed" Flow. The HTTP callback name is middle, not select.
+}

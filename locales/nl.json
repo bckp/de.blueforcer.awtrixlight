@@ -11,7 +11,10 @@
       "authenticationRequired": "Authenticatie is vereist",
       "invalidResponse": "Het apparaat gaf geen geldig antwoord.",
       "offline": "Apparaat is offline",
-      "rediscoveryFailed": "Er kon geen nieuw adres voor dit apparaat worden gevonden."
+      "rediscoveryFailed": "Er kon geen nieuw adres voor dit apparaat worden gevonden.",
+      "buttonCallbackConflict": "Knopcallbacks kunnen niet worden ingeschakeld omdat AWTRIX al een callback van een andere integratie heeft.",
+      "buttonCallbackLocalAddressInvalid": "Het lokale adres van Homey is geen ondersteund HTTP-adres voor knopcallbacks.",
+      "buttonCallbackSynchronizationFailed": "Synchronisatie van knopcallbacks is mislukt. Controleer het lokale Homey-adres en de callbackconfiguratie van AWTRIX."
     }
   },
   "list": {

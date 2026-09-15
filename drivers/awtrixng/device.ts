@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { randomBytes, timingSafeEqual } from 'crypto';
 import { Device, DiscoveryResultMDNSSD } from 'homey';
 import path from 'path';
 import AwtrixNgApi, {
@@ -9,7 +10,10 @@ import AwtrixNgApi, {
 } from '../../lib/awtrixng/Api/Api';
 import Poll from '../../lib/shared/Poll';
 import { toAwtrixNgBaseUrl } from '../../lib/awtrixng/Discovery/Detection';
-import { AwtrixNgHomeySettings, hasAwtrixNgLocalSettingsChange } from '../../lib/awtrixng/Services/Settings';
+import {
+  AwtrixNgHomeySettings,
+  hasAwtrixNgConnectionSettingsChange,
+} from '../../lib/awtrixng/Services/Settings';
 import runWithConcurrencyLimit from '../../lib/shared/Concurrency';
 import { toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
 import { AwtrixDeviceType } from '../awtrix-device-type';
@@ -40,6 +44,8 @@ interface AwtrixNgDeviceStore {
   version?: string;
   builtinAppsFirmwareVersion?: string;
   builtinAppsInitialized?: boolean;
+  buttonCallbackToken?: string;
+  managedButtonCallbackUrl?: string;
 }
 
 interface AwtrixNgDeviceSettings extends AwtrixNgHomeySettings {
@@ -47,6 +53,7 @@ interface AwtrixNgDeviceSettings extends AwtrixNgHomeySettings {
   port?: number;
   authUser?: string;
   authPass?: string;
+  buttonCallbackEnabled?: boolean;
 }
 
 interface AwtrixNgDeviceSettingsChange {
@@ -136,6 +143,7 @@ class AwtrixNgDevice extends Device {
         await this.refreshSettingsFromDevice();
         await this.refreshDisplayFromDevice();
         await this.synchronizeBuiltinAppsForFirmware(deviceStateResult.device.version, true, true);
+        await this.reconcileButtonCallbackOnStartup();
       }
     } catch (error: unknown) {
       this.error(error);
@@ -154,6 +162,7 @@ class AwtrixNgDevice extends Device {
 
   async onDeleted(): Promise<void> {
     this.log('AwtrixNgDevice has been deleted');
+    await this.clearOwnedButtonCallbackOnDelete();
     this.poll?.stop();
     this.icons?.invalidate();
   }
@@ -205,18 +214,41 @@ class AwtrixNgDevice extends Device {
     };
 
     try {
-      if (hasAwtrixNgLocalSettingsChange(changedKeys)) {
+      if (hasAwtrixNgConnectionSettingsChange(changedKeys)) {
         await this.applySettingsChangesWithCandidateConnection(newSettings as AwtrixNgDeviceSettings, changedKeys);
         return;
       }
 
       await this.runBuiltinAppsOperation(async () => {
-        await this.getApi().applySettingsChange(newSettings, changedKeys);
+        const api = this.getApi();
+        if (changedKeys.includes('buttonCallbackEnabled') && newSettings.buttonCallbackEnabled === true) {
+          api.requireButtonCallbackSupport();
+        }
+        await api.applySettingsChange(newSettings, changedKeys);
+        await this.applyButtonCallbackSettingChange(api, newSettings as AwtrixNgDeviceSettings, changedKeys);
       });
     } catch (error: unknown) {
       this.homeySettingsSnapshot = previousSettingsSnapshot;
       throw error;
     }
+  }
+
+  /** Called by the driver only after it has found this device by the route uid. */
+  async acceptsButtonCallback(input: { routeUid: string; bodyUid: string; token: string }): Promise<boolean> {
+    if (input.routeUid !== input.bodyUid || input.routeUid !== this.getData().id) {
+      return false;
+    }
+
+    const settings = this.homeySettingsSnapshot ?? await this.getSettings() as AwtrixNgDeviceSettings;
+    if (settings.buttonCallbackEnabled !== true) {
+      return false;
+    }
+
+    const expectedToken = this.getStoreSnapshot().buttonCallbackToken;
+
+    return expectedToken !== undefined && this.isManagedButtonCallbackToken(expectedToken)
+      && this.isManagedButtonCallbackToken(input.token)
+      && timingSafeEqual(Buffer.from(input.token, 'hex'), Buffer.from(expectedToken, 'hex'));
   }
 
   /**
@@ -327,6 +359,172 @@ class AwtrixNgDevice extends Device {
     await this.setUnavailable(this.getUnavailableMessage(result));
 
     return result;
+  }
+
+  private async applyButtonCallbackSettingChange(
+    api: AwtrixNgApi,
+    settings: AwtrixNgDeviceSettings,
+    changedKeys: readonly string[],
+  ): Promise<void> {
+    if (!changedKeys.includes('buttonCallbackEnabled')) {
+      return;
+    }
+
+    if (settings.buttonCallbackEnabled === true) {
+      await this.enableButtonCallback(api);
+    } else {
+      await this.disableButtonCallback(api);
+    }
+  }
+
+  /** Reconcile only enabled integrations; a default-false upgrade must not touch /system. */
+  private async reconcileButtonCallback(api: AwtrixNgApi, settings: AwtrixNgDeviceSettings): Promise<void> {
+    if (settings.buttonCallbackEnabled === true) {
+      await this.enableButtonCallback(api);
+    }
+  }
+
+  private async reconcileButtonCallbackOnStartup(): Promise<void> {
+    const settings = await this.getSettings() as AwtrixNgDeviceSettings;
+
+    if (settings.buttonCallbackEnabled !== true) {
+      return;
+    }
+
+    await this.reconcileButtonCallbackSafely(this.getApi(), settings);
+  }
+
+  private async reconcileButtonCallbackSafely(api: AwtrixNgApi, settings: AwtrixNgDeviceSettings): Promise<void> {
+    if (settings.buttonCallbackEnabled !== true) {
+      return;
+    }
+
+    try {
+      await this.reconcileButtonCallback(api, settings);
+      await this.unsetWarning();
+    } catch (error: unknown) {
+      // Synchronization is optional: the primary device integration stays available, but the
+      // error is both logged and surfaced to the user rather than being swallowed.
+      this.reportButtonCallbackError(error);
+      await this.setWarning(this.homey.__('states.awtrixNg.buttonCallbackSynchronizationFailed'));
+    }
+  }
+
+  private async enableButtonCallback(api: AwtrixNgApi): Promise<void> {
+    api.requireButtonCallbackSupport();
+    const token = await this.getOrCreateButtonCallbackToken();
+    const desiredUrl = await this.buildButtonCallbackUrl(this.getData().id as string, token);
+    const { managedButtonCallbackUrl } = this.getStoreSnapshot();
+    const currentUrl = await api.readButtonCallback();
+
+    if (currentUrl === desiredUrl) {
+      if (managedButtonCallbackUrl !== desiredUrl) {
+        await this.setStoreValue('managedButtonCallbackUrl', desiredUrl);
+      }
+      return;
+    }
+
+    if (currentUrl !== '' && currentUrl !== managedButtonCallbackUrl) {
+      throw new Error(this.homey.__('states.awtrixNg.buttonCallbackConflict'));
+    }
+
+    await api.writeButtonCallback(desiredUrl);
+    await this.setStoreValue('managedButtonCallbackUrl', desiredUrl);
+  }
+
+  private async disableButtonCallback(api: AwtrixNgApi): Promise<void> {
+    const { managedButtonCallbackUrl } = this.getStoreSnapshot();
+    const currentUrl = await api.readButtonCallback();
+
+    if (currentUrl === '') {
+      await this.unsetStoreValue('managedButtonCallbackUrl');
+      return;
+    }
+
+    if (managedButtonCallbackUrl !== undefined && currentUrl === managedButtonCallbackUrl) {
+      await api.writeButtonCallback('');
+      await this.unsetStoreValue('managedButtonCallbackUrl');
+      return;
+    }
+
+    const token = this.getStoreSnapshot().buttonCallbackToken;
+    const desiredUrl = token === undefined || !this.isManagedButtonCallbackToken(token)
+      ? undefined
+      : await this.buildButtonCallbackUrl(this.getData().id as string, token);
+
+    if (desiredUrl !== undefined && currentUrl === desiredUrl) {
+      await api.writeButtonCallback('');
+      await this.unsetStoreValue('managedButtonCallbackUrl');
+    }
+
+    if (desiredUrl === undefined || currentUrl !== desiredUrl) {
+      await this.unsetStoreValue('managedButtonCallbackUrl');
+    }
+  }
+
+  private async clearOwnedButtonCallbackOnDelete(): Promise<void> {
+    const { buttonCallbackToken, managedButtonCallbackUrl } = this.getStoreSnapshot();
+    if (this.api === undefined || (buttonCallbackToken === undefined && managedButtonCallbackUrl === undefined)) {
+      return;
+    }
+
+    try {
+      await this.disableButtonCallback(this.api);
+    } catch (error: unknown) {
+      // Device removal must work while the AWTRIX is offline. The failed API operation is
+      // nevertheless reported; do not turn this lifecycle cleanup into a silent no-op.
+      this.reportButtonCallbackError(error);
+    }
+  }
+
+  private reportButtonCallbackError(error: unknown): void {
+    const { buttonCallbackToken, managedButtonCallbackUrl } = this.getStoreSnapshot();
+    let details = formatAwtrixNgErrorDetails(error);
+    if (managedButtonCallbackUrl !== undefined) {
+      details = details.split(managedButtonCallbackUrl).join('<redacted>');
+    }
+    details = details.replace(/https?:\/\/[^\s]+\/api\/app\/de\.blueforcer\.awtrixlight\/awtrixng\/button\/[^\s|]+/g, '<redacted>');
+    if (buttonCallbackToken !== undefined) {
+      details = details.split(buttonCallbackToken).join('<redacted>');
+    }
+    this.error('AWTRIX NG button callback operation failed', details);
+  }
+
+  private async getOrCreateButtonCallbackToken(): Promise<string> {
+    const token = this.getStoreSnapshot().buttonCallbackToken;
+
+    if (token !== undefined && this.isManagedButtonCallbackToken(token)) {
+      return token;
+    }
+
+    const nextToken = randomBytes(32).toString('hex');
+    await this.setStoreValue('buttonCallbackToken', nextToken);
+    return nextToken;
+  }
+
+  private isManagedButtonCallbackToken(token: string): boolean {
+    return /^[a-f0-9]{64}$/.test(token);
+  }
+
+  private async buildButtonCallbackUrl(uid: string, token: string): Promise<string> {
+    const localAddress = await this.homey.cloud.getLocalAddress();
+    const baseAddress = localAddress.includes('://') ? localAddress : `http://${localAddress}`;
+    let url: URL;
+
+    try {
+      url = new URL(baseAddress);
+    } catch {
+      throw new Error(this.homey.__('states.awtrixNg.buttonCallbackLocalAddressInvalid'));
+    }
+
+    if (url.protocol !== 'http:') {
+      throw new Error(this.homey.__('states.awtrixNg.buttonCallbackLocalAddressInvalid'));
+    }
+
+    url.pathname = `/api/app/de.blueforcer.awtrixlight/awtrixng/button/${encodeURIComponent(uid)}/${encodeURIComponent(token)}`;
+    url.search = '';
+    url.hash = '';
+    return url.toString();
   }
 
   private async refreshSettingsFromDevice(): Promise<void> {
@@ -552,8 +750,16 @@ class AwtrixNgDevice extends Device {
     const { connection, syncAddressIntoSettings } = this.getConnectionCandidateFromSettings(newSettings, changedKeys);
     const api = await this.verifyCandidateConnection(connection.baseUrl, connection.auth);
 
+    if (newSettings.buttonCallbackEnabled === true) {
+      api.requireButtonCallbackSupport();
+    }
+
     await this.runBuiltinAppsOperation(async () => {
       await api.applySettingsChange(newSettings, changedKeys);
+      await this.applyButtonCallbackSettingChange(api, newSettings, changedKeys);
+      if (!changedKeys.includes('buttonCallbackEnabled')) {
+        await this.reconcileButtonCallback(api, newSettings);
+      }
     });
 
     await this.commitConnection(connection, api, false);
@@ -605,6 +811,7 @@ class AwtrixNgDevice extends Device {
     );
 
     await this.commitConnection(connection, api, true);
+    await this.reconcileButtonCallbackSafely(api, settings);
     this.ensurePollingStarted();
 
     const result = await this.refreshDeviceState({ allowAddCapabilities: false });
@@ -661,6 +868,7 @@ class AwtrixNgDevice extends Device {
     const dirEntries = await fs.promises.readdir(BundledIconsDirectory, { withFileTypes: true });
     const iconFiles = dirEntries.filter((entry) => entry.isFile()).map((entry) => entry.name);
     const failures: Array<{ fileName: string; error: unknown; index: number }> = [];
+
     await runWithConcurrencyLimit(iconFiles, MaxConcurrentIconUploads, async (fileName, index) => {
       try {
         const body = await fs.promises.readFile(path.join(BundledIconsDirectory, fileName));
@@ -703,6 +911,8 @@ class AwtrixNgDevice extends Device {
     const version = this.getStoreValue(FirmwareVersionStoreKey) as unknown;
     const builtinAppsFirmwareVersion = this.getStoreValue(BuiltinAppsFirmwareVersionStoreKey) as unknown;
     const builtinAppsInitialized = this.getStoreValue(BuiltinAppsInitializedStoreKey) as unknown;
+    const buttonCallbackToken = this.getStoreValue('buttonCallbackToken') as unknown;
+    const managedButtonCallbackUrl = this.getStoreValue('managedButtonCallbackUrl') as unknown;
 
     return {
       baseUrl: typeof baseUrl === 'string' && baseUrl.length > 0 ? baseUrl : undefined,
@@ -714,6 +924,8 @@ class AwtrixNgDevice extends Device {
         ? builtinAppsFirmwareVersion
         : undefined,
       builtinAppsInitialized: typeof builtinAppsInitialized === 'boolean' ? builtinAppsInitialized : undefined,
+      buttonCallbackToken: typeof buttonCallbackToken === 'string' ? buttonCallbackToken : undefined,
+      managedButtonCallbackUrl: typeof managedButtonCallbackUrl === 'string' ? managedButtonCallbackUrl : undefined,
     };
   }
 

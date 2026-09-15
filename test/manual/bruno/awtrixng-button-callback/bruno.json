@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "AWTRIX NG Homey Button Callback",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

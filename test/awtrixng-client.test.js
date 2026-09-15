@@ -139,6 +139,22 @@ test('AWTRIX NG client maps settings and display writes', async () => {
   }]);
 });
 
+test('AWTRIX NG client maps button callback system reads and explicit writes', async () => {
+  const { client, transport } = createClient();
+  const patch = { buttonCallback: 'http://homey.local/callback' };
+
+  transport.responseData = { buttonCallback: '' };
+  assert.deepEqual(await client.getSystem(), { buttonCallback: '' });
+  transport.responseData = { buttonCallback: patch.buttonCallback, ignored: true };
+  assert.deepEqual(await client.putSystem(patch), { buttonCallback: patch.buttonCallback, ignored: true });
+  assert.deepEqual(patch, { buttonCallback: 'http://homey.local/callback' });
+  assert.deepEqual(transport.calls, [{
+    method: 'GET', path: '/api/v1/system',
+  }, {
+    method: 'PUT', path: '/api/v1/system', body: { buttonCallback: 'http://homey.local/callback' },
+  }]);
+});
+
 test('AWTRIX NG client maps notification routes', async () => {
   const { client, transport } = createClient();
 

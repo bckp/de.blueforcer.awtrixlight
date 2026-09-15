@@ -15,7 +15,7 @@ export type AwtrixNgHomeySettings = Record<string, AwtrixNgHomeySettingValue>;
 
 export type AwtrixNgWritableSettingsField = keyof AwtrixNgSettingsPatchInput;
 
-export type AwtrixNgLocalSettingsField = 'address' | 'port' | 'authUser' | 'authPass';
+export type AwtrixNgLocalSettingsField = 'address' | 'port' | 'authUser' | 'authPass' | 'buttonCallbackEnabled';
 
 export type AwtrixNgHomeySettingsPatch = Partial<Record<AwtrixNgWritableSettingsField, boolean | string>>;
 
@@ -35,6 +35,7 @@ const localSettingsFields = new Set<string>([
   'address',
   'authPass',
   'authUser',
+  'buttonCallbackEnabled',
   'port',
 ]);
 
@@ -44,6 +45,10 @@ export const isAwtrixNgLocalSettingsField = (field: string): field is AwtrixNgLo
 
 export const hasAwtrixNgLocalSettingsChange = (changedKeys: readonly string[]): boolean => changedKeys.some(isAwtrixNgLocalSettingsField);
 
+export const hasAwtrixNgConnectionSettingsChange = (changedKeys: readonly string[]): boolean => changedKeys.some((field) => (
+  field === 'address' || field === 'port' || field === 'authUser' || field === 'authPass'
+));
+
 export const createAwtrixNgSettingsPatchFromChangedSettings = (
   newSettings: AwtrixNgHomeySettings,
   changedKeys: readonly string[],
@@ -52,6 +57,9 @@ export const createAwtrixNgSettingsPatchFromChangedSettings = (
 
   for (const key of changedKeys) {
     if (isAwtrixNgLocalSettingsField(key)) {
+      if (key === 'buttonCallbackEnabled' && typeof newSettings[key] !== 'boolean') {
+        throw new TypeError('AWTRIX NG buttonCallbackEnabled must be a boolean.');
+      }
       continue;
     }
 

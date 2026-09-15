@@ -14,6 +14,8 @@ import {
   AwtrixNgApiPushedAppPayload,
   AwtrixNgApiSettingsPatch,
   AwtrixNgApiSettingsResponse,
+  AwtrixNgApiSystemPatch,
+  AwtrixNgApiSystemResponse,
   AwtrixNgApiSoundPlayPayload,
   AwtrixNgApiVersionResponse,
 } from './Types';
@@ -68,6 +70,21 @@ export default class AwtrixNgClient {
       method: 'PATCH',
       path: '/api/v1/settings',
       body: patch,
+    });
+  }
+
+  getSystem(): Promise<AwtrixNgApiSystemResponse> {
+    return this.#request<AwtrixNgApiSystemResponse>({
+      method: 'GET',
+      path: '/api/v1/system',
+    });
+  }
+
+  putSystem(patch: AwtrixNgApiSystemPatch): Promise<AwtrixNgApiSystemResponse> {
+    return this.#request<AwtrixNgApiSystemResponse, AwtrixNgApiSystemPatch>({
+      method: 'PUT',
+      path: '/api/v1/system',
+      body: { buttonCallback: patch.buttonCallback },
     });
   }
 

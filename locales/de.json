@@ -11,7 +11,10 @@
       "authenticationRequired": "Authentifizierung erforderlich",
       "invalidResponse": "Das Gerät hat keine gültige Antwort geliefert.",
       "offline": "Gerät ist offline",
-      "rediscoveryFailed": "Es konnte keine neue Adresse für dieses Gerät gefunden werden."
+      "rediscoveryFailed": "Es konnte keine neue Adresse für dieses Gerät gefunden werden.",
+      "buttonCallbackConflict": "Tasten-Callbacks können nicht aktiviert werden, weil AWTRIX bereits einen Callback einer anderen Integration hat.",
+      "buttonCallbackLocalAddressInvalid": "Homeys lokale Adresse ist keine unterstützte HTTP-Adresse für Tasten-Callbacks.",
+      "buttonCallbackSynchronizationFailed": "Die Synchronisierung der Tasten-Callbacks ist fehlgeschlagen. Prüfen Sie Homeys lokale Adresse und die AWTRIX-Callback-Konfiguration."
     }
   },
   "list": {

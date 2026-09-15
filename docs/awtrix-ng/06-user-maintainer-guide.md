@@ -148,6 +148,37 @@ Starý AWTRIX 3 objektový formát `{ "dp": [...] }` se nepřevádí a je explic
 
 ## Settings
 
+### Callbacky tlačítek (AWTRIX NG 1.1.1)
+
+Každé NG zařízení má opt-in checkbox **Ostatní → Povolit callbacky tlačítek**,
+ve výchozím stavu vypnutý. Zapnutí vyžaduje zjištěný firmware 1.1.1 nebo
+novější; na starší či neznámé verzi skončí chybou před zápisem do zařízení.
+Při startu se již zapnutý checkbox na starším firmware jen ohlásí varováním
+bez změny `/system`. Vypnutí a odstranění vlastního callbacku zůstává možné
+i na starším firmware. Po úspěšném zapnutí Homey zapíše pouze `buttonCallback`
+přes `PUT /api/v1/system` a následnou hodnotu ověří. URL používá místní
+adresu Homey, nikoli cloud; Homey a AWTRIX proto musí být ve stejné LAN.
+Firmware neumí HTTPS ani auth header, takže náhodný per-device token putuje
+po LAN nešifrovaným HTTP. Token ani výslednou URL nikdy nedávejte do logu,
+screenshotu nebo support reportu.
+
+Firmware 1.1.1 posílá JSON `{"button":"left","state":true,"uid":"..."}`
+pro stisk a stejný objekt se `state:false` pro uvolnění. Homey validuje obě
+hrany, ale Flow spustí pouze při `true`. Device trigger karty jsou left,
+middle a right; `select` není platný callback název. Běžná navigace tlačítek
+zůstává aktivní, pokud ji samostatně nezablokuje `blockNavigation`.
+
+Homey spravuje pouze vlastní `managedButtonCallbackUrl`; cizí neprázdnou
+URL při zapnutí odmítne a při vypnutí či smazání zařízení ji nepřepisuje.
+Store obsahuje také `buttonCallbackToken`, který se při opětovném zapnutí
+použije znovu. Při ztrátě tokenu vypněte integraci, ručně vyčistěte
+`buttonCallback` přes `PUT /api/v1/system` a opět ji zapněte. Aktuální
+hodnotu lze zkontrolovat přes `GET /api/v1/system` (URL nikam nekopírovat).
+Při změně místní IP/portu Homey se vlastní URL opraví při dalším startu
+zařízení. Warning znamená, že synchronizace selhala nebo callback převzala
+jiná integrace. Před vydáním ověřte JSON callback na skutečném Homey a
+potvrďte jeden Flow run na stisk i žádný další run při uvolnění.
+
 AWTRIX NG settings UI expose pouze NG-specific subset:
 
 | Setting | Význam | Zápis do zařízení |

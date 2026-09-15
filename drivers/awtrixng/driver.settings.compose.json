@@ -428,5 +428,33 @@
         }
       }
     ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "en": "Miscellaneous",
+      "cs": "Ostatní",
+      "de": "Sonstiges",
+      "nl": "Overig"
+    },
+    "children": [
+      {
+        "id": "buttonCallbackEnabled",
+        "type": "checkbox",
+        "value": false,
+        "label": {
+          "en": "Enable button callbacks",
+          "cs": "Povolit callbacky tlačítek",
+          "de": "Tasten-Callbacks aktivieren",
+          "nl": "Knopcallbacks inschakelen"
+        },
+        "hint": {
+          "en": "Requires AWTRIX NG firmware 1.1.1 or newer. Uses Homey's local HTTP address and works only on the same LAN. The token travels over unencrypted HTTP because AWTRIX NG cannot use HTTPS. Buttons keep their normal navigation function.",
+          "cs": "Vyžaduje firmware AWTRIX NG 1.1.1 nebo novější. Používá místní HTTP adresu Homey a funguje jen ve stejné síti LAN. Token se přenáší nešifrovaným HTTP, protože AWTRIX NG neumí HTTPS. Tlačítka si ponechají běžnou navigační funkci.",
+          "de": "Erfordert AWTRIX NG Firmware 1.1.1 oder neuer. Verwendet Homeys lokale HTTP-Adresse und funktioniert nur im selben LAN. Das Token wird unverschlüsselt übertragen, da AWTRIX NG kein HTTPS unterstützt. Die Tasten behalten ihre normale Navigationsfunktion.",
+          "nl": "Vereist AWTRIX NG firmware 1.1.1 of nieuwer. Gebruikt het lokale HTTP-adres van Homey en werkt alleen op hetzelfde LAN. Het token wordt onversleuteld verzonden omdat AWTRIX NG geen HTTPS ondersteunt. De knoppen behouden hun normale navigatiefunctie."
+        }
+      }
+    ]
   }
 ]

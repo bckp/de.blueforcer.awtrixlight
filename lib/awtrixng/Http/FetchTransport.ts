@@ -40,6 +40,13 @@ const redactSensitiveHeaders = (headers: AwtrixNgHeaders): AwtrixNgHeaders => Ob
   return result;
 }, {});
 
+const redactSystemCallback = (url: string, data: unknown): unknown => {
+  if (!url.includes('/api/v1/system')) {
+    return data;
+  }
+  return RedactedHeaderValue;
+};
+
 export default class FetchAwtrixNgHttpTransport implements AwtrixNgHttpTransport {
 
   readonly #baseUrl: string;
@@ -191,7 +198,7 @@ export default class FetchAwtrixNgHttpTransport implements AwtrixNgHttpTransport
       url,
       headers: redactSensitiveHeaders(headers),
       query,
-      data,
+      data: redactSystemCallback(url, data),
     });
   }
 
@@ -206,7 +213,7 @@ export default class FetchAwtrixNgHttpTransport implements AwtrixNgHttpTransport
       dump: {
         status,
         statusText,
-        data,
+        data: redactSystemCallback(url, data),
         headers,
       },
     });
@@ -217,10 +224,17 @@ export default class FetchAwtrixNgHttpTransport implements AwtrixNgHttpTransport
       return;
     }
 
+    let arg: unknown;
+    if (url.includes('/api/v1/system')) {
+      arg = RedactedHeaderValue;
+    } else {
+      arg = error instanceof Error ? error.message : error;
+    }
+
     this.#log({
       message: `${method}(error)`,
       url,
-      arg: error instanceof Error ? error.message : error,
+      arg,
     });
   }
 
