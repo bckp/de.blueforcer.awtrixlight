@@ -79,6 +79,7 @@ const loadAwtrixNgDevice = (transport) => {
 const createAwtrixNgDeviceHarness = (transport, { initialCapabilities = [] } = {}) => {
   const homey = createFakeHomey();
   const capabilities = new Set(initialCapabilities);
+  const store = new Map([['baseUrl', 'http://192.0.2.20:80']]);
   const calls = {
     addCapability: [],
     error: [],
@@ -96,8 +97,14 @@ const createAwtrixNgDeviceHarness = (transport, { initialCapabilities = [] } = {
     error(error) {
       calls.error.push(error);
     },
+    getData() {
+      return { id: fullDeviceState.uid };
+    },
     getStoreValue(key) {
-      return key === 'baseUrl' ? 'http://192.0.2.20:80' : undefined;
+      return store.get(key);
+    },
+    async setStoreValue(key, value) {
+      store.set(key, value);
     },
     async getSettings() {
       return {};
@@ -134,8 +141,58 @@ const createAwtrixNgDeviceHarness = (transport, { initialCapabilities = [] } = {
     calls,
     capabilities,
     homey,
+    store,
   };
 };
+
+test('synth Flow action checks the paired feature and preserves a playback failure', async () => {
+  const error = new AwtrixNgApiError({
+    method: 'POST',
+    url: 'http://192.0.2.20:80/api/v1/audio/play',
+    message: 'bad sound',
+    code: 'validationFailed',
+    field: 'fx',
+    httpStatus: 422,
+  });
+  const { awtrixNgDevice, capabilities } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport({}));
+  const calls = [];
+  awtrixNgDevice.api = {
+    async playSynthFx(fx) {
+      calls.push(fx);
+      throw error;
+    },
+  };
+
+  await assert.rejects(awtrixNgDevice.playSynthEffect('lead: c4'), /does not support/);
+  assert.deepEqual(calls, []);
+  capabilities.add('awtrixng_audio_synth');
+  await assert.rejects(awtrixNgDevice.playSynthEffect('lead: c4'), (caught) => caught === error);
+  assert.deepEqual(calls, ['lead: c4']);
+});
+
+test('header Flow device methods require both features and propagate API errors', async () => {
+  const { awtrixNgDevice, capabilities } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport({}));
+  const input = { header: 'Home', text: '21 C', icon: '-' };
+  const error = new Error('layout refused');
+  const calls = [];
+  awtrixNgDevice.api = {
+    async sendHeaderNotification(payload) {
+      calls.push(payload);
+    },
+    async putHeaderApp(name, payload) {
+      calls.push({ name, payload });
+      throw error;
+    },
+  };
+  await assert.rejects(awtrixNgDevice.sendHeaderNotification(input), /does not support/);
+  capabilities.add('awtrixng_display_16px');
+  await assert.rejects(awtrixNgDevice.sendHeaderNotification(input), /does not support/);
+  assert.deepEqual(calls, []);
+  capabilities.add('awtrixng_layout');
+  await awtrixNgDevice.sendHeaderNotification(input);
+  await assert.rejects(awtrixNgDevice.putHeaderApp('weather', input), (caught) => caught === error);
+  assert.deepEqual(calls, [input, { name: 'weather', payload: input }]);
+});
 
 test('AWTRIX NG availability state marks detected probe as available', () => {
   assert.deepEqual(toAwtrixNgAvailabilityState({
@@ -418,6 +475,7 @@ test('AWTRIX NG onAdded uploads bundled icons with bounded parallelism and repor
 
   // device.icons is a read-only view of device.api.icons since update-plan-3 (M3).
   awtrixNgDevice.api = {
+    getBundledIconSize: async () => 8,
     icons: {
       async upload({ fileName, body }) {
         assert.equal(Buffer.isBuffer(body), true);
@@ -473,6 +531,33 @@ test('AWTRIX NG onAdded uploads bundled icons with bounded parallelism and repor
   assert.equal(calls.error[0][0].error.code, 'validationFailed');
   assert.equal(calls.error[0][0].error.message, 'icon format rejected');
   assert.equal(calls.error[0][0].error.field, 'file');
+});
+
+test('AWTRIX NG uploads 16x16 GIF icons once for TC002 and keeps the original assets for other panels', async () => {
+  const iconDirectory = path.join(__dirname, '../.homeybuild/drivers/awtrixng/assets/images/icons-16');
+  const expectedFiles = fs.readdirSync(iconDirectory).sort();
+  const uploads = [];
+  const { awtrixNgDevice, store } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
+
+  awtrixNgDevice.api = {
+    getBundledIconSize: async () => 16,
+    icons: {
+      async upload({ fileName, body }) {
+        uploads.push(fileName);
+        assert.equal(Buffer.isBuffer(body), true);
+        assert.equal(body.subarray(0, 3).toString(), 'GIF');
+        assert.equal(body.readUInt16LE(6), 16);
+        assert.equal(body.readUInt16LE(8), 16);
+      },
+    },
+  };
+
+  await awtrixNgDevice.onAdded();
+  assert.deepEqual(uploads.slice().sort(), expectedFiles);
+  assert.equal(store.get('tc002BundledIconsRevision'), 1);
+
+  await awtrixNgDevice.onAdded();
+  assert.equal(uploads.length, expectedFiles.length, 'already installed icons are not uploaded again');
 });
 
 test('AWTRIX NG onDeleted stops polling and clears the icon cache timer', async () => {

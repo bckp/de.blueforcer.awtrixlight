@@ -71,6 +71,60 @@ omezené; kontrola se provede až při použití RTTTL flow karty. Starší nebo
 nezjištěná verze skončí jednotnou chybou `AwtrixNgUnsupportedVersionError` a
 audio endpoint se nezavolá.
 
+## Layout karty pro 52×16
+
+Karty **Zobrazit notifikaci s nadpisem** (`awtrixng_notification_header`) a
+**Zobrazit aplikaci s nadpisem** (`awtrixng_application_header`) používají stejnou
+šablonu: ikona 16×16 vlevo, modrý nadpis v horní osmipixelové oblasti a bílý text
+v dolní oblasti. Oba řádky používají font `small` a samostatně rolují dlouhý text.
+Bez ikony dostane text celou šířku displeje. Dobu zobrazení lze změnit přes běžné
+**Přidat dobu trvání**. Bez zadané doby šablona posílá `repeat: 1` a počká na jedno
+celé projetí všech rolujících řádků; pokud se text vejde a neroluje, platí výchozí
+doba zařízení. Se zadanou dobou posílá jen `durationMs`. Aplikace v rotaci se
+vytváří/aktualizuje pod obvyklou interní předponou `homey-`.
+
+Párování ukládá `awtrixng_layout` jen podle `capabilities.layouts.version: 1`.
+Filtr obou šablon vyžaduje současně `awtrixng_layout` a `awtrixng_display_16px`;
+stejné schopnosti kontroluje i runtime zařízení. Marker 16řádkového displeje zatím
+označuje ověřený TC002 52×16. Podpora layoutu sama o sobě se neváže na boardType:
+NG zařízení s 32×8 ji může deklarovat a používat vlastní JSON přes stávající raw
+karty. Při každém odeslání se znovu ověří rozměry, fonty a limity z API. Starší
+zařízení bez explicitní podpory dostane chybu, žádná pole se nevynechávají.
+
+Homey podle své dokumentace nezmění capability filtr při pozdějším přidání
+capability; nové šablony proto ověřujeme na nově spárovaném zařízení. Stávající
+JSON karty zůstávají použitelné i bez markeru a kontrolují skutečné API. Podrobný
+formát a příklad jsou v [JSON options](03-json-options.md#layout-json).
+
+## Audio na TC002 1.1.6
+
+Při párování se podle skutečných audio capabilities uloží marker
+`awtrixng_audio_url`. Jen zařízení s tímto markerem mají tyto Flow karty:
+
+- **Přehrát MP3 z URL**: stáhne a přehraje soubor jednou bez uložení na zařízení.
+- **Přehrát MP3 ze Soundboardu**: vybere MP3 ze seznamu nainstalovaného Soundboardu,
+  při každém spuštění znovu načte jeho aktuální záznam a pošle lokální URL Homey.
+- **Zastavit zvuk právě přehrávaného upozornění**: zastaví skupinu `alert`; rádio a
+  zvuky skriptů mají samostatné ovládání.
+
+MP3 akce čekají na dokončení a hlásí i chybu stahování z `alert.error`, kterou
+počáteční odpověď HTTP 200 ještě neobsahuje. Limit je 4 MB podle firmware a 120 sekund
+na spuštění této akce. Po překročení času se zastaví přehrávání, pokud skupina stále
+patří původní URL, a Flow skončí chybou. Souběžné URL akce na stejném zařízení se
+odmítnou; stop může probíhající akci zrušit. Jiná notifikace může zvuk nahradit,
+což akce také oznámí jako přerušení. API nerozlišuje dvě externí přehrání stejné URL
+identifikátorem relace.
+
+Soundboard vyžaduje oprávnění `homey:app:com.athom.soundboard` a lokální adresu Homey
+dostupnou ze zařízení. Ve výběru jsou pouze MP3; WAV nepřevádíme. Po smazání a
+opětovném nahrání zvuku je třeba ve Flow vybrat nový záznam, i když má stejný název.
+Přesný počet opakování zatím není samostatná funkce.
+
+Syntetizovaný zvuk se na novém API posílá jako `song` a přehraje se jednou jako
+`alert`, který nahradí předchozí upozornění. Starší API používá původní `fx` efekt;
+rozdíl je uveden v nápovědě karty. NG legacy zvukové parametry notifikací se převádějí
+v NG audio vrstvě. Rozhraní sdílených Flow akcí a AWTRIX 3 driver se kvůli tomu nemění.
+
 ## Custom apps a názvy
 
 Uživatel zadává název custom app bez interního prefixu.

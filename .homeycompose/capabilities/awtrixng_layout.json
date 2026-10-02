@@ -1,0 +1,8 @@
+{
+  "type": "boolean",
+  "title": { "en": "Layouts", "cs": "Rozložení do oblastí" },
+  "getable": true,
+  "setable": false,
+  "insights": false,
+  "uiComponent": null
+}

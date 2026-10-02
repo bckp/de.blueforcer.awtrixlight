@@ -29,13 +29,31 @@ import {
   runAwtrixNgPreviousAppCapability,
   runAwtrixNgWeatherOverlayCapability,
 } from '../Device/Controls';
-import { AwtrixNgCapabilityUpdatePlan, createAwtrixNgCapabilityUpdatePlan } from '../Device/State';
+import {
+  AwtrixNgCapabilityUpdatePlan,
+  AwtrixNgFeatureCapabilityIds,
+  AwtrixNgHomeyFeatureCapabilityId,
+  createAwtrixNgCapabilityUpdatePlan,
+} from '../Device/State';
 import AwtrixNgIcons, { AwtrixNgIconsOptions } from '../Services/Icons';
 import { readAwtrixNgButtonCallback, writeAwtrixNgButtonCallback } from '../Services/ButtonCallback';
 import { isPlainObject } from '../Support/Guards';
+import { assertAwtrixNgLayoutCapabilities, AwtrixNgHeaderLayoutInput, createAwtrixNgHeaderLayout } from '../Services/Layouts';
+import {
+  AwtrixNgNotificationInput, AwtrixNgPushedAppInput,
+  toAwtrixNgHomeyPushedAppName, toAwtrixNgNotificationPayload, toAwtrixNgPushedAppPayload,
+} from '../Payload/Transformers';
+import {
+  AwtrixNgAudioPlaybackError,
+  toAwtrixNgSoundObjectNotification,
+  usesAwtrixNgSoundObjects,
+  validateAwtrixNgMp3Url,
+  waitForAwtrixNgUrlSound,
+} from '../Services/Audio';
 import isAwtrixNgFirmwareVersionSupported from './FirmwareVersion';
 import { AwtrixNgUnsupportedVersionError } from './UnsupportedVersionError';
 import {
+  AwtrixNgApiCapabilitiesResponse,
   AwtrixNgApiDeviceStateResponse,
   AwtrixNgApiDisplayPatch,
   AwtrixNgApiIndicatorPayload,
@@ -50,10 +68,13 @@ export { AwtrixNgDeviceIdentityMismatchError } from './IdentityMismatchError';
 export { AwtrixNgUnsupportedVersionError } from './UnsupportedVersionError';
 export { formatAwtrixNgErrorDetails } from '../Device/Availability';
 export { AwtrixNgWeatherOverlayCapabilityId } from '../Services/Display';
+export { AwtrixNgFeatureCapabilityIds } from '../Device/State';
+export type { AwtrixNgHeaderLayoutInput } from '../Services/Layouts';
 export type { AwtrixNgBasicAuthOptions } from '../Http/Transport';
 export type { AwtrixNgDeviceProbeResult } from '../Discovery/Detection';
 
 const DeviceEndpoint = '/api/v1/device';
+const CapabilitiesEndpoint = '/api/v1/capabilities';
 const SettingsEndpoint = '/api/v1/settings';
 const AppsEndpoint = '/api/v1/apps';
 const RtttlMinimumFirmwareVersion = '1.1.0';
@@ -107,6 +128,10 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
 
   #firmwareVersion?: string;
 
+  #urlPlayback?: { cancelled: boolean; startFinished: Promise<void> };
+
+  #stoppingAudio = false;
+
   /**
    * Production code constructs the facade through fromConnection(); the constructor stays
    * public only so tests can inject a client backed by a fake transport.
@@ -128,6 +153,48 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
   /** One-off probe without holding an instance - for pairing and rediscovery in driver.ts. */
   static async probe(options: AwtrixNgConnectionOptions): Promise<AwtrixNgDeviceProbeResult> {
     return probeAwtrixNgDevice(AwtrixNgApi.createClient(options));
+  }
+
+  /** Pairing-time feature markers. Knob is an observed TC002 board feature, not a reported API field. */
+  static async getPairingFeatures(
+    options: AwtrixNgConnectionOptions,
+    device: AwtrixNgApiDeviceStateResponse,
+  ): Promise<AwtrixNgHomeyFeatureCapabilityId[]> {
+    const capabilities = await AwtrixNgApi.createClient(options).getCapabilities();
+    if (!isPlainObject(capabilities)) {
+      throw new AwtrixNgInvalidResponseError({ endpoint: CapabilitiesEndpoint, expectedShape: 'a capabilities object', actualValue: capabilities });
+    }
+    const features: AwtrixNgHomeyFeatureCapabilityId[] = [];
+    if (device.boardType === 'tc002') {
+      AwtrixNgApi.validateTc002Capabilities(capabilities);
+      features.push(AwtrixNgFeatureCapabilityIds.knob);
+    }
+    if (device.boardType === 'tc002' && capabilities.display?.height === 16) {
+      features.push(AwtrixNgFeatureCapabilityIds.display16);
+    }
+    if (usesAwtrixNgSoundObjects(capabilities) ? capabilities.audio?.song === true : capabilities.audio?.synth === true) {
+      features.push(AwtrixNgFeatureCapabilityIds.audioSynth);
+    }
+    if (capabilities.audio?.mp3 === true && capabilities.audio?.url === true && usesAwtrixNgSoundObjects(capabilities)) {
+      features.push(AwtrixNgFeatureCapabilityIds.audioUrl);
+    }
+    if (capabilities.layouts?.version === 1) features.push(AwtrixNgFeatureCapabilityIds.layout);
+    return features;
+  }
+
+  private static validateTc002Capabilities(capabilities: unknown): asserts capabilities is AwtrixNgApiCapabilitiesResponse {
+    if (!isPlainObject(capabilities)
+      || !isPlainObject(capabilities.platform)
+      || capabilities.platform.id !== 'tc002'
+      || !isPlainObject(capabilities.display)
+      || capabilities.display.width !== 52
+      || capabilities.display.height !== 16) {
+      throw new AwtrixNgInvalidResponseError({
+        endpoint: CapabilitiesEndpoint,
+        expectedShape: 'TC002 platform with a 52x16 display',
+        actualValue: capabilities,
+      });
+    }
   }
 
   /**
@@ -197,6 +264,22 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     const state = await this.#client.getDevice();
     this.#firmwareVersion = state.version;
     return state;
+  }
+
+  /** Selects bundled icon artwork from the verified device and its reported panel size. */
+  async getBundledIconSize(expectedUid: string): Promise<8 | 16> {
+    const result = await this.verifyIdentity(expectedUid);
+
+    // Observed on TC002 beta 1.1.5: boardType is "tc002" (older docs only show "awtrixng").
+    if (result.device.boardType !== 'tc002') {
+      return 8;
+    }
+
+    const capabilities = await this.#client.getCapabilities();
+
+    AwtrixNgApi.validateTc002Capabilities(capabilities);
+
+    return 16;
   }
 
   /** Returns the Homey settings update derived from the device settings, or undefined when in sync. */
@@ -339,7 +422,21 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
 
   // ---- AwtrixNgFlowActionClient (delegation to the client) --------------------
 
-  sendNotification(payload: AwtrixNgApiNotificationPayload): Promise<AwtrixNgApiOkResponse> {
+  async sendNotification(payload: AwtrixNgApiNotificationPayload): Promise<AwtrixNgApiOkResponse> {
+    if (payload.layout !== undefined) {
+      toAwtrixNgNotificationPayload(payload as AwtrixNgNotificationInput);
+      assertAwtrixNgLayoutCapabilities(payload.layout, await this.#client.getCapabilities(), 'notification');
+    }
+    if (payload.sound === undefined && payload.soundRtttl === undefined && payload.soundLoop === undefined) {
+      return this.#client.sendNotification(payload);
+    }
+    const capabilities = await this.readAudioCapabilities();
+    if (usesAwtrixNgSoundObjects(capabilities)) {
+      return this.#client.sendNotification(toAwtrixNgSoundObjectNotification(payload));
+    }
+    if (typeof payload.sound === 'object') {
+      throw new Error('Sound objects and lists require the new AWTRIX NG audio API.');
+    }
     return this.#client.sendNotification(payload);
   }
 
@@ -356,6 +453,85 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     return this.#client.playRtttl(rtttl);
   }
 
+  playSynthFx(fx: string): Promise<AwtrixNgApiOkResponse> {
+    if (typeof fx !== 'string' || fx.trim().length === 0) {
+      throw new TypeError('AWTRIX NG synth effect must be a non-empty string.');
+    }
+    return this.playSynthSound(fx);
+  }
+
+  private async playSynthSound(song: string): Promise<AwtrixNgApiOkResponse> {
+    const capabilities = await this.readAudioCapabilities();
+    if (usesAwtrixNgSoundObjects(capabilities)) {
+      if (capabilities.audio?.song !== true) throw new Error('This AWTRIX NG device has no synthesizer.');
+      return this.#client.playSound({ song });
+    }
+    if (capabilities.audio?.synth !== true) throw new Error('This AWTRIX NG device has no synthesizer.');
+    return this.#client.playSynthFx(song);
+  }
+
+  /** Resolves only after a finite URL sound finishes, including asynchronous download errors. */
+  async playMp3Url(value: string): Promise<void> {
+    const url = validateAwtrixNgMp3Url(value);
+    if (this.#urlPlayback !== undefined || this.#stoppingAudio) throw new Error('A URL sound is already running or stopping on this device. Stop it before starting another.');
+    let finishStart!: () => void;
+    const playback = {
+      cancelled: false,
+      startFinished: new Promise<void>((resolve) => {
+        finishStart = resolve;
+      }),
+    };
+    this.#urlPlayback = playback;
+    try {
+      await this.requireUrlAudio();
+      if (playback.cancelled) throw new Error('MP3 playback was cancelled.');
+      await this.#client.playSound({ file: url });
+      finishStart();
+      await waitForAwtrixNgUrlSound(this.#client, url);
+      if (playback.cancelled) throw new Error('MP3 playback was cancelled.');
+    } catch (error) {
+      if (error instanceof AwtrixNgAudioPlaybackError && error.timedOut) {
+        const state = await this.#client.getAudio();
+        if (state.alert?.playing && state.alert.name === url) {
+          await this.#client.stopAlert();
+        }
+      }
+      throw error;
+    } finally {
+      finishStart();
+      this.#urlPlayback = undefined;
+    }
+  }
+
+  async stopUrlSound(): Promise<void> {
+    if (this.#stoppingAudio) throw new Error('An alert stop is already running.');
+    this.#stoppingAudio = true;
+    try {
+      await this.requireUrlAudio();
+      const playback = this.#urlPlayback;
+      if (playback !== undefined) playback.cancelled = true;
+      await playback?.startFinished;
+      await this.#client.stopAlert();
+    } finally {
+      this.#stoppingAudio = false;
+    }
+  }
+
+  private async requireUrlAudio(): Promise<void> {
+    const capabilities = await this.readAudioCapabilities();
+    if (capabilities.audio?.mp3 !== true || capabilities.audio?.url !== true || !usesAwtrixNgSoundObjects(capabilities)) {
+      throw new Error('This AWTRIX NG device does not support native MP3 URL playback.');
+    }
+  }
+
+  private async readAudioCapabilities(): Promise<AwtrixNgApiCapabilitiesResponse> {
+    const capabilities = await this.#client.getCapabilities();
+    if (!isPlainObject(capabilities) || (capabilities.audio !== undefined && !isPlainObject(capabilities.audio))) {
+      throw new AwtrixNgInvalidResponseError({ endpoint: CapabilitiesEndpoint, expectedShape: 'a capabilities object with optional audio flags', actualValue: capabilities });
+    }
+    return capabilities;
+  }
+
   putIndicator(id: AwtrixNgIndicatorId, payload: AwtrixNgApiIndicatorPayload): Promise<AwtrixNgApiOkResponse> {
     return this.#client.putIndicator(id, payload);
   }
@@ -364,8 +540,20 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     return this.#client.deleteIndicator(id);
   }
 
-  putPushedApp(name: string, payload: AwtrixNgApiPushedAppPayload): Promise<AwtrixNgApiOkResponse> {
+  async putPushedApp(name: string, payload: AwtrixNgApiPushedAppPayload): Promise<AwtrixNgApiOkResponse> {
+    if (payload.layout !== undefined) {
+      toAwtrixNgPushedAppPayload(payload as AwtrixNgPushedAppInput);
+      assertAwtrixNgLayoutCapabilities(payload.layout, await this.#client.getCapabilities(), 'pushedApp');
+    }
     return this.#client.putPushedApp(name, payload);
+  }
+
+  async sendHeaderNotification(input: AwtrixNgHeaderLayoutInput): Promise<void> {
+    await this.sendNotification(createAwtrixNgHeaderLayout(input));
+  }
+
+  async putHeaderApp(name: string, input: AwtrixNgHeaderLayoutInput): Promise<void> {
+    await this.putPushedApp(toAwtrixNgHomeyPushedAppName(name), createAwtrixNgHeaderLayout(input));
   }
 
   deleteApp(name: string): Promise<AwtrixNgApiOkResponse> {

@@ -17,6 +17,7 @@ import {
   AwtrixNgApiTextCases,
 } from '../Api/Types';
 import { isPlainObject } from '../Support/Guards';
+import { assertAwtrixNgSound } from '../Services/Audio';
 
 export {
   AwtrixNgHomeyPushedAppName,
@@ -103,6 +104,7 @@ const pageFieldMap: Record<keyof AwtrixNgApiPagePayload, true> = {
   iconMode: true,
   iconOffsetX: true,
   lineChart: true,
+  layout: true,
   overlay: true,
   palette: true,
   paletteBlend: true,
@@ -614,7 +616,157 @@ const assertBooleanField = (input: Record<string, unknown>, field: string, targe
   });
 };
 
+const layoutFields = new Set(['version', 'regions', 'backgroundColor', 'effect', 'effectSpeed', 'overlay',
+  'palette', 'paletteBlend', 'paletteSpan', 'paletteSpeed']);
+const regionContents = ['text', 'icon', 'chart', 'progress', 'draw'] as const;
+const regionOptions: Record<typeof regionContents[number], string[]> = {
+  text: ['font', 'color', 'textColor', 'palette', 'paletteBlend', 'paletteSpan', 'paletteSpeed', 'align', 'valign',
+    'scroll', 'repeat', 'textCase', 'textBlinkMs', 'textFadeMs'],
+  icon: ['align', 'valign'],
+  chart: ['color', 'textColor', 'palette', 'paletteBlend', 'paletteSpan', 'paletteSpeed'],
+  progress: ['color', 'textColor', 'palette', 'paletteBlend', 'paletteSpan', 'paletteSpeed', 'trackColor'],
+  draw: ['color', 'textColor', 'font'],
+};
+
+const invalidLayoutField = (
+  field: string, target: AwtrixNgTransformTarget, details: string,
+  reason: AwtrixNgUnsupportedPayloadFieldReason = 'invalid-value',
+): never => {
+  throw new UnsupportedAwtrixNgPayloadFieldError({
+    field, target, reason, details,
+  });
+};
+
+/** Keep nested validation errors attached to the actual JSON field. */
+const withLayoutPath = (path: string, validate: () => void): void => {
+  try {
+    validate();
+  } catch (error: unknown) {
+    if (error instanceof UnsupportedAwtrixNgPayloadFieldError) {
+      throw new UnsupportedAwtrixNgPayloadFieldError({
+        field: `${path}.${error.field}`, target: error.target, reason: error.reason, details: error.details,
+      });
+    }
+    throw error;
+  }
+};
+
+const assertLayoutPalette = (value: Record<string, unknown>, target: AwtrixNgTransformTarget): void => {
+  assertPaletteValue(value, target);
+  assertBooleanField(value, 'paletteBlend', target);
+  for (const key of ['paletteSpan', 'paletteSpeed']) assertFiniteNumberField(value, key, target);
+  if (['paletteBlend', 'paletteSpan', 'paletteSpeed'].some((key) => value[key] !== undefined)
+    && value.palette === undefined) {
+    invalidLayoutField('palette', target, 'Palette options require a palette in the same object.');
+  }
+};
+
+const assertLayoutRegion = (region: Record<string, unknown>, target: AwtrixNgTransformTarget): void => {
+  const contents = regionContents.filter((key) => region[key] !== undefined);
+  if (contents.length !== 1) invalidLayoutField('<content>', target, 'A region requires exactly one of text, icon, chart, progress or draw.');
+  const content = contents[0];
+  assertKnownFields(region, new Set(['id', 'box', content, ...regionOptions[content]]), target);
+  if (typeof region.id !== 'string' || region.id.length === 0 || Buffer.byteLength(region.id) > 64) {
+    invalidLayoutField('id', target, 'Region ID must be a non-empty string of at most 64 UTF-8 bytes.');
+  }
+  if (!Array.isArray(region.box) || region.box.length !== 4
+    || !region.box.every((coordinate) => Number.isInteger(coordinate) && coordinate >= 0)
+    || region.box[2] === 0 || region.box[3] === 0) {
+    invalidLayoutField('box', target, 'Expected [x, y, width, height] with non-negative integer coordinates and positive sizes.');
+  }
+  for (const key of ['align', 'valign']) assertStringEnumField(region, key, ['start', 'center', 'end'], target);
+  if (region.font !== undefined && (typeof region.font !== 'string' || region.font.length === 0)) {
+    invalidLayoutField('font', target, 'Expected a font name from device capabilities.');
+  }
+  if (region.color !== undefined && region.textColor !== undefined) {
+    invalidLayoutField('textColor', target, 'Use color or textColor, not both.');
+  }
+  assertLayoutPalette(region, target);
+  if (content === 'text') {
+    assertTextValue(region, target);
+    if (typeof region.scroll === 'string') {
+      assertStringEnumField(region, 'scroll', AwtrixNgApiScrollModes, target);
+    } else {
+      assertScrollValue(region, target);
+    }
+    const scroll = isPlainObject(region.scroll) ? region.scroll : {};
+    for (const [key, max] of [['speed', 1000000], ['holdMs', 1000000], ['gap', 32767]] as const) {
+      if (typeof scroll[key] === 'number' && scroll[key] > max) {
+        invalidLayoutField(`scroll.${key}`, target, `Expected a value no greater than ${max}.`);
+      }
+    }
+    assertStringEnumField(region, 'textCase', AwtrixNgApiTextCases, target);
+    for (const key of ['repeat', 'textBlinkMs', 'textFadeMs']) {
+      assertFiniteNumberField(region, key, target, true);
+      if (typeof region[key] === 'number' && (region[key] < 0 || (key === 'repeat' && region[key] > 1000000))) {
+        invalidLayoutField(key, target, key === 'repeat' ? 'Expected an integer in the range 0..1000000.' : 'Expected a non-negative integer.');
+      }
+    }
+  }
+  if (content === 'icon' && (typeof region.icon !== 'string' || region.icon.length === 0)) {
+    invalidLayoutField('icon', target, 'Expected a non-empty icon ID or data URL.');
+  }
+  if (content === 'draw') assertDrawValue(region, target);
+  if (content === 'progress' && (typeof region.progress !== 'number' || !Number.isFinite(region.progress)
+    || region.progress < 0 || region.progress > 100)) {
+    invalidLayoutField('progress', target, 'Expected a number in the range 0..100.');
+  }
+  if (content === 'chart') {
+    if (!isPlainObject(region.chart)) invalidLayoutField('chart', target, 'Expected a chart object.');
+    const chart = region.chart as Record<string, unknown>;
+    withLayoutPath('chart', () => {
+      assertKnownFields(chart, new Set(['values', 'type', 'min', 'max']), target);
+      assertStringEnumField(chart, 'type', ['line', 'bar'], target);
+      if (!Array.isArray(chart.values) || chart.values.length === 0 || chart.values.length > 128
+        || !chart.values.every(Number.isInteger)) invalidLayoutField('values', target, 'Expected 1..128 integer chart points.');
+      if (chart.min !== undefined || chart.max !== undefined) {
+        if (typeof chart.min !== 'number' || typeof chart.max !== 'number'
+          || !Number.isFinite(chart.min) || !Number.isFinite(chart.max) || chart.min >= chart.max) {
+          invalidLayoutField('min', target, 'Set both min and max, with min smaller than max.');
+        }
+      }
+    });
+  }
+};
+
+const assertLayoutValue = (input: Record<string, unknown>, target: 'notification' | 'pushedApp'): void => {
+  if (input.layout === undefined) return;
+  const conflicting = pageFields.find((key) => !['layout', 'durationMs', 'repeat'].includes(key) && input[key] !== undefined);
+  if (conflicting !== undefined) {
+    invalidLayoutField(conflicting, target, 'Drawing fields must be inside layout when a layout is supplied.', 'unsupported-field');
+  }
+  if (!isPlainObject(input.layout)) invalidLayoutField('layout', target, 'Expected a layout object.');
+  const layout = input.layout as Record<string, unknown>;
+  withLayoutPath('layout', () => {
+    assertKnownFields(layout, layoutFields, target);
+    if (layout.version !== 1) invalidLayoutField('version', target, 'Only layout version 1 is supported.');
+    if (!Array.isArray(layout.regions) || layout.regions.length === 0 || layout.regions.length > 16) {
+      invalidLayoutField('regions', target, 'Expected 1..16 regions.');
+    }
+    const ids = new Set<string>();
+    (layout.regions as unknown[]).forEach((region, index) => withLayoutPath(`regions[${index}]`, () => {
+      if (!isPlainObject(region)) invalidLayoutField('<region>', target, 'Expected a region object.');
+      const record = region as Record<string, unknown>;
+      assertLayoutRegion(record, target);
+      if (ids.has(record.id as string)) invalidLayoutField('id', target, 'Region IDs must be unique within the layout.');
+      ids.add(record.id as string);
+    }));
+    if (layout.backgroundColor !== undefined && layout.effect !== undefined) {
+      invalidLayoutField('effect', target, 'An effect cannot be combined with backgroundColor.');
+    }
+    for (const key of ['effect', 'overlay']) {
+      if (layout[key] !== undefined && typeof layout[key] !== 'string') invalidLayoutField(key, target, 'Expected a name from device capabilities.');
+    }
+    if (layout.effectSpeed !== undefined && (typeof layout.effectSpeed !== 'number' || !Number.isFinite(layout.effectSpeed)
+      || layout.effectSpeed < 0.1 || layout.effectSpeed > 10)) {
+      invalidLayoutField('effectSpeed', target, 'Expected a number in the range 0.1..10.');
+    }
+    assertLayoutPalette(layout, target);
+  });
+};
+
 const assertPagePayload = (input: Record<string, unknown>, target: 'notification' | 'pushedApp'): void => {
+  assertLayoutValue(input, target);
   assertTextValue(input, target);
   assertScrollValue(input, target);
   assertDrawValue(input, target);
@@ -690,6 +842,7 @@ export const toAwtrixNgNotificationPayload = (input: AwtrixNgNotificationInput):
   assertBooleanField(inputRecord, 'stack', 'notification');
   assertBooleanField(inputRecord, 'wakeup', 'notification');
   assertBooleanField(inputRecord, 'soundLoop', 'notification');
+  if (inputRecord.sound !== undefined && typeof inputRecord.sound !== 'number') assertAwtrixNgSound(inputRecord.sound);
 
   return {
     ...input,

@@ -105,8 +105,20 @@ export interface AwtrixNgApiCapabilitiesResponse {
   transitions: string[];
   overlays: string[];
   palettes: string[];
-  radio: boolean;
-  gpio: AwtrixNgApiGpioCapabilities;
+  radio?: boolean;
+  gpio: AwtrixNgApiGpioCapabilities | null;
+  platform?: { id: string };
+  display?: { width: number; height: number };
+  fonts?: { name: string; ascent: number; descent: number; lineHeight: number }[];
+  layouts?: {
+    version: number;
+    limits: { regions: number; scrollers: number; assets: number; chartPoints: number; textBytes: number };
+  };
+  audio?: {
+    synth?: boolean; mp3?: boolean; radio?: boolean; mixer?: boolean;
+    song?: boolean; rtttl?: boolean; speech?: boolean; track?: boolean;
+    url?: boolean; effect?: boolean; clip?: boolean;
+  };
 }
 
 export type AwtrixNgApiTimeSeparatorMode = 'steady' | 'blink' | 'pulse';
@@ -340,7 +352,48 @@ export type AwtrixNgApiDrawCommand =
   | AwtrixNgApiDrawTextCommand
   | AwtrixNgApiDrawBitmapCommand;
 
+export type AwtrixNgApiLayoutAlignment = 'start' | 'center' | 'end';
+
+export interface AwtrixNgApiLayoutRegion {
+  id: string;
+  box: [number, number, number, number];
+  text?: string | AwtrixNgApiTextFragment[];
+  icon?: string;
+  chart?: { values: number[]; type?: 'line' | 'bar'; min?: number; max?: number };
+  progress?: number;
+  draw?: AwtrixNgApiDrawCommand[];
+  font?: string;
+  color?: AwtrixNgApiColorInput | 'palette';
+  textColor?: AwtrixNgApiColorInput | 'palette';
+  trackColor?: AwtrixNgApiColorInput;
+  align?: AwtrixNgApiLayoutAlignment;
+  valign?: AwtrixNgApiLayoutAlignment;
+  scroll?: AwtrixNgApiScrollPayload | AwtrixNgApiScrollMode;
+  repeat?: number;
+  textCase?: AwtrixNgApiTextCase;
+  textBlinkMs?: number;
+  textFadeMs?: number;
+  palette?: AwtrixNgApiPalette;
+  paletteBlend?: boolean;
+  paletteSpan?: number;
+  paletteSpeed?: number;
+}
+
+export interface AwtrixNgApiLayout {
+  version: 1;
+  regions: AwtrixNgApiLayoutRegion[];
+  backgroundColor?: AwtrixNgApiColorInput;
+  effect?: string;
+  effectSpeed?: number;
+  overlay?: string;
+  palette?: AwtrixNgApiPalette;
+  paletteBlend?: boolean;
+  paletteSpan?: number;
+  paletteSpeed?: number;
+}
+
 export interface AwtrixNgApiPagePayload {
+  layout?: AwtrixNgApiLayout;
   text?: string | AwtrixNgApiTextFragment[];
   textCase?: AwtrixNgApiTextCase;
   font?: AwtrixNgApiFont;
@@ -374,12 +427,22 @@ export interface AwtrixNgApiPagePayload {
   draw?: AwtrixNgApiDrawCommand[];
 }
 
+export type AwtrixNgApiSoundObject = (
+  | { file: string }
+  | { rtttl: string }
+  | { song: string }
+  | { speech: string }
+  | { track: number }
+) & { loop?: boolean; nextBar?: boolean };
+
+export type AwtrixNgApiSound = string | AwtrixNgApiSoundObject | (string | AwtrixNgApiSoundObject)[];
+
 export interface AwtrixNgApiNotificationPayload extends AwtrixNgApiPagePayload {
   name?: string;
   hold?: boolean;
   stack?: boolean;
   wakeup?: boolean;
-  sound?: string | number;
+  sound?: AwtrixNgApiSound | number;
   soundRtttl?: string;
   soundLoop?: boolean;
 }
@@ -403,6 +466,22 @@ export interface AwtrixNgApiSoundPlayPayload {
   name?: string;
   rtttl?: string;
   builtin?: string;
+  fx?: string;
+  file?: string;
+  song?: string;
+  loop?: boolean;
+}
+
+export interface AwtrixNgApiAudioGroup {
+  playing: boolean;
+  name: string;
+  error: string;
+}
+
+export interface AwtrixNgApiAudioResponse {
+  alert: AwtrixNgApiAudioGroup;
+  app: AwtrixNgApiAudioGroup;
+  radio: { playing: boolean; error: string };
 }
 
 export interface AwtrixNgApiFileEntry {

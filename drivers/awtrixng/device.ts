@@ -5,6 +5,8 @@ import path from 'path';
 import AwtrixNgApi, {
   AwtrixNgBasicAuthOptions,
   AwtrixNgDeviceProbeResult,
+  AwtrixNgFeatureCapabilityIds,
+  AwtrixNgHeaderLayoutInput,
   AwtrixNgWeatherOverlayCapabilityId,
   formatAwtrixNgErrorDetails,
 } from '../../lib/awtrixng/Api/Api';
@@ -20,6 +22,9 @@ import { AwtrixDeviceType } from '../awtrix-device-type';
 
 const PollIntervalMs = 60000;
 const BundledIconsDirectory = path.join(__dirname, 'assets/images/icons');
+const BundledIcons16Directory = path.join(__dirname, 'assets/images/icons-16');
+const Tc002BundledIconsRevision = 1;
+const Tc002BundledIconsRevisionStoreKey = 'tc002BundledIconsRevision';
 const MaxConcurrentIconUploads = 3;
 const RedactedSettingValue = '<redacted>';
 const BuiltinAppsInitializedStoreKey = 'builtinAppsInitialized';
@@ -144,6 +149,10 @@ class AwtrixNgDevice extends Device {
         await this.refreshDisplayFromDevice();
         await this.synchronizeBuiltinAppsForFirmware(deviceStateResult.device.version, true, true);
         await this.reconcileButtonCallbackOnStartup();
+        if (deviceStateResult.device.boardType === 'tc002'
+          && this.getStoreValue(Tc002BundledIconsRevisionStoreKey) !== Tc002BundledIconsRevision) {
+          await this.uploadBundledIconsSafely();
+        }
       }
     } catch (error: unknown) {
       this.error(error);
@@ -157,7 +166,7 @@ class AwtrixNgDevice extends Device {
 
   async onAdded(): Promise<void> {
     this.log('AwtrixNgDevice has been added');
-    await this.uploadBundledIcons();
+    await this.uploadBundledIconsSafely();
   }
 
   async onDeleted(): Promise<void> {
@@ -345,6 +354,46 @@ class AwtrixNgDevice extends Device {
     }
 
     return this.api;
+  }
+
+  async playSynthEffect(fx: string): Promise<void> {
+    if (!this.hasCapability(AwtrixNgFeatureCapabilityIds.audioSynth)) {
+      throw new Error('This AWTRIX NG device does not support synthesized audio.');
+    }
+    await this.getApi().playSynthFx(fx);
+  }
+
+  async sendHeaderNotification(input: AwtrixNgHeaderLayoutInput): Promise<void> {
+    this.requireHeaderLayoutCapabilities();
+    await this.getApi().sendHeaderNotification(input);
+  }
+
+  async putHeaderApp(name: string, input: AwtrixNgHeaderLayoutInput): Promise<void> {
+    this.requireHeaderLayoutCapabilities();
+    await this.getApi().putHeaderApp(name, input);
+  }
+
+  private requireHeaderLayoutCapabilities(): void {
+    if (!this.hasCapability(AwtrixNgFeatureCapabilityIds.layout)
+      || !this.hasCapability(AwtrixNgFeatureCapabilityIds.display16)) {
+      throw new Error('This AWTRIX NG device does not support the 16-row header layout.');
+    }
+  }
+
+  async playMp3Url(url: string): Promise<void> {
+    this.requireUrlAudioCapability();
+    await this.getApi().playMp3Url(url);
+  }
+
+  async stopUrlSound(): Promise<void> {
+    this.requireUrlAudioCapability();
+    await this.getApi().stopUrlSound();
+  }
+
+  private requireUrlAudioCapability(): void {
+    if (!this.hasCapability(AwtrixNgFeatureCapabilityIds.audioUrl)) {
+      throw new Error('This AWTRIX NG device does not support native MP3 URL playback.');
+    }
   }
 
   async refreshDeviceState(options: { allowAddCapabilities: boolean }): Promise<AwtrixNgDeviceProbeResult | undefined> {
@@ -858,20 +907,39 @@ class AwtrixNgDevice extends Device {
    * instead of thrown and reported once. They are logged in file order so the diagnostics
    * stay stable regardless of which worker hit them.
    */
-  private async uploadBundledIcons(): Promise<void> {
+  private async uploadBundledIconsSafely(): Promise<void> {
+    try {
+      const iconSize = await this.getApi().getBundledIconSize(this.getData().id as string);
+
+      if (iconSize === 16 && this.getStoreValue(Tc002BundledIconsRevisionStoreKey) === Tc002BundledIconsRevision) {
+        return;
+      }
+
+      const success = await this.uploadBundledIcons(iconSize);
+
+      if (iconSize === 16 && success) {
+        await this.setStoreValue(Tc002BundledIconsRevisionStoreKey, Tc002BundledIconsRevision);
+      }
+    } catch (error: unknown) {
+      this.error(error);
+    }
+  }
+
+  private async uploadBundledIcons(iconSize: 8 | 16): Promise<boolean> {
     const { icons } = this;
 
     if (icons === undefined) {
       throw new Error(this.getConnectionNotConfiguredMessage());
     }
 
-    const dirEntries = await fs.promises.readdir(BundledIconsDirectory, { withFileTypes: true });
+    const directory = iconSize === 16 ? BundledIcons16Directory : BundledIconsDirectory;
+    const dirEntries = await fs.promises.readdir(directory, { withFileTypes: true });
     const iconFiles = dirEntries.filter((entry) => entry.isFile()).map((entry) => entry.name);
     const failures: Array<{ fileName: string; error: unknown; index: number }> = [];
 
     await runWithConcurrencyLimit(iconFiles, MaxConcurrentIconUploads, async (fileName, index) => {
       try {
-        const body = await fs.promises.readFile(path.join(BundledIconsDirectory, fileName));
+        const body = await fs.promises.readFile(path.join(directory, fileName));
         await icons.upload({
           fileName,
           body,
@@ -885,6 +953,8 @@ class AwtrixNgDevice extends Device {
       failures.sort((left, right) => left.index - right.index);
       this.error(failures.map(({ fileName, error }) => ({ fileName, error })));
     }
+
+    return failures.length === 0;
   }
 
   private getBaseUrlFromStore(): string | undefined {

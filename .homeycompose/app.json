@@ -16,7 +16,7 @@
   "category": [
     "appliances"
   ],
-  "permissions": [],
+  "permissions": ["homey:app:com.athom.soundboard"],
   "api": {
     "awtrixNgButtonCallback": {
       "method": "POST",

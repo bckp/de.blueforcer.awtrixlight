@@ -3,6 +3,7 @@ import { parseAwtrixNgApiError } from './ErrorParser';
 import {
   AwtrixNgApiAppsOrderPayload,
   AwtrixNgApiAppsResponse,
+  AwtrixNgApiAudioResponse,
   AwtrixNgApiCapabilitiesResponse,
   AwtrixNgApiDeviceStateResponse,
   AwtrixNgApiDisplayPatch,
@@ -139,6 +140,26 @@ export default class AwtrixNgClient {
       path: '/api/v1/audio/play',
       body: { rtttl },
     });
+  }
+
+  playSynthFx(fx: string): Promise<AwtrixNgApiOkResponse> {
+    return this.#request<AwtrixNgApiOkResponse, AwtrixNgApiSoundPlayPayload>({
+      method: 'POST',
+      path: '/api/v1/audio/play',
+      body: { fx },
+    });
+  }
+
+  playSound(payload: AwtrixNgApiSoundPlayPayload): Promise<AwtrixNgApiOkResponse> {
+    return this.#request<AwtrixNgApiOkResponse>({ method: 'POST', path: '/api/v1/audio/play', body: payload });
+  }
+
+  getAudio(): Promise<AwtrixNgApiAudioResponse> {
+    return this.#request<AwtrixNgApiAudioResponse>({ method: 'GET', path: '/api/v1/audio' });
+  }
+
+  stopAlert(): Promise<AwtrixNgApiOkResponse> {
+    return this.#request<AwtrixNgApiOkResponse>({ method: 'POST', path: '/api/v1/audio/stop', body: { group: 'alert' } });
   }
 
   getApps(): Promise<AwtrixNgApiAppsResponse> {

@@ -26,6 +26,228 @@
       "hint": {
         "en": "Enable button callbacks in the AWTRIX NG device settings before using this trigger."
       }
+    },
+    {
+      "id": "awtrixng_knob_pressed",
+      "$filter": "capabilities=awtrixng_knob",
+      "title": {
+        "en": "Knob was pressed",
+        "cs": "Otočný ovladač byl stisknut"
+      },
+      "hint": {
+        "en": "Enable button callbacks in the AWTRIX NG device settings before using this trigger.",
+        "cs": "Pro tento spouštěč zapněte callback tlačítek v nastavení zařízení AWTRIX NG."
+      }
+    },
+    {
+      "id": "awtrixng_knob_turned",
+      "$filter": "capabilities=awtrixng_knob",
+      "title": {
+        "en": "Knob was turned",
+        "cs": "Otočným ovladačem bylo otočeno"
+      },
+      "hint": {
+        "en": "Enable button callbacks in the AWTRIX NG device settings before using this trigger. The turn token is negative to the left and positive to the right.",
+        "cs": "Zapněte callback tlačítek. Hodnota otočení je záporná doleva a kladná doprava."
+      },
+      "tokens": [
+        {
+          "name": "turn",
+          "type": "number",
+          "title": {
+            "en": "Turn",
+            "cs": "Otočení"
+          }
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "awtrixng_audio_fx",
+      "$filter": "capabilities=awtrixng_audio_synth",
+      "title": {
+        "en": "Play a synthesized sound",
+        "cs": "Přehrát syntetizovaný zvuk"
+      },
+      "titleFormatted": {
+        "en": "Play synthesized sound [[fx]]",
+        "cs": "Přehrát syntetizovaný zvuk [[fx]]"
+      },
+      "hint": {
+        "en": "Play a synthesized sound once. On the new audio API it replaces the current alert; older firmware plays an fx effect.",
+        "cs": "Přehraje syntetizovaný zvuk jednou. Nové audio API nahrazuje právě přehrávané upozornění; starší firmware přehraje efekt fx."
+      },
+      "args": [
+        {
+          "name": "fx",
+          "type": "text",
+          "placeholder": {
+            "en": "bpm 120; inst lead wave=pulse volume=40; lead: c4 e g c5",
+            "cs": "bpm 120; inst lead wave=pulse volume=40; lead: c4 e g c5"
+          }
+        }
+      ]
+    },
+    {
+      "id": "awtrixng_audio_url",
+      "$filter": "capabilities=awtrixng_audio_url",
+      "title": {
+        "en": "Play an MP3 from a URL",
+        "cs": "Přehrát MP3 z URL"
+      },
+      "titleFormatted": {
+        "en": "Play MP3 [[url]]",
+        "cs": "Přehrát MP3 [[url]]"
+      },
+      "hint": {
+        "en": "Download and play an MP3 once, without storing it. Maximum 4 MB and 120 seconds. This action finishes when playback ends and reports download errors. Replaces the current alert.",
+        "cs": "Stáhne a jednou přehraje MP3 bez uložení. Nejvýše 4 MB a 120 sekund. Akce skončí s přehráváním a hlásí chyby stahování. Nahrazuje právě přehrávané upozornění."
+      },
+      "args": [
+        {
+          "name": "url",
+          "type": "text",
+          "title": {
+            "en": "MP3 URL",
+            "cs": "URL souboru MP3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "awtrixng_audio_soundboard",
+      "$filter": "capabilities=awtrixng_audio_url",
+      "title": {
+        "en": "Play an MP3 from Soundboard",
+        "cs": "Přehrát MP3 ze Soundboardu"
+      },
+      "titleFormatted": {
+        "en": "Play Soundboard MP3 [[sound]]",
+        "cs": "Přehrát MP3 [[sound]] ze Soundboardu"
+      },
+      "hint": {
+        "en": "Requires Soundboard and a local Homey address reachable from the clock. Plays once without copying to storage. MP3 only, maximum 120 seconds. Select the sound again if it was deleted and replaced.",
+        "cs": "Vyžaduje Soundboard a lokální adresu Homey dostupnou ze zařízení. Přehraje jednou bez kopie v úložišti. Pouze MP3, nejvýše 120 sekund. Po smazání a nahrazení zvuku ho vyberte znovu."
+      },
+      "args": [
+        {
+          "name": "sound",
+          "type": "autocomplete",
+          "title": {
+            "en": "Sound",
+            "cs": "Zvuk"
+          }
+        }
+      ]
+    },
+    {
+      "id": "awtrixng_audio_stop",
+      "$filter": "capabilities=awtrixng_audio_url",
+      "title": {
+        "en": "Stop the current alert sound",
+        "cs": "Zastavit zvuk právě přehrávaného upozornění"
+      },
+      "hint": {
+        "en": "Stops the alert group, including a URL or Soundboard sound. Script sounds and radio are controlled separately.",
+        "cs": "Zastaví skupinu upozornění včetně zvuku z URL či Soundboardu. Zvuky skriptů a rádia mají samostatné ovládání."
+      }
+    },
+    {
+      "id": "awtrixng_notification_header",
+      "$filter": "capabilities=awtrixng_layout,awtrixng_display_16px",
+      "title": {
+        "en": "Show a notification with a header",
+        "cs": "Zobrazit notifikaci s nadpisem"
+      },
+      "titleFormatted": {
+        "en": "Show [[icon]], [[header]], [[text]]",
+        "cs": "Zobrazit [[icon]], [[header]], [[text]]"
+      },
+      "hint": {
+        "en": "For a 52×16 display with layout support: a 16×16 icon on the left, header and text on the right. Text rows scroll independently. Use the JSON card for a custom layout. Without Add duration, waits for each scrolling row to finish once. With Add duration, uses that time. Text that fits uses the device default duration.",
+        "cs": "Pro displej 52×16 s podporou layoutu: ikona 16×16 vlevo, nadpis a text vpravo. Textové řádky rolují samostatně. Vlastní rozložení zadejte přes kartu s JSON. Bez zadané doby počká na jedno celé projetí každého rolujícího řádku. S Přidat dobu trvání použije zadaný čas. Text, který se vejde, používá výchozí dobu zařízení."
+      },
+      "args": [
+        {
+          "name": "icon",
+          "type": "autocomplete",
+          "title": {
+            "en": "Icon",
+            "cs": "Ikona"
+          },
+          "required": false
+        },
+        {
+          "name": "header",
+          "type": "text",
+          "title": {
+            "en": "Header",
+            "cs": "Nadpis"
+          }
+        },
+        {
+          "name": "text",
+          "type": "text",
+          "title": {
+            "en": "Text",
+            "cs": "Text"
+          }
+        }
+      ],
+      "duration": true
+    },
+    {
+      "id": "awtrixng_application_header",
+      "$filter": "capabilities=awtrixng_layout,awtrixng_display_16px",
+      "title": {
+        "en": "Show an app with a header",
+        "cs": "Zobrazit aplikaci s nadpisem"
+      },
+      "titleFormatted": {
+        "en": "Show app [[name]]: [[icon]], [[header]], [[text]]",
+        "cs": "Zobrazit aplikaci [[name]]: [[icon]], [[header]], [[text]]"
+      },
+      "hint": {
+        "en": "For a 52×16 display with layout support: a 16×16 icon on the left, header and text on the right. Text rows scroll independently. Use the JSON card for a custom layout. Without Add duration, waits for each scrolling row to finish once. With Add duration, uses that time. Text that fits uses the device default duration.",
+        "cs": "Pro displej 52×16 s podporou layoutu: ikona 16×16 vlevo, nadpis a text vpravo. Textové řádky rolují samostatně. Vlastní rozložení zadejte přes kartu s JSON. Bez zadané doby počká na jedno celé projetí každého rolujícího řádku. S Přidat dobu trvání použije zadaný čas. Text, který se vejde, používá výchozí dobu zařízení."
+      },
+      "args": [
+        {
+          "name": "name",
+          "type": "text",
+          "title": {
+            "en": "App name",
+            "cs": "Název aplikace"
+          }
+        },
+        {
+          "name": "icon",
+          "type": "autocomplete",
+          "title": {
+            "en": "Icon",
+            "cs": "Ikona"
+          },
+          "required": false
+        },
+        {
+          "name": "header",
+          "type": "text",
+          "title": {
+            "en": "Header",
+            "cs": "Nadpis"
+          }
+        },
+        {
+          "name": "text",
+          "type": "text",
+          "title": {
+            "en": "Text",
+            "cs": "Text"
+          }
+        }
+      ],
+      "duration": true
     }
   ]
 }

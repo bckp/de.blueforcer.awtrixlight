@@ -89,14 +89,19 @@ const isBuiltinAppInLoop = (apps: AwtrixNgApiAppsResponse, appName: AwtrixNgBuil
   apps.some((app) => isAvailableBuiltinApp(app, appName) && app.enabled === true)
 );
 
-const getCurrentLoopAppNames = (apps: AwtrixNgApiAppsResponse): string[] => apps
-  .map((app, index) => ({ app, index }))
-  .filter(({ app }) => app.slot !== undefined && app.slot !== null)
-  .sort((left, right) => {
-    const slotDifference = (left.app.slot as number) - (right.app.slot as number);
-    return slotDifference === 0 ? left.index - right.index : slotDifference;
-  })
-  .map(({ app }) => app.name);
+const getCurrentLoopAppNames = (apps: AwtrixNgApiAppsResponse): string[] => {
+  const loopApps = apps
+    .map((app, index) => ({ app, index }))
+    .filter(({ app }) => app.inLoop === true || (app.slot !== undefined && app.slot !== null));
+
+  // TC002 currently reports inLoop: true with slot: null. When any slot is absent,
+  // inventory order is the only complete ordering supplied by the device.
+  if (loopApps.every(({ app }) => typeof app.slot === 'number')) {
+    loopApps.sort((left, right) => (left.app.slot as number) - (right.app.slot as number) || left.index - right.index);
+  }
+
+  return loopApps.map(({ app }) => app.name);
+};
 
 const getCurrentDisabledAppNames = (apps: AwtrixNgApiAppsResponse): string[] => Array.from(new Set(
   apps.filter((app) => app.enabled === false).map((app) => app.name),
