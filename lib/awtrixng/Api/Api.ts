@@ -39,9 +39,11 @@ import AwtrixNgIcons, { AwtrixNgIconsOptions } from '../Services/Icons';
 import { readAwtrixNgButtonCallback, writeAwtrixNgButtonCallback } from '../Services/ButtonCallback';
 import { isPlainObject } from '../Support/Guards';
 import { assertAwtrixNgLayoutCapabilities, AwtrixNgHeaderLayoutInput, createAwtrixNgHeaderLayout } from '../Services/Layouts';
+import { assertAwtrixNgPageCapabilities, needsAwtrixNgPageCapabilities } from '../Services/PageCapabilities';
 import {
   AwtrixNgNotificationInput, AwtrixNgPushedAppInput,
   toAwtrixNgHomeyPushedAppName, toAwtrixNgNotificationPayload, toAwtrixNgPushedAppPayload,
+  UnsupportedAwtrixNgPayloadFieldError,
 } from '../Payload/Transformers';
 import {
   AwtrixNgAudioPlaybackError,
@@ -49,6 +51,10 @@ import {
   usesAwtrixNgSoundObjects,
   validateAwtrixNgMp3Url,
   waitForAwtrixNgUrlSound,
+  hasAwtrixNgGroupAudio, assertAwtrixNgMixerLevel, readAwtrixNgMixerLevels,
+  readAwtrixNgRadioStations, validateAwtrixNgStation, assertAwtrixNgClip, downloadAwtrixNgClip,
+  AwtrixNgAudioGroup, AwtrixNgMixerField, AwtrixNgMixerLevels, AwtrixNgRadioStation,
+  findAwtrixNgUnsupportedSoundSource,
 } from '../Services/Audio';
 import isAwtrixNgFirmwareVersionSupported from './FirmwareVersion';
 import { AwtrixNgUnsupportedVersionError } from './UnsupportedVersionError';
@@ -70,6 +76,8 @@ export { formatAwtrixNgErrorDetails } from '../Device/Availability';
 export { AwtrixNgWeatherOverlayCapabilityId } from '../Services/Display';
 export { AwtrixNgFeatureCapabilityIds } from '../Device/State';
 export type { AwtrixNgHeaderLayoutInput } from '../Services/Layouts';
+export { AwtrixNgMixerFields } from '../Services/Audio';
+export type { AwtrixNgAudioGroup, AwtrixNgMixerField, AwtrixNgMixerLevels } from '../Services/Audio';
 export type { AwtrixNgBasicAuthOptions } from '../Http/Transport';
 export type { AwtrixNgDeviceProbeResult } from '../Discovery/Detection';
 
@@ -128,9 +136,11 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
 
   #firmwareVersion?: string;
 
-  #urlPlayback?: { cancelled: boolean; startFinished: Promise<void> };
+  #alertPlayback?: { cancelled: boolean; startFinished: Promise<void>; cancel?: () => void };
 
   #stoppingAudio = false;
+
+  #stationWrites: Promise<void> = Promise.resolve();
 
   /**
    * Production code constructs the facade through fromConnection(); the constructor stays
@@ -161,6 +171,21 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     device: AwtrixNgApiDeviceStateResponse,
   ): Promise<AwtrixNgHomeyFeatureCapabilityId[]> {
     const capabilities = await AwtrixNgApi.createClient(options).getCapabilities();
+    return AwtrixNgApi.featuresFromCapabilities(device, capabilities);
+  }
+
+  static supportsGroupAudioFirmware(version: string): boolean {
+    return isAwtrixNgFirmwareVersionSupported(version, '1.1.6');
+  }
+
+  async readFeatures(device: AwtrixNgApiDeviceStateResponse): Promise<AwtrixNgHomeyFeatureCapabilityId[]> {
+    return AwtrixNgApi.featuresFromCapabilities(device, await this.#client.getCapabilities());
+  }
+
+  private static featuresFromCapabilities(
+    device: AwtrixNgApiDeviceStateResponse,
+    capabilities: AwtrixNgApiCapabilitiesResponse,
+  ): AwtrixNgHomeyFeatureCapabilityId[] {
     if (!isPlainObject(capabilities)) {
       throw new AwtrixNgInvalidResponseError({ endpoint: CapabilitiesEndpoint, expectedShape: 'a capabilities object', actualValue: capabilities });
     }
@@ -179,6 +204,12 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
       features.push(AwtrixNgFeatureCapabilityIds.audioUrl);
     }
     if (capabilities.layouts?.version === 1) features.push(AwtrixNgFeatureCapabilityIds.layout);
+    if (hasAwtrixNgGroupAudio(capabilities)) {
+      features.push(AwtrixNgFeatureCapabilityIds.audioGroups, AwtrixNgFeatureCapabilityIds.audioMixer,
+        AwtrixNgFeatureCapabilityIds.volume, AwtrixNgFeatureCapabilityIds.alertVolume, AwtrixNgFeatureCapabilityIds.appVolume);
+      if (capabilities.audio?.radio === true) features.push(AwtrixNgFeatureCapabilityIds.audioRadio, AwtrixNgFeatureCapabilityIds.radioVolume);
+      if (capabilities.audio?.clip === true) features.push(AwtrixNgFeatureCapabilityIds.audioClip);
+    }
     return features;
   }
 
@@ -423,16 +454,23 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
   // ---- AwtrixNgFlowActionClient (delegation to the client) --------------------
 
   async sendNotification(payload: AwtrixNgApiNotificationPayload): Promise<AwtrixNgApiOkResponse> {
-    if (payload.layout !== undefined) {
+    if (needsAwtrixNgPageCapabilities(payload)) {
       toAwtrixNgNotificationPayload(payload as AwtrixNgNotificationInput);
-      assertAwtrixNgLayoutCapabilities(payload.layout, await this.#client.getCapabilities(), 'notification');
+      await this.validatePageCapabilities(payload, 'notification');
     }
     if (payload.sound === undefined && payload.soundRtttl === undefined && payload.soundLoop === undefined) {
       return this.#client.sendNotification(payload);
     }
     const capabilities = await this.readAudioCapabilities();
     if (usesAwtrixNgSoundObjects(capabilities)) {
-      return this.#client.sendNotification(toAwtrixNgSoundObjectNotification(payload));
+      const prepared = toAwtrixNgSoundObjectNotification(payload);
+      const field = prepared.sound === undefined ? undefined : findAwtrixNgUnsupportedSoundSource(prepared.sound as Exclude<typeof prepared.sound, number | undefined>, capabilities);
+      if (field !== undefined) {
+        throw new UnsupportedAwtrixNgPayloadFieldError({
+          field: `sound.${field}`, target: 'notification', reason: 'unsupported-field', details: 'This device does not advertise the required audio output.',
+        });
+      }
+      return this.#client.sendNotification(prepared);
     }
     if (typeof payload.sound === 'object') {
       throw new Error('Sound objects and lists require the new AWTRIX NG audio API.');
@@ -473,7 +511,7 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
   /** Resolves only after a finite URL sound finishes, including asynchronous download errors. */
   async playMp3Url(value: string): Promise<void> {
     const url = validateAwtrixNgMp3Url(value);
-    if (this.#urlPlayback !== undefined || this.#stoppingAudio) throw new Error('A URL sound is already running or stopping on this device. Stop it before starting another.');
+    if (this.#alertPlayback !== undefined || this.#stoppingAudio) throw new Error('An alert action is already running or stopping on this device. Stop it before starting another.');
     let finishStart!: () => void;
     const playback = {
       cancelled: false,
@@ -481,7 +519,7 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
         finishStart = resolve;
       }),
     };
-    this.#urlPlayback = playback;
+    this.#alertPlayback = playback;
     try {
       await this.requireUrlAudio();
       if (playback.cancelled) throw new Error('MP3 playback was cancelled.');
@@ -499,22 +537,135 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
       throw error;
     } finally {
       finishStart();
-      this.#urlPlayback = undefined;
+      this.#alertPlayback = undefined;
     }
   }
 
   async stopUrlSound(): Promise<void> {
+    await this.stopAudioGroup('alert');
+  }
+
+  async stopAudioGroup(group: AwtrixNgAudioGroup): Promise<void> {
+    if (!['alert', 'app', 'radio', 'all'].includes(group)) throw new TypeError('Unknown audio group.');
+    const caps = await this.requireGroupAudio();
+    if (group === 'radio' && caps.audio?.radio !== true) throw new Error('This AWTRIX NG device has no internet radio.');
+    if (group === 'app' || group === 'radio') {
+      await this.#client.stopAudio(group);
+      return;
+    }
     if (this.#stoppingAudio) throw new Error('An alert stop is already running.');
     this.#stoppingAudio = true;
     try {
-      await this.requireUrlAudio();
-      const playback = this.#urlPlayback;
-      if (playback !== undefined) playback.cancelled = true;
+      const playback = this.#alertPlayback;
+      if (playback !== undefined) {
+        playback.cancelled = true;
+        playback.cancel?.();
+      }
       await playback?.startFinished;
-      await this.#client.stopAlert();
+      await this.#client.stopAudio(group);
     } finally {
       this.#stoppingAudio = false;
     }
+  }
+
+  private async requireGroupAudio(): Promise<AwtrixNgApiCapabilitiesResponse> {
+    const caps = await this.readAudioCapabilities();
+    if (!hasAwtrixNgGroupAudio(caps)) throw new Error('This AWTRIX NG device does not support the audio group API.');
+    return caps;
+  }
+
+  async readMixer(): Promise<AwtrixNgMixerLevels> {
+    await this.requireGroupAudio();
+    return readAwtrixNgMixerLevels(await this.#client.getSettings());
+  }
+
+  async setMixerLevel(field: AwtrixNgMixerField, value: number): Promise<AwtrixNgMixerLevels> {
+    assertAwtrixNgMixerLevel(field, value);
+    const caps = await this.requireGroupAudio();
+    if (field === 'radioVolume' && caps.audio?.radio !== true) throw new Error('This AWTRIX NG device has no internet radio.');
+    // Read first: the capability schema identifies the new protocol; the settings confirm its mixer.
+    readAwtrixNgMixerLevels(await this.#client.getSettings());
+    return readAwtrixNgMixerLevels(await this.#client.patchSettings({ [field]: value }));
+  }
+
+  private async requireRadio(): Promise<void> {
+    const caps = await this.requireGroupAudio();
+    if (caps.audio?.radio !== true) throw new Error('This AWTRIX NG device has no internet radio.');
+  }
+
+  async readRadioStations(): Promise<AwtrixNgRadioStation[]> {
+    await this.requireRadio();
+    return readAwtrixNgRadioStations(await this.#client.getAudio());
+  }
+
+  async playRadio(value: string | number): Promise<void> {
+    const station = validateAwtrixNgStation(value);
+    await this.requireRadio();
+    await this.#client.playSound({ station });
+    const state = await this.#client.getAudio();
+    if (!isPlainObject(state.radio) || typeof state.radio.error !== 'string') {
+      throw new AwtrixNgInvalidResponseError({ endpoint: '/api/v1/audio', expectedShape: 'a radio group with an error string', actualValue: state });
+    }
+    if (state.radio.error) throw new AwtrixNgAudioPlaybackError(state.radio.error, false, 'radio.error');
+  }
+
+  async playRadioUrl(value: string): Promise<void> {
+    await this.playRadio(validateAwtrixNgMp3Url(value));
+  }
+
+  async saveRadioStation(name: string, value: string): Promise<void> {
+    if (typeof name !== 'string' || name.trim().length === 0 || Buffer.byteLength(name) > 24) throw new TypeError('Station name must contain 1..24 bytes.');
+    const url = validateAwtrixNgMp3Url(value);
+    if (Buffer.byteLength(url) > 255) throw new TypeError('Station URL must contain at most 255 bytes.');
+    const write = this.#stationWrites.then(async () => {
+      const stations = await this.readRadioStations();
+      const index = stations.findIndex((station) => station.name === name);
+      if (index >= 0) stations[index] = { name, url };
+      else stations.push({ name, url });
+      if (stations.length > 32) throw new RangeError('At most 32 radio stations can be saved.');
+      await this.#client.putRadioStations(stations);
+    });
+    this.#stationWrites = write.then(() => undefined, () => undefined);
+    await write;
+  }
+
+  async playAudioClipUrl(value: string): Promise<void> {
+    await this.startAudioClip((signal) => downloadAwtrixNgClip(value, signal));
+  }
+
+  async playAudioClip(body: Uint8Array): Promise<void> {
+    assertAwtrixNgClip(body);
+    await this.startAudioClip(async () => body);
+  }
+
+  private async startAudioClip(readBody: (signal: AbortSignal) => Promise<Uint8Array>): Promise<void> {
+    if (this.#alertPlayback !== undefined || this.#stoppingAudio) throw new Error('An alert is already running or stopping.');
+    let finishStart!: () => void;
+    const controller = new AbortController();
+    const playback = {
+      cancelled: false,
+      cancel: () => controller.abort(new Error('Audio clip was cancelled.')),
+      startFinished: new Promise<void>((resolve) => {
+        finishStart = resolve;
+      }),
+    };
+    this.#alertPlayback = playback;
+    try {
+      await this.requireClip();
+      if (playback.cancelled) throw new Error('Audio clip was cancelled.');
+      const body = await readBody(controller.signal);
+      assertAwtrixNgClip(body);
+      if (playback.cancelled) throw new Error('Audio clip was cancelled.');
+      await this.#client.playClip(body);
+    } finally {
+      finishStart();
+      this.#alertPlayback = undefined;
+    }
+  }
+
+  private async requireClip(): Promise<void> {
+    const caps = await this.requireGroupAudio();
+    if (caps.audio?.clip !== true) throw new Error('This AWTRIX NG device does not support transient audio clips.');
   }
 
   private async requireUrlAudio(): Promise<void> {
@@ -541,11 +692,25 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
   }
 
   async putPushedApp(name: string, payload: AwtrixNgApiPushedAppPayload): Promise<AwtrixNgApiOkResponse> {
-    if (payload.layout !== undefined) {
+    if (needsAwtrixNgPageCapabilities(payload)) {
       toAwtrixNgPushedAppPayload(payload as AwtrixNgPushedAppInput);
-      assertAwtrixNgLayoutCapabilities(payload.layout, await this.#client.getCapabilities(), 'pushedApp');
+      await this.validatePageCapabilities(payload, 'pushedApp');
     }
     return this.#client.putPushedApp(name, payload);
+  }
+
+  private async validatePageCapabilities(
+    page: AwtrixNgApiNotificationPayload | AwtrixNgApiPushedAppPayload,
+    target: 'notification' | 'pushedApp',
+  ): Promise<void> {
+    const caps = await this.readAudioCapabilities();
+    if (page.layout !== undefined) assertAwtrixNgLayoutCapabilities(page.layout, caps, target);
+    let extended = false;
+    if (page.icons !== undefined || page.iconGap !== undefined) {
+      const version = this.#firmwareVersion ?? (await this.#client.getVersion()).version;
+      extended = typeof version === 'string' && isAwtrixNgFirmwareVersionSupported(version, '1.1.6');
+    }
+    assertAwtrixNgPageCapabilities(page, caps, extended, target);
   }
 
   async sendHeaderNotification(input: AwtrixNgHeaderLayoutInput): Promise<void> {

@@ -1641,3 +1641,53 @@ test('AWTRIX NG refuses HTTPS local address before reading or writing system cal
   }), /buttonCallbackLocalAddressInvalid/);
   assert.deepEqual(harness.requestLog(), []);
 });
+
+test('existing NG device gains mixer and supported audio cards on restart, then follows knob volume changes', async () => {
+  const apiSettings = {
+    autoBrightness: false,
+    autoTransition: true,
+    blockNavigation: false,
+    uppercase: false,
+    transitionEffect: 'Fade',
+    volume: 90,
+    alertVolume: 100,
+    appVolume: 80,
+    radioVolume: 60,
+  };
+  const harness = createSettingsHarness({
+    storeEntries: [['baseUrl', 'http://192.0.2.10'], ['tc002BundledIconsRevision', 1]],
+    settings: { buttonCallbackEnabled: false },
+    responses: {
+      'GET /api/v1/device': () => jsonResponse({ ...createDeviceState(), boardType: 'tc002', version: '1.1.6' }),
+      'GET /api/v1/capabilities': () => jsonResponse({
+        platform: { id: 'tc002' },
+        display: { width: 52, height: 16 },
+        audio: {
+          song: true, rtttl: true, mp3: true, url: true, radio: true, clip: true,
+        },
+      }),
+      'GET /api/v1/settings': () => jsonResponse({ ...apiSettings }),
+      'PATCH /api/v1/settings': (request) => {
+        Object.assign(apiSettings, request.body); return jsonResponse({ ...apiSettings });
+      },
+    },
+  });
+  const capabilities = new Set();
+  harness.device.getCapabilities = () => [...capabilities];
+  harness.device.hasCapability = (id) => capabilities.has(id);
+  harness.device.addCapability = async (id) => {
+    capabilities.add(id);
+  };
+  await harness.device.onInit();
+  assert.equal(harness.device.getAvailable(), true);
+  assert.ok(capabilities.has('awtrixng_audio_radio'));
+  assert.ok(capabilities.has('awtrixng_audio_clip'));
+  assert.ok(capabilities.has('awtrixng_audio_mixer'));
+  const master = harness.capabilityListeners.find((entry) => entry.capabilityId === 'awtrixng_volume');
+  await master.listener(0);
+  assert.equal(apiSettings.volume, 0);
+  assert.ok(harness.capabilityValues.some((entry) => entry.capabilityId === 'awtrixng_volume' && entry.value === 0));
+  apiSettings.volume = 72;
+  await harness.device.homey.tick(60000);
+  assert.ok(harness.capabilityValues.some((entry) => entry.capabilityId === 'awtrixng_volume' && entry.value === 72));
+});

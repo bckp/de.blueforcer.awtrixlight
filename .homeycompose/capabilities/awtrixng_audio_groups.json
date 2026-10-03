@@ -1,0 +1,11 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Audio groups",
+    "cs": "Zvukové skupiny"
+  },
+  "getable": true,
+  "setable": false,
+  "insights": false,
+  "uiComponent": null
+}

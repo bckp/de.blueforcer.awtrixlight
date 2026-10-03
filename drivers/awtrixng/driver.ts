@@ -20,7 +20,9 @@ import {
 import runWithConcurrencyLimit from '../../lib/shared/Concurrency';
 import { isRecord, toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
 import { AwtrixNgButton, parseAwtrixNgButtonCallback } from './button-callback';
-import { getSoundboardMp3s, resolveSoundboardMp3Url, SoundboardAppId } from './soundboard';
+import {
+  getSoundboardMp3s, getSoundboardAudioFiles, resolveSoundboardMp3Url, resolveSoundboardClipUrl, SoundboardAppId,
+} from './soundboard';
 
 const AwtrixNgManualPairingOptionId = '__awtrixng_manual_pairing__' as const;
 const AwtrixNgAuthRequiredPairingOptionPrefix = '__awtrixng_auth_required__:' as const;
@@ -168,6 +170,7 @@ class AwtrixNgDriver extends Driver {
     this.#knobPressedTrigger = this.homey.flow.getDeviceTriggerCard('awtrixng_knob_pressed');
     this.#knobTurnedTrigger = this.homey.flow.getDeviceTriggerCard('awtrixng_knob_turned');
     this.registerHeaderLayoutCards();
+    this.registerAudioCards();
     this.homey.flow.getActionCard('awtrixng_audio_fx').registerRunListener(async (args: {
       device: import('./device').default;
       fx: string;
@@ -193,6 +196,41 @@ class AwtrixNgDriver extends Driver {
     });
     soundboardCard.registerArgumentAutocompleteListener('sound', async (query: string) => (
       (await getSoundboardMp3s(this.homey.api.getApiApp(SoundboardAppId)))
+        .filter((sound) => sound.name.toLowerCase().includes(query.toLowerCase()))
+        .map((sound) => ({ id: sound.id, name: sound.name }))
+    ));
+  }
+
+  private registerAudioCards(): void {
+    type DeviceArgs = { device: import('./device').default };
+    this.homey.flow.getActionCard('awtrixng_audio_volume').registerRunListener(async (
+      args: DeviceArgs & { group: import('../../lib/awtrixng/Api/Api').AwtrixNgMixerField; volume: number },
+    ) => args.device.setAudioVolume(args.group, args.volume));
+    this.homey.flow.getActionCard('awtrixng_audio_stop_group').registerRunListener(async (
+      args: DeviceArgs & { group: import('../../lib/awtrixng/Api/Api').AwtrixNgAudioGroup },
+    ) => args.device.stopAudioGroup(args.group));
+    const radio = this.homey.flow.getActionCard('awtrixng_radio_station');
+    radio.registerRunListener(async (args: DeviceArgs & { station: { id: string } }) => args.device.playRadio(args.station.id));
+    radio.registerArgumentAutocompleteListener('station', async (query: string, args: DeviceArgs) => (
+      (await args.device.getRadioStations()).filter((station) => station.name.toLowerCase().includes(query.toLowerCase()))
+        .map((station) => ({ id: station.name, name: station.name }))
+    ));
+    this.homey.flow.getActionCard('awtrixng_radio_url').registerRunListener(async (
+      args: DeviceArgs & { url: string },
+    ) => args.device.playRadioUrl(args.url));
+    this.homey.flow.getActionCard('awtrixng_radio_save').registerRunListener(async (
+      args: DeviceArgs & { name: string; url: string },
+    ) => args.device.saveRadioStation(args.name, args.url));
+    this.homey.flow.getActionCard('awtrixng_audio_clip_url').registerRunListener(async (
+      args: DeviceArgs & { url: string },
+    ) => args.device.playAudioClipUrl(args.url));
+    const clip = this.homey.flow.getActionCard('awtrixng_audio_clip_soundboard');
+    clip.registerRunListener(async (args: DeviceArgs & { sound: { id: string } }) => {
+      const url = await resolveSoundboardClipUrl(this.homey.api.getApiApp(SoundboardAppId), await this.homey.cloud.getLocalAddress(), args.sound.id);
+      await args.device.playAudioClipUrl(url);
+    });
+    clip.registerArgumentAutocompleteListener('sound', async (query: string) => (
+      (await getSoundboardAudioFiles(this.homey.api.getApiApp(SoundboardAppId)))
         .filter((sound) => sound.name.toLowerCase().includes(query.toLowerCase()))
         .map((sound) => ({ id: sound.id, name: sound.name }))
     ));

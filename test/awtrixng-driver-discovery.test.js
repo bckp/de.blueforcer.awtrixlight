@@ -181,8 +181,9 @@ test('TC002 1.1.6 pairing advertises native URL and song support explicitly', as
   driver.log = () => {};
   const result = await driver.probeManualPairingInput({ address: '192.0.2.60', port: 8080 });
   assert.equal(result.status, 'detected');
-  assert.deepEqual(result.device.capabilities.slice(-4), [
+  assert.deepEqual(result.device.capabilities.slice(-9), [
     'awtrixng_knob', 'awtrixng_display_16px', 'awtrixng_audio_synth', 'awtrixng_audio_url',
+    'awtrixng_audio_groups', 'awtrixng_audio_mixer', 'awtrixng_volume', 'awtrixng_alert_volume', 'awtrixng_app_volume',
   ]);
 });
 

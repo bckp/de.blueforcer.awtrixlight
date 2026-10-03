@@ -2,6 +2,53 @@
 
 Status: implementation notes, updated 2026-10-03. TC002 stays in the AWTRIX NG driver.
 
+## Mixer, radio, clips and flat JSON extensions (2026-10-03)
+
+- Owner-approved scope: mixer, internet radio, group stops, sending transient files
+  and extending JSON only where supported. App selection, script integration and
+  moodlight remain outside this change. No shared driver interface changes.
+- Mixer UI: master/alert/app sliders, and radio slider only on radio-capable
+  hardware. All are integer percentages, including zero. A Flow card writes one
+  level. Init reads levels; the existing minute poll follows knob/web UI changes.
+- New markers: `awtrixng_audio_mixer`, `awtrixng_audio_groups`,
+  `awtrixng_audio_radio`, `awtrixng_audio_clip`. The live new API has no `mixer`
+  flag: group audio uses its explicit boolean `song`/`rtttl` schema and active
+  audio outputs; the mixer additionally validates all four settings. Radio and
+  clips use their own flags. Existing 1.1.6+ devices gain markers on app startup.
+- Radio cards select a saved station by name, play a stream URL, or save/update
+  one station while keeping the rest. Writes from one facade are serialized;
+  external web UI edits cannot be locked because station writes replace the list.
+  The play action checks the immediate radio error. Future network outages remain
+  in device audio state; no new Homey trigger claims to monitor them.
+- Group stop supports alert, app, radio and all. Existing alert-stop card remains
+  compatible. Stopping alert/all cancels prepared URL playback and clip downloads.
+- Clip cards let Homey fetch a URL or freshly resolve a Soundboard MP3/WAV, then
+  POST bytes to `/api/v1/audio/clip`. Limit 2 MiB, bounded streaming download,
+  30-second download timeout, no filesystem storage. The action completes when
+  firmware starts playback; the native URL card still waits for playback to end.
+- JSON accepts `iconGap` (0–128), `icons` (at most four with integer coordinates)
+  and named fonts advertised by the device. No dedicated capability advertises
+  icon gap/multiple icons, so these fields conservatively require the verified
+  firmware 1.1.6 contract or newer. Earlier-version support is UNKNOWN. This is
+  a protocol gate, independent of display dimensions. Internet image URLs require
+  the documented TC002 platform, also in layout regions. Unsupported fields fail
+  explicitly; flat visual keys still cannot be combined with layout.
+- Notification sound JSON additionally accepts `station` with radio capability;
+  station is forbidden in fallback lists and with looping options. Speech length
+  is validated as UTF-8 bytes (1–512). Dedicated TTS Flow is outside this scope.
+- Live physical TC002 1.1.6: started idle; master temporarily set to zero, alert
+  changed to 47; direct silent WAV and Homey-style fetch/send WAV both returned
+  success. All four stop requests succeeded. The documented SWR3 stream reported
+  `radio.playing: true` with an empty error, then false after radio stop. No
+  station was saved. All original mixer levels were restored and checked equal.
+- Live flat JSON: Matrix font, icon gap and extra icon accepted by the physical
+  device; display read returned 52×16 with rendered pixels. The test notification
+  expired after 2.5 seconds. This confirms acceptance/rendering, not a visual
+  comparison of every font or icon position.
+- Sources: [HTTP audio API](https://ang.blueforcer.de/reference/http/#audio),
+  [mixer settings](https://ang.blueforcer.de/reference/settings/#sound),
+  [payload reference](https://ang.blueforcer.de/reference/payload/).
+
 ## Layouts and header cards (2026-10-03)
 
 - The owner proposed a simple TC002 card with icon, header and text, plus custom

@@ -28,7 +28,7 @@ This table lists the JSON properties accepted by the Homey app for AWTRIX NG not
 | `text` | `string` or `TextFragment[]` | X | X |
 | `layout` | `LayoutObject` (device must advertise layout version 1) | X | X |
 | `textCase` | `"inherit" \| "upper" \| "asTyped"` | X | X |
-| `font` | `"small" \| "large"` | X | X |
+| `font` | `string`: `small`, `large`, or a name advertised in `capabilities.fonts` | X | X |
 | `textColor` | `ColorInput \| "palette"` | X | X |
 | `textBlinkMs` | `number` | X | X |
 | `textFadeMs` | `number` | X | X |
@@ -39,6 +39,8 @@ This table lists the JSON properties accepted by the Homey app for AWTRIX NG not
 | `icon` | `string` | X | X |
 | `iconMode` | `"fixed" \| "pushOnce" \| "push"` | X | X |
 | `iconOffsetX` | `number` | X | X |
+| `iconGap` | integer 0–128; verified NG 1.1.6 contract or newer | X | X |
+| `icons` | up to four `{ icon, x?, y? }` objects; verified NG 1.1.6 contract or newer | X | X |
 | `durationMs` | `number` | X | X |
 | `backgroundColor` | `ColorInput` | X | X |
 | `barChart` | `number[]` | X | X |
@@ -91,7 +93,7 @@ These fields are accepted by both notification/message JSON payloads and pushed 
 |---|---|---|
 | `text` | `string` or `TextFragment[]` | Main text. Text fragments must use `{ "text": string, "color"?: ColorInput }`. Legacy `{ "t", "c" }` fragments are rejected. |
 | `textCase` | `"inherit" \| "upper" \| "asTyped"` | Text casing mode. |
-| `font` | `"small" \| "large"` | Panel font. `large` is seven rows high. |
+| `font` | `string` | `small`, `large`, or a Matrix font explicitly advertised in `capabilities.fonts`. |
 | `textColor` | `ColorInput \| "palette"` | Text color. Use `"palette"` together with `palette` for palette-based rendering. |
 | `textBlinkMs` | `number` | Text blink interval in milliseconds. |
 | `textFadeMs` | `number` | Text fade duration in milliseconds. |
@@ -102,6 +104,8 @@ These fields are accepted by both notification/message JSON payloads and pushed 
 | `icon` | `string` | Icon ID/name or AWTRIX NG-supported inline icon value. Exact inline data URL compatibility is not guaranteed. |
 | `iconMode` | `"fixed" \| "pushOnce" \| "push"` | Icon movement mode. |
 | `iconOffsetX` | `number` | Horizontal icon offset. |
+| `iconGap` | integer 0–128 | Gap between the main icon and text; NG 1.1.6 or newer. |
+| `icons` | `{ icon: string, x?: integer, y?: integer }[]` | Up to four independent icons; coordinates −65535…65535. NG 1.1.6 or newer. |
 | `durationMs` | `number` | Page/notification duration in milliseconds. In regular Homey flows this is normally set via Homey's native Add duration option; in JSON-only flows use this field directly. |
 | `backgroundColor` | `ColorInput` | Background color. |
 | `barChart` | `number[]` | Bar chart values. |
@@ -119,6 +123,15 @@ These fields are accepted by both notification/message JSON payloads and pushed 
 | `paletteSpeed` | `number` | Palette animation speed. |
 | `overlay` | `string` | Per-page overlay string. Use documented AWTRIX NG overlay names. `"clear"` semantics are UNKNOWN and not treated as AWTRIX 3 compatibility. |
 | `draw` | `DrawCommand[]` | Low-level draw commands accepted by AWTRIX NG. |
+
+### Device-specific page extensions
+
+Named fonts are checked against the current `capabilities.fonts`, on either panel
+size. Internet icon URLs are accepted only on TC002, including layout regions.
+There is no explicit capability flag for `iconGap` or `icons`: the app deliberately
+requires the verified 1.1.6 payload contract or newer. Support on earlier firmware
+is UNKNOWN. No unsupported field is silently removed. Layout cannot be combined
+with these flat visual fields; place icons in its regions instead.
 
 ### Layout JSON
 
@@ -308,12 +321,17 @@ They accept all common page options plus the notification-only fields below.
 The common page field `repeat` sets the number of completed scrolling-text passes. If the text does not scroll, it has no effect.
 
 On TC002 1.1.6's audio API, `sound` also accepts an object with exactly one source:
-`file`, `rtttl`, `song`, `speech` or `track`. A list contains 1–4 names or sound objects
+`file`, `rtttl`, `song`, `speech`, `track` or `station`. A list contains 1–4 names or sound objects
 and is passed to firmware for its documented fallback selection. `loop` must be a
 boolean; `nextBar` is only allowed with a looping song. Sound objects and lists are
 explicitly rejected on the older audio API. Existing NG `soundRtttl`, numeric
 `sound` and `soundLoop` options are adapted at the NG facade to the new sound object;
 conflicting sources or loop options are rejected instead of discarded.
+
+`station` accepts a saved name, a zero-based index or a stream URL, requires
+`audio.radio`, and cannot have loop/nextBar options or appear in a fallback list.
+`speech` is limited to 1–512 UTF-8 bytes. Single sound objects require their
+corresponding audio capability; lists retain firmware's explicit fallback behavior.
 
 ```json
 {"text":"Door open","sound":[{"speech":"The front door is open."},"ding"]}

@@ -1,6 +1,5 @@
 import {
   AwtrixNgApiDisplayPatch,
-  AwtrixNgApiFonts,
   AwtrixNgApiIconModes,
   AwtrixNgApiIndicatorPayload,
   AwtrixNgApiNotificationPayload,
@@ -103,6 +102,8 @@ const pageFieldMap: Record<keyof AwtrixNgApiPagePayload, true> = {
   icon: true,
   iconMode: true,
   iconOffsetX: true,
+  iconGap: true,
+  icons: true,
   lineChart: true,
   layout: true,
   overlay: true,
@@ -772,7 +773,41 @@ const assertPagePayload = (input: Record<string, unknown>, target: 'notification
   assertDrawValue(input, target);
   assertPaletteValue(input, target);
   assertStringEnumField(input, 'textCase', AwtrixNgApiTextCases, target);
-  assertStringEnumField(input, 'font', AwtrixNgApiFonts, target);
+  if (input.font !== undefined && (typeof input.font !== 'string' || input.font.length === 0)) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'font', target, reason: 'invalid-value', details: 'Expected a non-empty font name advertised by the device.',
+    });
+  }
+  if (input.iconGap !== undefined && (!Number.isInteger(input.iconGap) || Number(input.iconGap) < 0 || Number(input.iconGap) > 128)) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'iconGap', target, reason: 'unsupported-field', details: 'Expected an integer from 0 to 128.',
+    });
+  }
+  if (input.icons !== undefined) {
+    if (!Array.isArray(input.icons) || input.icons.length > 4) {
+      throw new UnsupportedAwtrixNgPayloadFieldError({
+        field: 'icons', target, reason: 'unsupported-field', details: 'Expected at most four icons.',
+      });
+    }
+    input.icons.forEach((item, index) => {
+      const path = `icons[${index}]`;
+      if (!isPlainObject(item) || typeof item.icon !== 'string' || item.icon.length === 0) {
+        throw new UnsupportedAwtrixNgPayloadFieldError({
+          field: `${path}.icon`, target, reason: 'unsupported-field', details: 'Expected a non-empty icon.',
+        });
+      }
+      for (const key of Object.keys(item)) {
+        if (!['icon', 'x', 'y'].includes(key)) {
+          throw new UnsupportedAwtrixNgPayloadFieldError({ field: `${path}.${key}`, target, reason: 'unknown-field' });
+        }
+        if (key !== 'icon' && (!Number.isInteger(item[key]) || Math.abs(Number(item[key])) > 65535)) {
+          throw new UnsupportedAwtrixNgPayloadFieldError({
+            field: `${path}.${key}`, target, reason: 'unsupported-field', details: 'Expected an integer from -65535 to 65535.',
+          });
+        }
+      }
+    });
+  }
   assertStringEnumField(input, 'iconMode', AwtrixNgApiIconModes, target);
   // UNKNOWN: range not documented (durationMs).
   assertFiniteNumberField(input, 'durationMs', target);

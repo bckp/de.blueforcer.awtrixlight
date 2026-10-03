@@ -202,6 +202,9 @@ export interface AwtrixNgApiSettingsResponse {
   batteryColor: AwtrixNgApiColor | null;
   scroll: AwtrixNgApiScrollSettings;
   volume: number;
+  alertVolume?: number;
+  appVolume?: number;
+  bootSound?: boolean;
   radioVolume: number;
   radioMeta: boolean;
   saturation: number;
@@ -396,7 +399,7 @@ export interface AwtrixNgApiPagePayload {
   layout?: AwtrixNgApiLayout;
   text?: string | AwtrixNgApiTextFragment[];
   textCase?: AwtrixNgApiTextCase;
-  font?: AwtrixNgApiFont;
+  font?: string;
   textColor?: AwtrixNgApiColorInput | 'palette';
   textBlinkMs?: number;
   textFadeMs?: number;
@@ -407,6 +410,8 @@ export interface AwtrixNgApiPagePayload {
   icon?: string;
   iconMode?: AwtrixNgApiIconMode;
   iconOffsetX?: number;
+  iconGap?: number;
+  icons?: { icon: string; x?: number; y?: number }[];
   durationMs?: number;
   repeat?: number;
   backgroundColor?: AwtrixNgApiColorInput;
@@ -433,6 +438,7 @@ export type AwtrixNgApiSoundObject = (
   | { song: string }
   | { speech: string }
   | { track: number }
+  | { station: string | number }
 ) & { loop?: boolean; nextBar?: boolean };
 
 export type AwtrixNgApiSound = string | AwtrixNgApiSoundObject | (string | AwtrixNgApiSoundObject)[];
@@ -463,6 +469,7 @@ export interface AwtrixNgApiIndicatorPayload {
 }
 
 export interface AwtrixNgApiSoundPlayPayload {
+  station?: string | number;
   name?: string;
   rtttl?: string;
   builtin?: string;

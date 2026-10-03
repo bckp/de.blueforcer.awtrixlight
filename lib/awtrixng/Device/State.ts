@@ -19,6 +19,14 @@ export const AwtrixNgFeatureCapabilityIds = {
   display16: 'awtrixng_display_16px',
   audioSynth: 'awtrixng_audio_synth',
   audioUrl: 'awtrixng_audio_url',
+  audioGroups: 'awtrixng_audio_groups',
+  audioMixer: 'awtrixng_audio_mixer',
+  audioRadio: 'awtrixng_audio_radio',
+  audioClip: 'awtrixng_audio_clip',
+  volume: 'awtrixng_volume',
+  alertVolume: 'awtrixng_alert_volume',
+  appVolume: 'awtrixng_app_volume',
+  radioVolume: 'awtrixng_radio_volume',
   layout: 'awtrixng_layout',
 } as const;
 

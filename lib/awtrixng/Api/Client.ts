@@ -20,6 +20,7 @@ import {
   AwtrixNgApiSoundPlayPayload,
   AwtrixNgApiVersionResponse,
 } from './Types';
+import { AwtrixNgAudioGroup, AwtrixNgRadioStation } from '../Services/Audio';
 
 export type AwtrixNgIndicatorId = 1 | 2 | 3;
 
@@ -159,7 +160,21 @@ export default class AwtrixNgClient {
   }
 
   stopAlert(): Promise<AwtrixNgApiOkResponse> {
-    return this.#request<AwtrixNgApiOkResponse>({ method: 'POST', path: '/api/v1/audio/stop', body: { group: 'alert' } });
+    return this.stopAudio('alert');
+  }
+
+  stopAudio(group: AwtrixNgAudioGroup): Promise<AwtrixNgApiOkResponse> {
+    return this.#request({ method: 'POST', path: '/api/v1/audio/stop', body: group === 'all' ? {} : { group } });
+  }
+
+  playClip(body: Uint8Array): Promise<AwtrixNgApiOkResponse> {
+    return this.#request({
+      method: 'POST', path: '/api/v1/audio/clip', body, headers: { 'Content-Type': 'application/octet-stream' }, timeoutMs: 30000,
+    });
+  }
+
+  putRadioStations(stations: AwtrixNgRadioStation[]): Promise<AwtrixNgApiOkResponse> {
+    return this.#request({ method: 'PUT', path: '/api/v1/audio/stations', body: { stations } });
   }
 
   getApps(): Promise<AwtrixNgApiAppsResponse> {

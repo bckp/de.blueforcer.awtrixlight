@@ -1383,6 +1383,287 @@
           }
         ],
         "duration": true
+      },
+      {
+        "id": "awtrixng_audio_volume",
+        "title": {
+          "en": "Set an audio mixer level",
+          "cs": "Nastavit hlasitost mixeru"
+        },
+        "titleFormatted": {
+          "en": "Set [[group]] volume to [[volume]]%",
+          "cs": "Nastavit hlasitost [[group]] na [[volume]] %"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_mixer"
+          },
+          {
+            "name": "group",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "volume",
+                "title": {
+                  "en": "Master",
+                  "cs": "Celková"
+                }
+              },
+              {
+                "id": "alertVolume",
+                "title": {
+                  "en": "Alerts",
+                  "cs": "Upozornění"
+                }
+              },
+              {
+                "id": "appVolume",
+                "title": {
+                  "en": "Apps",
+                  "cs": "Aplikace"
+                }
+              },
+              {
+                "id": "radioVolume",
+                "title": {
+                  "en": "Radio",
+                  "cs": "Rádio"
+                }
+              }
+            ]
+          },
+          {
+            "name": "volume",
+            "type": "number",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "title": {
+              "en": "Volume (%)",
+              "cs": "Hlasitost (%)"
+            }
+          }
+        ],
+        "hint": {
+          "en": "The master and group levels multiply. Zero silences that group. Radio requires radio support.",
+          "cs": "Celková hlasitost se násobí hlasitostí skupiny. Nula skupinu ztiší. Rádio vyžaduje podporu rádia."
+        }
+      },
+      {
+        "id": "awtrixng_audio_stop_group",
+        "title": {
+          "en": "Stop an audio group",
+          "cs": "Zastavit zvukovou skupinu"
+        },
+        "titleFormatted": {
+          "en": "Stop [[group]] audio",
+          "cs": "Zastavit zvuky [[group]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_groups"
+          },
+          {
+            "name": "group",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "alert",
+                "title": {
+                  "en": "Alerts",
+                  "cs": "Upozornění"
+                }
+              },
+              {
+                "id": "app",
+                "title": {
+                  "en": "Apps",
+                  "cs": "Aplikace"
+                }
+              },
+              {
+                "id": "radio",
+                "title": {
+                  "en": "Radio",
+                  "cs": "Rádio"
+                }
+              },
+              {
+                "id": "all",
+                "title": {
+                  "en": "Everything",
+                  "cs": "Všechny skupiny"
+                }
+              }
+            ]
+          }
+        ],
+        "hint": {
+          "en": "Stops alerts, script sounds, radio or everything. An alert stop also cancels a URL sound being prepared.",
+          "cs": "Zastaví upozornění, zvuky skriptů, rádio nebo všechny skupiny. Zastavení upozornění zruší i právě připravovaný zvuk z URL."
+        }
+      },
+      {
+        "id": "awtrixng_radio_station",
+        "title": {
+          "en": "Play a saved radio station",
+          "cs": "Přehrát uloženou rozhlasovou stanici"
+        },
+        "titleFormatted": {
+          "en": "Play radio station [[station]]",
+          "cs": "Přehrát stanici [[station]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_radio"
+          },
+          {
+            "name": "station",
+            "type": "autocomplete",
+            "title": {
+              "en": "Station",
+              "cs": "Stanice"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Select a station saved on the clock. Radio continues until stopped. Alerts pause radio and it resumes afterwards.",
+          "cs": "Vyberte stanici uloženou na hodinách. Rádio hraje do zastavení. Upozornění ho pozastaví a poté rádio pokračuje."
+        }
+      },
+      {
+        "id": "awtrixng_radio_url",
+        "title": {
+          "en": "Play internet radio from a URL",
+          "cs": "Přehrát internetové rádio z URL"
+        },
+        "titleFormatted": {
+          "en": "Play radio [[url]]",
+          "cs": "Přehrát rádio [[url]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_radio"
+          },
+          {
+            "name": "url",
+            "type": "text",
+            "title": {
+              "en": "Stream URL",
+              "cs": "URL streamu"
+            }
+          }
+        ],
+        "hint": {
+          "en": "MP3 streams only; M3U and PLS playlists are supported. Does not save a station. Radio continues until stopped.",
+          "cs": "Pouze streamy MP3; podporuje playlisty M3U a PLS. Stanici neukládá. Rádio hraje do zastavení."
+        }
+      },
+      {
+        "id": "awtrixng_radio_save",
+        "title": {
+          "en": "Save a radio station",
+          "cs": "Uložit rozhlasovou stanici"
+        },
+        "titleFormatted": {
+          "en": "Save station [[name]] with URL [[url]]",
+          "cs": "Uložit stanici [[name]] s URL [[url]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_radio"
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "title": {
+              "en": "Station name",
+              "cs": "Název stanice"
+            }
+          },
+          {
+            "name": "url",
+            "type": "text",
+            "title": {
+              "en": "Stream URL",
+              "cs": "URL streamu"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Adds a station or replaces the URL of the station with this exact name. Keeps the other stations. Up to 32 stations.",
+          "cs": "Přidá stanici nebo přepíše URL stanice s tímto přesným názvem. Ostatní stanice zachová. Nejvýše 32 stanic."
+        }
+      },
+      {
+        "id": "awtrixng_audio_clip_url",
+        "title": {
+          "en": "Send an audio file from a URL",
+          "cs": "Odeslat zvukový soubor z URL"
+        },
+        "titleFormatted": {
+          "en": "Send and play audio [[url]]",
+          "cs": "Odeslat a přehrát zvuk [[url]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_clip"
+          },
+          {
+            "name": "url",
+            "type": "text",
+            "title": {
+              "en": "Audio file URL",
+              "cs": "URL zvukového souboru"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Homey downloads and sends the file directly. MP3 or 16-bit PCM WAV, maximum 2 MiB. Plays once without storing. This action finishes when playback starts.",
+          "cs": "Homey stáhne soubor a přímo ho odešle. MP3 nebo WAV s 16bitovým PCM, nejvýše 2 MiB. Přehraje jednou bez uložení. Akce skončí při zahájení přehrávání."
+        }
+      },
+      {
+        "id": "awtrixng_audio_clip_soundboard",
+        "title": {
+          "en": "Send an audio file from Soundboard",
+          "cs": "Odeslat zvukový soubor ze Soundboardu"
+        },
+        "titleFormatted": {
+          "en": "Send and play Soundboard file [[sound]]",
+          "cs": "Odeslat a přehrát soubor [[sound]] ze Soundboardu"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_clip"
+          },
+          {
+            "name": "sound",
+            "type": "autocomplete",
+            "title": {
+              "en": "Sound",
+              "cs": "Zvuk"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Requires Soundboard. Homey resolves the current file and sends it directly. MP3 or 16-bit PCM WAV, maximum 2 MiB; no stored copy. Finishes when playback starts.",
+          "cs": "Vyžaduje Soundboard. Homey načte aktuální soubor a přímo ho odešle. MP3 nebo WAV s 16bitovým PCM, nejvýše 2 MiB; bez uložené kopie. Končí při zahájení přehrávání."
+        }
       }
     ],
     "triggers": [
@@ -2515,6 +2796,86 @@
       "uiComponent": "button",
       "icon": "/assets/capability_awtrix_matrix.svg"
     },
+    "awtrixng_alert_volume": {
+      "type": "number",
+      "title": {
+        "en": "Alert volume",
+        "cs": "Hlasitost upozornění"
+      },
+      "getable": true,
+      "setable": true,
+      "insights": false,
+      "uiComponent": "slider",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "units": "%",
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "awtrixng_app_volume": {
+      "type": "number",
+      "title": {
+        "en": "App volume",
+        "cs": "Hlasitost aplikací"
+      },
+      "getable": true,
+      "setable": true,
+      "insights": false,
+      "uiComponent": "slider",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "units": "%",
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "awtrixng_audio_clip": {
+      "type": "boolean",
+      "title": {
+        "en": "Audio clips",
+        "cs": "Zvukové klipy"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
+    "awtrixng_audio_groups": {
+      "type": "boolean",
+      "title": {
+        "en": "Audio groups",
+        "cs": "Zvukové skupiny"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
+    "awtrixng_audio_mixer": {
+      "type": "boolean",
+      "title": {
+        "en": "Audio mixer",
+        "cs": "Zvukový mixer"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
+    "awtrixng_audio_radio": {
+      "type": "boolean",
+      "title": {
+        "en": "Internet radio",
+        "cs": "Internetové rádio"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
     "awtrixng_audio_synth": {
       "type": "boolean",
       "title": {
@@ -2569,6 +2930,42 @@
       "setable": false,
       "insights": false,
       "uiComponent": null
+    },
+    "awtrixng_radio_volume": {
+      "type": "number",
+      "title": {
+        "en": "Radio volume",
+        "cs": "Hlasitost rádia"
+      },
+      "getable": true,
+      "setable": true,
+      "insights": false,
+      "uiComponent": "slider",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "units": "%",
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "awtrixng_volume": {
+      "type": "number",
+      "title": {
+        "en": "Master volume",
+        "cs": "Celková hlasitost"
+      },
+      "getable": true,
+      "setable": true,
+      "insights": false,
+      "uiComponent": "slider",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "units": "%",
+      "preventTag": true,
+      "preventInsights": true
     },
     "awtrixng_weather_overlay": {
       "type": "enum",

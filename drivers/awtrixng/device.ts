@@ -7,6 +7,10 @@ import AwtrixNgApi, {
   AwtrixNgDeviceProbeResult,
   AwtrixNgFeatureCapabilityIds,
   AwtrixNgHeaderLayoutInput,
+  AwtrixNgAudioGroup,
+  AwtrixNgMixerField,
+  AwtrixNgMixerFields,
+  AwtrixNgMixerLevels,
   AwtrixNgWeatherOverlayCapabilityId,
   formatAwtrixNgErrorDetails,
 } from '../../lib/awtrixng/Api/Api';
@@ -145,6 +149,7 @@ class AwtrixNgDevice extends Device {
       const deviceStateResult = await this.refreshDeviceState({ allowAddCapabilities: true });
 
       if (deviceStateResult?.status === 'detected') {
+        await this.synchronizeAudioFeatures(deviceStateResult.device);
         await this.refreshSettingsFromDevice();
         await this.refreshDisplayFromDevice();
         await this.synchronizeBuiltinAppsForFirmware(deviceStateResult.device.version, true, true);
@@ -337,6 +342,7 @@ class AwtrixNgDevice extends Device {
 
       if (result?.status === 'detected') {
         await this.synchronizeBuiltinAppsForFirmware(result.device.version, false, true);
+        if (this.hasCapability(AwtrixNgFeatureCapabilityIds.audioMixer)) await this.refreshMixer();
       }
     }, this.homey, {
       intervalMs: PollIntervalMs,
@@ -388,6 +394,64 @@ class AwtrixNgDevice extends Device {
   async stopUrlSound(): Promise<void> {
     this.requireUrlAudioCapability();
     await this.getApi().stopUrlSound();
+  }
+
+  async setAudioVolume(field: AwtrixNgMixerField, value: number): Promise<void> {
+    const levels = await this.getApi().setMixerLevel(field, value);
+    await this.updateMixerCapabilities(levels);
+  }
+
+  async stopAudioGroup(group: AwtrixNgAudioGroup): Promise<void> {
+    await this.getApi().stopAudioGroup(group);
+  }
+
+  async playRadio(station: string | number): Promise<void> {
+    await this.getApi().playRadio(station);
+  }
+
+  async playRadioUrl(url: string): Promise<void> {
+    await this.getApi().playRadioUrl(url);
+  }
+
+  async getRadioStations(): Promise<{ name: string; url: string }[]> {
+    return this.getApi().readRadioStations();
+  }
+
+  async saveRadioStation(name: string, url: string): Promise<void> {
+    await this.getApi().saveRadioStation(name, url);
+  }
+
+  async playAudioClipUrl(url: string): Promise<void> {
+    await this.getApi().playAudioClipUrl(url);
+  }
+
+  private async synchronizeAudioFeatures(device: Extract<AwtrixNgDeviceProbeResult, { status: 'detected' }>['device']): Promise<void> {
+    // 1.1.6 is the first supported group-audio contract. Existing devices gain markers on restart.
+    if (!AwtrixNgApi.supportsGroupAudioFirmware(device.version)) return;
+    const features = await this.getApi().readFeatures(device);
+    for (const capability of features) {
+      if (!this.hasCapability(capability)) await this.addCapability(capability);
+    }
+    if (this.hasCapability(AwtrixNgFeatureCapabilityIds.audioMixer)) {
+      for (const field of AwtrixNgMixerFields) {
+        const capability = AwtrixNgFeatureCapabilityIds[field];
+        if (this.hasCapability(capability)) {
+          this.registerCapabilityListener(capability, async (value: number) => this.setAudioVolume(field, value));
+        }
+      }
+      await this.refreshMixer();
+    }
+  }
+
+  private async refreshMixer(): Promise<void> {
+    await this.updateMixerCapabilities(await this.getApi().readMixer());
+  }
+
+  private async updateMixerCapabilities(levels: AwtrixNgMixerLevels): Promise<void> {
+    for (const field of AwtrixNgMixerFields) {
+      const capability = AwtrixNgFeatureCapabilityIds[field];
+      if (this.hasCapability(capability)) await this.setCapabilityValue(capability, levels[field]);
+    }
   }
 
   private requireUrlAudioCapability(): void {

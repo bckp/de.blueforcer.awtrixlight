@@ -125,6 +125,37 @@ Syntetizovaný zvuk se na novém API posílá jako `song` a přehraje se jednou 
 rozdíl je uveden v nápovědě karty. NG legacy zvukové parametry notifikací se převádějí
 v NG audio vrstvě. Rozhraní sdílených Flow akcí a AWTRIX 3 driver se kvůli tomu nemění.
 
+## Mixer, rádio a přímé odesílání souborů
+
+Nové zvukové API nabízí celkovou hlasitost a skupiny upozornění, aplikací a rádia.
+V Homey jsou posuvníky 0–100 % a karta **Nastavit hlasitost mixeru**. Výsledná
+hlasitost je celková hlasitost × hlasitost skupiny / 100. Nula znamená ticho.
+Úrovně se načtou při spuštění aplikace a obnovují při minutovém pollingu; změna
+z Homey se zapíše ihned. Při restartu získají nové capabilities i již spárovaná
+NG zařízení s firmwarem 1.1.6 nebo novějším. AWTRIX 3 se tím nemění.
+
+- **Zastavit zvukovou skupinu**: upozornění, zvuky skriptů, rádio nebo všechny
+  skupiny. Původní karta pro zastavení upozornění zůstává kompatibilní.
+- **Přehrát uloženou rozhlasovou stanici**: seznam se načítá z hodin.
+- **Přehrát internetové rádio z URL**: MP3 stream, případně playlist M3U/PLS.
+  Rádio hraje do zastavení. Akce skončí po přijetí příkazu a kontrole aktuální
+  chyby; pozdější výpadky připojení nejsou událostí Homey Flow.
+- **Uložit rozhlasovou stanici**: přidá stanici nebo změní URL jejího přesného
+  názvu. Zachová ostatní stanice; nejvýše 32. Současná uložení z této aplikace
+  jsou serializovaná. Současné změny z webového UI nelze zamknout, API nenabízí
+  podmíněný zápis.
+- **Odeslat zvukový soubor z URL / ze Soundboardu**: Homey stáhne soubor a odešle
+  ho jako binární tělo do `audio/clip`. Hodiny soubor neukládají. Podporuje MP3
+  a 16bitový PCM WAV; nejvýše 2 MiB. Formát ověří firmware a jeho chyby se
+  zachovají. Akce skončí při zahájení přehrávání. Zastavení upozornění nebo všech
+  skupin zruší také probíhající přípravu klipu.
+
+Rádio a klipy mají samostatné capability filtry podle `audio.radio` a
+`audio.clip`. Mixer a skupiny se rozpoznávají podle nového schématu zvukového
+API (`audio.song` a `audio.rtttl` jsou boolean); mixer navíc vyžaduje čtyři platné
+úrovně v `GET settings`. Staré API se potichu neemuluje. Přehrání rádia a
+přímého klipu bylo na fyzickém TC002 1.1.6 ověřeno se ztišeným masterem.
+
 ## Custom apps a názvy
 
 Uživatel zadává název custom app bez interního prefixu.
