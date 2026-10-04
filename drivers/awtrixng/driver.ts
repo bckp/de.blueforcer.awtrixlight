@@ -171,6 +171,7 @@ class AwtrixNgDriver extends Driver {
     this.#knobTurnedTrigger = this.homey.flow.getDeviceTriggerCard('awtrixng_knob_turned');
     this.registerHeaderLayoutCards();
     this.registerAudioCards();
+    this.registerScriptSettingsCards();
     this.homey.flow.getActionCard('awtrixng_brightness').registerRunListener(async (args: {
       device: import('./device').default; brightness: number;
     }): Promise<void> => {
@@ -251,6 +252,35 @@ class AwtrixNgDriver extends Driver {
         .filter((sound) => sound.name.toLowerCase().includes(query.toLowerCase()))
         .map((sound) => ({ id: sound.id, name: sound.name }))
     ));
+  }
+
+  private registerScriptSettingsCards(): void {
+    type ScriptArgs = { device: import('./device').default; script: { id: string }; key: { id: string }; value: string };
+    const set = this.homey.flow.getActionCard('awtrixng_script_setting_set');
+    const read = this.homey.flow.getActionCard('awtrixng_script_setting_get');
+    set.registerRunListener(async (args: ScriptArgs) => args.device.setScriptSetting(args.script.id, args.key.id, args.value));
+    read.registerRunListener(async (args: ScriptArgs) => args.device.getScriptSetting(args.script.id, args.key.id));
+    const dataSet = this.homey.flow.getActionCard('awtrixng_script_data_set');
+    const dataRead = this.homey.flow.getActionCard('awtrixng_script_data_get');
+    dataSet.registerRunListener(async (args: ScriptArgs) => args.device.setScriptData(args.script.id, args.value));
+    dataRead.registerRunListener(async (args: ScriptArgs) => args.device.getScriptData(args.script.id, args.key.id));
+    const search = <T extends { id: string; name: string }>(choices: T[], query: string): T[] => choices.filter((item) => (
+      item.name.toLowerCase().includes(query.toLowerCase()) || item.id.toLowerCase().includes(query.toLowerCase())
+    ));
+    for (const card of [set, read, dataSet, dataRead]) {
+      card.registerArgumentAutocompleteListener('script', async (query: string, args: ScriptArgs) => search(await args.device.getManageableScripts(), query));
+    }
+    for (const card of [set, read]) {
+      card.registerArgumentAutocompleteListener('key', async (query: string, args: ScriptArgs) => (
+        args.script?.id ? search(await args.device.getScriptSettingChoices(args.script.id), query) : []
+      ));
+    }
+    dataRead.registerArgumentAutocompleteListener('key', async (query: string, args: ScriptArgs) => (
+      args.script?.id ? search(await args.device.getScriptDataChoices(args.script.id), query) : []
+    ));
+    const shared = this.homey.flow.getActionCard('awtrixng_script_shared_get');
+    shared.registerRunListener(async (args: ScriptArgs) => args.device.getSharedScriptValue(args.key.id));
+    shared.registerArgumentAutocompleteListener('key', async (query: string, args: ScriptArgs) => search(await args.device.getSharedScriptChoices(), query));
   }
 
   private registerHeaderLayoutCards(): void {

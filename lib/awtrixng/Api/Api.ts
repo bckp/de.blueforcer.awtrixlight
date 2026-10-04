@@ -59,6 +59,11 @@ import {
   findAwtrixNgUnsupportedSoundSource,
 } from '../Services/Audio';
 import isAwtrixNgFirmwareVersionSupported from './FirmwareVersion';
+import {
+  assertAwtrixNgScriptName, getAwtrixNgManageableScripts, assertAwtrixNgScriptConfig,
+  parseAwtrixNgScriptSettingValue, parseAwtrixNgScriptDataPatch, assertAwtrixNgScriptWriteResult,
+  assertAwtrixNgSharedScriptValues, toAwtrixNgScriptValueToken, AwtrixNgScriptValueError,
+} from '../Services/Scripts';
 import { AwtrixNgUnsupportedVersionError } from './UnsupportedVersionError';
 import {
   AwtrixNgApiCapabilitiesResponse,
@@ -808,13 +813,100 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     await this.putPushedApp(toAwtrixNgHomeyPushedAppName(name), createAwtrixNgHeaderLayout(input));
   }
 
-  async readSelectableScripts(): Promise<AwtrixNgApiAppInventoryItem[]> {
+  private async requireScripting(): Promise<void> {
     const device = await this.#client.getDevice();
     if (!isPlainObject(device) || typeof device.scriptingRunning !== 'boolean') {
       throw new AwtrixNgInvalidResponseError({ endpoint: DeviceEndpoint, expectedShape: 'a scriptingRunning boolean', actualValue: device });
     }
     if (!device.scriptingRunning) throw new Error('Scripting is disabled on this AWTRIX NG device.');
+  }
+
+  async readSelectableScripts(): Promise<AwtrixNgApiAppInventoryItem[]> {
+    await this.requireScripting();
     return getAwtrixNgSelectableScripts(await this.#client.getApps());
+  }
+
+  async readManageableScripts(): Promise<AwtrixNgApiAppInventoryItem[]> {
+    await this.requireScripting();
+    return getAwtrixNgManageableScripts(await this.#client.getApps());
+  }
+
+  private async requireInstalledScript(name: string): Promise<void> {
+    assertAwtrixNgScriptName(name);
+    if (!(await this.readManageableScripts()).some((script) => script.name === name)) {
+      throw new AwtrixNgScriptValueError('name', 'No installed script with this name.');
+    }
+  }
+
+  private async readScriptConfig(name: string) {
+    await this.requireInstalledScript(name);
+    const config = await this.#client.getScriptConfig(name);
+    assertAwtrixNgScriptConfig(config, name);
+    return config;
+  }
+
+  async readScriptSettingChoices(name: string): Promise<{ id: string; name: string; description: string }[]> {
+    return (await this.readScriptConfig(name)).fields.map((field) => ({
+      id: field.key, name: field.label || field.key, description: field.type,
+    }));
+  }
+
+  async writeScriptSetting(name: string, key: string, value: string): Promise<void> {
+    const config = await this.readScriptConfig(name);
+    const field = config.fields.find((item) => item.key === key);
+    if (field === undefined) throw new AwtrixNgScriptValueError('key', 'Setting is not declared by this script.');
+    const body = { [key]: parseAwtrixNgScriptSettingValue(field, value) };
+    const result = await this.#client.patchScriptConfig(name, body);
+    assertAwtrixNgScriptWriteResult(result, name, `/api/v1/apps/${name}/config`);
+  }
+
+  async readScriptSettingValue(name: string, key: string): Promise<{ value: string }> {
+    const field = (await this.readScriptConfig(name)).fields.find((item) => item.key === key);
+    if (field === undefined) throw new AwtrixNgScriptValueError('key', 'Setting is not declared by this script.');
+    return toAwtrixNgScriptValueToken(field.value);
+  }
+
+  private async readScriptData(name: string): Promise<Record<string, unknown>> {
+    await this.requireInstalledScript(name);
+    const data = await this.#client.getScriptData(name);
+    if (!isPlainObject(data)) {
+      throw new AwtrixNgInvalidResponseError({ endpoint: `/api/v1/apps/${name}/data`, expectedShape: 'a script data object', actualValue: data });
+    }
+    return data;
+  }
+
+  async readScriptDataChoices(name: string): Promise<{ id: string; name: string }[]> {
+    return Object.keys(await this.readScriptData(name)).map((key) => ({ id: key, name: key }));
+  }
+
+  async readScriptDataValue(name: string, key: string): Promise<{ value: string }> {
+    const data = await this.readScriptData(name);
+    if (!Object.hasOwn(data, key)) throw new AwtrixNgScriptValueError('key', 'Script has no stored value with this key.');
+    return toAwtrixNgScriptValueToken(data[key]);
+  }
+
+  async writeScriptData(name: string, source: string): Promise<void> {
+    const body = parseAwtrixNgScriptDataPatch(source);
+    await this.requireInstalledScript(name);
+    const result = await this.#client.patchScriptData(name, body);
+    assertAwtrixNgScriptWriteResult(result, name, `/api/v1/apps/${name}/data`);
+  }
+
+  private async readSharedScriptValues() {
+    await this.requireScripting();
+    const values = await this.#client.getSharedScriptValues();
+    assertAwtrixNgSharedScriptValues(values);
+    return values;
+  }
+
+  async readSharedScriptChoices(): Promise<{ id: string; name: string }[]> {
+    return (await this.readSharedScriptValues()).map((item) => ({ id: `${item.owner}.${item.key}`, name: `${item.owner}.${item.key}` }));
+  }
+
+  async readSharedScriptValue(id: string): Promise<{ value: string }> {
+    const item = (await this.readSharedScriptValues()).find((value) => `${value.owner}.${value.key}` === id);
+    if (item === undefined) throw new AwtrixNgScriptValueError('key', 'Shared script value is no longer available.');
+    return toAwtrixNgScriptValueToken(item.value);
   }
 
   async showScript(name: string): Promise<void> {

@@ -1726,6 +1726,226 @@
           "en": "Sets manual brightness. Disables automatic brightness on devices with a light sensor. Does not switch display power.",
           "cs": "Nastaví ruční jas. U zařízení se světelným senzorem vypne automatický jas. Nemění zapnutí displeje."
         }
+      },
+      {
+        "id": "awtrixng_script_setting_set",
+        "title": {
+          "en": "Set a script setting",
+          "cs": "Nastavit volbu skriptu"
+        },
+        "titleFormatted": {
+          "en": "Set [[script]] setting [[key]] to [[value]]",
+          "cs": "Nastavit volbu [[key]] skriptu [[script]] na [[value]]"
+        },
+        "hint": {
+          "en": "Uses declared settings. Text and select values are plain text; booleans true/false, numbers as numbers, colors #RRGGBB or integers. Out-of-range values fail. Saving restarts the script.",
+          "cs": "Používá deklarované volby. Text a výběr zadejte přímo, logickou hodnotu jako true/false, číslo jako číslo, barvu jako #RRGGBB nebo celé číslo. Hodnota mimo rozsah selže. Uložení restartuje skript."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "script",
+            "type": "autocomplete",
+            "title": {
+              "en": "Script",
+              "cs": "Skript"
+            }
+          },
+          {
+            "name": "key",
+            "type": "autocomplete",
+            "title": {
+              "en": "Setting / key",
+              "cs": "Volba / klíč"
+            }
+          },
+          {
+            "name": "value",
+            "type": "text",
+            "title": {
+              "en": "Value",
+              "cs": "Hodnota"
+            }
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_script_setting_get",
+        "title": {
+          "en": "Read a script setting",
+          "cs": "Načíst volbu skriptu"
+        },
+        "titleFormatted": {
+          "en": "Read [[script]] setting [[key]]",
+          "cs": "Načíst volbu [[key]] skriptu [[script]]"
+        },
+        "hint": {
+          "en": "Returns a text Value token in Advanced Flow. Numbers and booleans are represented as JSON. A missing setting fails.",
+          "cs": "Vrací textový token Hodnota v Advanced Flow. Čísla a logické hodnoty mají podobu JSON. Chybějící volba způsobí chybu."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "script",
+            "type": "autocomplete",
+            "title": {
+              "en": "Script",
+              "cs": "Skript"
+            }
+          },
+          {
+            "name": "key",
+            "type": "autocomplete",
+            "title": {
+              "en": "Setting / key",
+              "cs": "Volba / klíč"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "value",
+            "type": "string",
+            "title": {
+              "en": "Value",
+              "cs": "Hodnota"
+            }
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_script_data_set",
+        "title": {
+          "en": "Change stored script data",
+          "cs": "Změnit uložená data skriptu"
+        },
+        "titleFormatted": {
+          "en": "Change [[script]] stored data to [[value]]",
+          "cs": "Změnit uložená data skriptu [[script]] na [[value]]"
+        },
+        "hint": {
+          "en": "Supply a non-empty JSON object. Only these keys change; null removes a key. Declared settings use a separate card. Saving restarts the script.",
+          "cs": "Zadejte neprázdný JSON objekt. Mění se jen uvedené klíče; null klíč odstraní. Deklarované volby mají samostatnou kartu. Uložení restartuje skript."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "script",
+            "type": "autocomplete",
+            "title": {
+              "en": "Script",
+              "cs": "Skript"
+            }
+          },
+          {
+            "name": "value",
+            "type": "text",
+            "title": {
+              "en": "JSON changes",
+              "cs": "Změny v JSON"
+            }
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_script_data_get",
+        "title": {
+          "en": "Read a stored script value",
+          "cs": "Načíst uloženou hodnotu skriptu"
+        },
+        "titleFormatted": {
+          "en": "Read [[script]] stored value [[key]]",
+          "cs": "Načíst uloženou hodnotu [[key]] skriptu [[script]]"
+        },
+        "hint": {
+          "en": "Returns a text Value token in Advanced Flow. Structured data is JSON. A missing key fails.",
+          "cs": "Vrací textový token Hodnota v Advanced Flow. Strukturovaná data mají podobu JSON. Chybějící klíč způsobí chybu."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "script",
+            "type": "autocomplete",
+            "title": {
+              "en": "Script",
+              "cs": "Skript"
+            }
+          },
+          {
+            "name": "key",
+            "type": "autocomplete",
+            "title": {
+              "en": "Setting / key",
+              "cs": "Volba / klíč"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "value",
+            "type": "string",
+            "title": {
+              "en": "Value",
+              "cs": "Hodnota"
+            }
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_script_shared_get",
+        "title": {
+          "en": "Read a shared script value",
+          "cs": "Načíst sdílenou hodnotu skriptu"
+        },
+        "titleFormatted": {
+          "en": "Read shared script value [[key]]",
+          "cs": "Načíst sdílenou hodnotu skriptu [[key]]"
+        },
+        "hint": {
+          "en": "Read-only. Returns a text Value token in Advanced Flow. Values disappear after script restart; a missing value fails.",
+          "cs": "Pouze čtení. Vrací textový token Hodnota v Advanced Flow. Hodnoty po restartu skriptu zmizí; chybějící hodnota způsobí chybu."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "key",
+            "type": "autocomplete",
+            "title": {
+              "en": "Shared value",
+              "cs": "Sdílená hodnota"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "value",
+            "type": "string",
+            "title": {
+              "en": "Value",
+              "cs": "Hodnota"
+            }
+          }
+        ]
       }
     ],
     "triggers": [

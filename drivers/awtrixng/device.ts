@@ -426,6 +426,42 @@ class AwtrixNgDevice extends Device {
     await this.getApi().showScript(name);
   }
 
+  async getManageableScripts(): Promise<{ id: string; name: string }[]> {
+    return (await this.getApi().readManageableScripts()).map((script) => ({ id: script.name, name: script.meta?.name || script.name }));
+  }
+
+  async getScriptSettingChoices(name: string) {
+    return this.getApi().readScriptSettingChoices(name);
+  }
+
+  async setScriptSetting(name: string, key: string, value: string): Promise<void> {
+    await this.getApi().writeScriptSetting(name, key, value);
+  }
+
+  async getScriptSetting(name: string, key: string) {
+    return this.getApi().readScriptSettingValue(name, key);
+  }
+
+  async getScriptDataChoices(name: string) {
+    return this.getApi().readScriptDataChoices(name);
+  }
+
+  async getScriptData(name: string, key: string) {
+    return this.getApi().readScriptDataValue(name, key);
+  }
+
+  async setScriptData(name: string, value: string): Promise<void> {
+    await this.getApi().writeScriptData(name, value);
+  }
+
+  async getSharedScriptChoices() {
+    return this.getApi().readSharedScriptChoices();
+  }
+
+  async getSharedScriptValue(id: string) {
+    return this.getApi().readSharedScriptValue(id);
+  }
+
   async playRadioUrl(url: string): Promise<void> {
     await this.getApi().playRadioUrl(url);
   }

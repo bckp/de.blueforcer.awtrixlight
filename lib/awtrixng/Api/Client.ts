@@ -19,6 +19,9 @@ import {
   AwtrixNgApiSystemResponse,
   AwtrixNgApiSoundPlayPayload,
   AwtrixNgApiVersionResponse,
+  AwtrixNgApiScriptConfig,
+  AwtrixNgApiScriptWriteResult,
+  AwtrixNgApiSharedScriptValue,
 } from './Types';
 import { AwtrixNgAudioGroup, AwtrixNgRadioStation } from '../Services/Audio';
 
@@ -186,6 +189,26 @@ export default class AwtrixNgClient {
 
   showApp(name: string, fast: boolean): Promise<AwtrixNgApiOkResponse> {
     return this.#request({ method: 'PUT', path: '/api/v1/apps/active', body: { name, fast } });
+  }
+
+  getScriptConfig(name: string): Promise<AwtrixNgApiScriptConfig> {
+    return this.#request({ method: 'GET', path: `/api/v1/apps/${this.#pathSegment(name)}/config` });
+  }
+
+  patchScriptConfig(name: string, body: Record<string, unknown>): Promise<AwtrixNgApiScriptWriteResult> {
+    return this.#request({ method: 'PATCH', path: `/api/v1/apps/${this.#pathSegment(name)}/config`, body });
+  }
+
+  getScriptData(name: string): Promise<Record<string, unknown>> {
+    return this.#request({ method: 'GET', path: `/api/v1/apps/${this.#pathSegment(name)}/data` });
+  }
+
+  patchScriptData(name: string, body: Record<string, unknown>): Promise<AwtrixNgApiScriptWriteResult> {
+    return this.#request({ method: 'PATCH', path: `/api/v1/apps/${this.#pathSegment(name)}/data`, body });
+  }
+
+  getSharedScriptValues(): Promise<AwtrixNgApiSharedScriptValue[]> {
+    return this.#request({ method: 'GET', path: '/api/v1/scripts/shared' });
   }
 
   putAppsOrder(payload: AwtrixNgApiAppsOrderPayload): Promise<AwtrixNgApiOkResponse> {

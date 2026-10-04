@@ -290,6 +290,37 @@ export interface AwtrixNgApiAppInventoryItem {
 
 export type AwtrixNgApiAppsResponse = AwtrixNgApiAppInventoryItem[];
 
+export interface AwtrixNgApiScriptSetting {
+  key: string;
+  type: 'bool' | 'text' | 'number' | 'slider' | 'select' | 'color';
+  label?: string;
+  value: unknown;
+  min?: number;
+  max?: number;
+  maxlen?: number;
+  options?: string[];
+}
+
+export interface AwtrixNgApiScriptConfig {
+  name: string;
+  fields: AwtrixNgApiScriptSetting[];
+  warnings: unknown[];
+}
+
+export interface AwtrixNgApiScriptWriteResult {
+  ok: true;
+  name: string;
+  error: AwtrixNgApiScriptAppError | null;
+}
+
+export interface AwtrixNgApiSharedScriptValue {
+  owner: string;
+  key: string;
+  type: 'int' | 'real' | 'bool' | 'string';
+  value: number | boolean | string | null;
+  ageMs: number;
+}
+
 export interface AwtrixNgApiAppsOrderPayload {
   order?: string[];
   disabled: string[];
