@@ -27,7 +27,7 @@ export const createAwtrixNgHeaderLayout = (input: AwtrixNgHeaderLayoutInput): Aw
       regions: [
         ...(icon ? [{ id: 'icon', box: [0, 0, 16, 16] as [number, number, number, number], icon: input.icon }] : []),
         {
-          id: 'header', box: [x, 0, width, 8], text: input.header, font: 'small', align: 'start', color: '#00AAFF', scroll: { mode: 'loop' },
+          id: 'header', box: [x, 0, width, 8], text: input.header, font: 'small', align: 'center', color: '#00AAFF', scroll: { mode: 'loop' },
         },
         {
           id: 'text', box: [x, 8, width, 8], text: input.text, font: 'small', align: 'start', color: '#FFFFFF', scroll: { mode: 'loop' },

@@ -75,7 +75,7 @@ audio endpoint se nezavolá.
 
 Karty **Zobrazit notifikaci s nadpisem** (`awtrixng_notification_header`) a
 **Zobrazit aplikaci s nadpisem** (`awtrixng_application_header`) používají stejnou
-šablonu: ikona 16×16 vlevo, modrý nadpis v horní osmipixelové oblasti a bílý text
+šablonu: ikona 16×16 vlevo, modrý nadpis zarovnaný na střed horní osmipixelové oblasti a bílý text
 v dolní oblasti. Oba řádky používají font `small` a samostatně rolují dlouhý text.
 Bez ikony dostane text celou šířku displeje. Dobu zobrazení lze změnit přes běžné
 **Přidat dobu trvání**. Bez zadané doby šablona posílá `repeat: 1` a počká na jedno
