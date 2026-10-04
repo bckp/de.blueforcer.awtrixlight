@@ -21,6 +21,7 @@ import {
   toAwtrixNgBuiltinAppSettingsUpdate,
   validateAwtrixNgBuiltinAppSettingsChange,
   writeAwtrixNgAppsOrder,
+  getAwtrixNgSelectableScripts,
 } from '../Services/Apps';
 import { AwtrixNgWeatherOverlayValue, toAwtrixNgHomeyWeatherOverlayValue } from '../Services/Display';
 import {
@@ -66,6 +67,7 @@ import {
   AwtrixNgApiNotificationPayload,
   AwtrixNgApiOkResponse,
   AwtrixNgApiPushedAppPayload,
+  AwtrixNgApiAppInventoryItem,
 } from './Types';
 
 // Re-exported facade surface: device.ts consumes these alongside AwtrixNgApi so it does
@@ -87,6 +89,8 @@ const SettingsEndpoint = '/api/v1/settings';
 const AppsEndpoint = '/api/v1/apps';
 const RtttlMinimumFirmwareVersion = '1.1.0';
 const ButtonCallbackMinimumFirmwareVersion = '1.1.1';
+const PositionedIconsMinimumFirmwareVersion = '1.1.2';
+const TextAlignmentMinimumFirmwareVersion = '1.1.7';
 
 export interface AwtrixNgConnectionOptions {
   baseUrl: string;
@@ -411,6 +415,18 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
 
     validateAwtrixNgBuiltinAppSettingsChange(newSettings, changedKeys);
 
+    if (settingsPatch?.autoBrightness !== undefined) {
+      const caps = await this.#client.getCapabilities();
+      if (!isPlainObject(caps)) {
+        throw new AwtrixNgInvalidResponseError({ endpoint: CapabilitiesEndpoint, expectedShape: 'a capabilities object', actualValue: caps });
+      }
+      if (caps.sensors?.light === false || caps.platform?.id === 'tc002') {
+        throw new UnsupportedAwtrixNgPayloadFieldError({
+          field: 'autoBrightness', target: 'settings', reason: 'unsupported-field', details: 'This device has no light sensor; automatic brightness has no effect.',
+        });
+      }
+    }
+
     const appsOrderPayload = await prepareAwtrixNgBuiltinAppSettingsChange(this.#client, newSettings, changedKeys);
 
     if (appsOrderPayload !== undefined) {
@@ -458,12 +474,13 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
       toAwtrixNgNotificationPayload(payload as AwtrixNgNotificationInput);
       await this.validatePageCapabilities(payload, 'notification');
     }
-    if (payload.sound === undefined && payload.soundRtttl === undefined && payload.soundLoop === undefined) {
-      return this.#client.sendNotification(payload);
+    const page = await this.prepareTextAlignment(payload, 'notification');
+    if (page.sound === undefined && page.soundRtttl === undefined && page.soundLoop === undefined) {
+      return this.#client.sendNotification(page);
     }
     const capabilities = await this.readAudioCapabilities();
     if (usesAwtrixNgSoundObjects(capabilities)) {
-      const prepared = toAwtrixNgSoundObjectNotification(payload);
+      const prepared = toAwtrixNgSoundObjectNotification(page);
       const field = prepared.sound === undefined ? undefined : findAwtrixNgUnsupportedSoundSource(prepared.sound as Exclude<typeof prepared.sound, number | undefined>, capabilities);
       if (field !== undefined) {
         throw new UnsupportedAwtrixNgPayloadFieldError({
@@ -472,10 +489,10 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
       }
       return this.#client.sendNotification(prepared);
     }
-    if (typeof payload.sound === 'object') {
+    if (typeof page.sound === 'object') {
       throw new Error('Sound objects and lists require the new AWTRIX NG audio API.');
     }
-    return this.#client.sendNotification(payload);
+    return this.#client.sendNotification(page);
   }
 
   dismissActiveNotification(): Promise<AwtrixNgApiOkResponse> {
@@ -696,7 +713,37 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
       toAwtrixNgPushedAppPayload(payload as AwtrixNgPushedAppInput);
       await this.validatePageCapabilities(payload, 'pushedApp');
     }
-    return this.#client.putPushedApp(name, payload);
+    return this.#client.putPushedApp(name, await this.prepareTextAlignment(payload, 'pushedApp'));
+  }
+
+  /** Documented compatibility adapter: legacy centering stays native before 1.1.7. */
+  private async prepareTextAlignment<T extends AwtrixNgApiNotificationPayload | AwtrixNgApiPushedAppPayload>(
+    page: T,
+    target: 'notification' | 'pushedApp',
+  ): Promise<T> {
+    if (page.textAlign === undefined && page.textCenter === undefined) return page;
+    if (target === 'notification') toAwtrixNgNotificationPayload(page as AwtrixNgNotificationInput);
+    else toAwtrixNgPushedAppPayload(page as AwtrixNgPushedAppInput);
+    const version = await this.readPageFirmwareVersion();
+    if (!isAwtrixNgFirmwareVersionSupported(version, TextAlignmentMinimumFirmwareVersion)) {
+      if (page.textAlign !== undefined) {
+        throw new UnsupportedAwtrixNgPayloadFieldError({
+          field: 'textAlign', target, reason: 'unsupported-field', details: 'Requires AWTRIX NG 1.1.7 or newer.',
+        });
+      }
+      return page;
+    }
+    if (page.textCenter === undefined) return page;
+    const { textCenter, ...rest } = page;
+    return { ...rest, textAlign: textCenter ? 'center' : 'start' } as T;
+  }
+
+  private async readPageFirmwareVersion(): Promise<string> {
+    const version = this.#firmwareVersion ?? (await this.#client.getVersion()).version;
+    if (typeof version !== 'string' || !isAwtrixNgFirmwareVersionSupported(version, '0.0.0')) {
+      throw new AwtrixNgInvalidResponseError({ endpoint: '/api/v1/version', expectedShape: 'a semantic firmware version', actualValue: version });
+    }
+    return version;
   }
 
   private async validatePageCapabilities(
@@ -707,8 +754,8 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     if (page.layout !== undefined) assertAwtrixNgLayoutCapabilities(page.layout, caps, target);
     let extended = false;
     if (page.icons !== undefined || page.iconGap !== undefined) {
-      const version = this.#firmwareVersion ?? (await this.#client.getVersion()).version;
-      extended = typeof version === 'string' && isAwtrixNgFirmwareVersionSupported(version, '1.1.6');
+      const version = await this.readPageFirmwareVersion();
+      extended = isAwtrixNgFirmwareVersionSupported(version, PositionedIconsMinimumFirmwareVersion);
     }
     assertAwtrixNgPageCapabilities(page, caps, extended, target);
   }
@@ -719,6 +766,22 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
 
   async putHeaderApp(name: string, input: AwtrixNgHeaderLayoutInput): Promise<void> {
     await this.putPushedApp(toAwtrixNgHomeyPushedAppName(name), createAwtrixNgHeaderLayout(input));
+  }
+
+  async readSelectableScripts(): Promise<AwtrixNgApiAppInventoryItem[]> {
+    const device = await this.#client.getDevice();
+    if (!isPlainObject(device) || typeof device.scriptingRunning !== 'boolean') {
+      throw new AwtrixNgInvalidResponseError({ endpoint: DeviceEndpoint, expectedShape: 'a scriptingRunning boolean', actualValue: device });
+    }
+    if (!device.scriptingRunning) throw new Error('Scripting is disabled on this AWTRIX NG device.');
+    return getAwtrixNgSelectableScripts(await this.#client.getApps());
+  }
+
+  async showScript(name: string): Promise<void> {
+    if (typeof name !== 'string' || !/^[A-Za-z0-9_-]{1,32}$/.test(name)) throw new TypeError('Invalid script name.');
+    const scripts = await this.readSelectableScripts();
+    if (!scripts.some((script) => script.name === name)) throw new Error(`Script ${name} is unavailable, disabled, incompatible or has an error.`);
+    await this.#client.showApp(name, true);
   }
 
   deleteApp(name: string): Promise<AwtrixNgApiOkResponse> {

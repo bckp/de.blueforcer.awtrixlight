@@ -108,6 +108,7 @@ export interface AwtrixNgApiCapabilitiesResponse {
   radio?: boolean;
   gpio: AwtrixNgApiGpioCapabilities | null;
   platform?: { id: string };
+  sensors?: { light?: boolean };
   display?: { width: number; height: number };
   fonts?: { name: string; ascent: number; descent: number; lineHeight: number }[];
   layouts?: {
@@ -267,6 +268,7 @@ export interface AwtrixNgApiScriptAppMeta {
   desc: string;
   author: string;
   version: string;
+  display?: { width: number; height: number; fits: boolean } | null;
 }
 
 export interface AwtrixNgApiAppInventoryItem {
@@ -280,6 +282,7 @@ export interface AwtrixNgApiAppInventoryItem {
   icon?: string;
   skipped?: boolean;
   headless?: boolean;
+  ondemand?: boolean;
   config?: boolean;
   error?: AwtrixNgApiScriptAppError | null;
   meta?: AwtrixNgApiScriptAppMeta;
@@ -293,6 +296,10 @@ export interface AwtrixNgApiAppsOrderPayload {
 }
 
 export const AwtrixNgApiTextCases = ['inherit', 'upper', 'asTyped'] as const;
+
+export const AwtrixNgApiTextAlignments = ['start', 'center', 'end'] as const;
+
+export type AwtrixNgApiTextAlignment = typeof AwtrixNgApiTextAlignments[number];
 
 export type AwtrixNgApiTextCase = typeof AwtrixNgApiTextCases[number];
 
@@ -404,6 +411,7 @@ export interface AwtrixNgApiPagePayload {
   textBlinkMs?: number;
   textFadeMs?: number;
   textCenter?: boolean;
+  textAlign?: AwtrixNgApiTextAlignment;
   textOffsetX?: number;
   textInFront?: boolean;
   scroll?: AwtrixNgApiScrollPayload | AwtrixNgApiScrollMode;

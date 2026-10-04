@@ -104,6 +104,10 @@
         "id": "autoBrightness",
         "type": "checkbox",
         "value": false,
+        "hint": {
+          "en": "Requires a light sensor. TC002 has no light sensor and does not support this option.",
+          "cs": "Vyžaduje světelný senzor. TC002 ho nemá a tuto volbu nepodporuje."
+        },
         "label": {
           "en": "Auto-brightness",
           "nl": "Automatische helderheid",

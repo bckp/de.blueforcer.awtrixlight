@@ -171,6 +171,15 @@ class AwtrixNgDriver extends Driver {
     this.#knobTurnedTrigger = this.homey.flow.getDeviceTriggerCard('awtrixng_knob_turned');
     this.registerHeaderLayoutCards();
     this.registerAudioCards();
+    const scriptCard = this.homey.flow.getActionCard('awtrixng_script_show');
+    scriptCard.registerRunListener(async (args: {
+      device: import('./device').default; script: { id: string };
+    }): Promise<void> => args.device.showScript(args.script.id));
+    scriptCard.registerArgumentAutocompleteListener('script', async (query: string, args: {
+      device: import('./device').default;
+    }) => (await args.device.getSelectableScripts()).filter((script) => (
+      script.name.toLowerCase().includes(query.toLowerCase()) || script.id.toLowerCase().includes(query.toLowerCase())
+    )));
     this.homey.flow.getActionCard('awtrixng_audio_fx').registerRunListener(async (args: {
       device: import('./device').default;
       fx: string;

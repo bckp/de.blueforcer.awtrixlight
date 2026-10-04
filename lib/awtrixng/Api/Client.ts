@@ -184,6 +184,10 @@ export default class AwtrixNgClient {
     });
   }
 
+  showApp(name: string, fast: boolean): Promise<AwtrixNgApiOkResponse> {
+    return this.#request({ method: 'PUT', path: '/api/v1/apps/active', body: { name, fast } });
+  }
+
   putAppsOrder(payload: AwtrixNgApiAppsOrderPayload): Promise<AwtrixNgApiOkResponse> {
     return this.#request<AwtrixNgApiOkResponse, AwtrixNgApiAppsOrderPayload>({
       method: 'PUT',

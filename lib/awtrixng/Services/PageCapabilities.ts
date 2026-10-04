@@ -8,7 +8,7 @@ export const needsAwtrixNgPageCapabilities = (page: AwtrixNgApiPagePayload): boo
   || (typeof page.icon === 'string' && /^https?:\/\//i.test(page.icon))
 );
 
-/** No icon-gap/multiple-icon capability flag exists. Those fields use the verified 1.1.6 contract. */
+/** No icon-gap/multiple-icon flag exists. The public 1.1.2 contract and current docs define these fields. */
 export const assertAwtrixNgPageCapabilities = (
   page: AwtrixNgApiPagePayload,
   caps: AwtrixNgApiCapabilitiesResponse,
@@ -25,7 +25,7 @@ export const assertAwtrixNgPageCapabilities = (
     unsupported('font', 'This font is not advertised by the device.');
   }
   for (const field of ['iconGap', 'icons'] as const) {
-    if (page[field] !== undefined && !extendedFieldsSupported) unsupported(field, 'Requires the verified AWTRIX NG 1.1.6 payload contract or newer.');
+    if (page[field] !== undefined && !extendedFieldsSupported) unsupported(field, 'Requires AWTRIX NG 1.1.2 or newer.');
   }
   const checkIcon = (icon: string | undefined, field: string): void => {
     if (icon !== undefined && /^https?:\/\//i.test(icon)

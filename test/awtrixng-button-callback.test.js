@@ -23,6 +23,39 @@ const loadDriver = () => {
   }
 };
 
+test('NG script Flow searches names and forwards the native script ID; failures reach the Flow', async () => {
+  const Driver = loadDriver();
+  const runs = new Map();
+  const completions = new Map();
+  const driver = new Driver();
+  driver.log = () => {};
+  driver.homey = {
+    flow: {
+      getDeviceTriggerCard: () => ({}),
+      getActionCard: (id) => ({
+        registerRunListener: (listener) => runs.set(id, listener),
+        registerArgumentAutocompleteListener: (arg, listener) => completions.set(id, listener),
+      }),
+    },
+  };
+  await driver.onInit();
+  const calls = [];
+  const device = {
+    getSelectableScripts: async () => [{ id: 'Racer', name: 'Pixel Race' }, { id: 'Weather', name: 'Forecast' }],
+    showScript: async (name) => calls.push(name),
+  };
+  const autocomplete = completions.get('awtrixng_script_show');
+  assert.deepEqual(await autocomplete('race', { device }), [{ id: 'Racer', name: 'Pixel Race' }]);
+  assert.deepEqual(await autocomplete('weather', { device }), [{ id: 'Weather', name: 'Forecast' }]);
+  await runs.get('awtrixng_script_show')({ device, script: { id: 'Racer', name: 'Pixel Race' } });
+  assert.deepEqual(calls, ['Racer']);
+  const error = new Error('Script is unavailable');
+  device.showScript = async () => {
+    throw error;
+  };
+  await assert.rejects(runs.get('awtrixng_script_show')({ device, script: { id: 'Racer' } }), (failure) => failure === error);
+});
+
 test('NG audio Flow listeners resolve Soundboard metadata and call the selected device', async () => {
   const Driver = loadDriver();
   const runs = new Map();

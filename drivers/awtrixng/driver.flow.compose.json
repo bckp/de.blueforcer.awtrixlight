@@ -501,6 +501,31 @@
         "en": "Requires Soundboard. Homey resolves the current file and sends it directly. MP3 or 16-bit PCM WAV, maximum 2 MiB; no stored copy. Finishes when playback starts.",
         "cs": "Vyžaduje Soundboard. Homey načte aktuální soubor a přímo ho odešle. MP3 nebo WAV s 16bitovým PCM, nejvýše 2 MiB; bez uložené kopie. Končí při zahájení přehrávání."
       }
+    },
+    {
+      "id": "awtrixng_script_show",
+      "title": {
+        "en": "Show an installed script",
+        "cs": "Zobrazit nainstalovaný skript"
+      },
+      "titleFormatted": {
+        "en": "Show script [[script]]",
+        "cs": "Zobrazit skript [[script]]"
+      },
+      "args": [
+        {
+          "name": "script",
+          "type": "autocomplete",
+          "title": {
+            "en": "Script",
+            "cs": "Skript"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Select a working, enabled script installed on the clock. Starts on-demand scripts. Next or previous app ends an on-demand script. Background scripts and modules are not shown.",
+        "cs": "Vyberte funkční a zapnutý skript nainstalovaný na hodinách. Spustí i skripty na vyžádání. Další nebo předchozí aplikace takový skript ukončí. Skripty na pozadí a moduly se nenabízejí."
+      }
     }
   ]
 }

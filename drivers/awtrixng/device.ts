@@ -409,6 +409,16 @@ class AwtrixNgDevice extends Device {
     await this.getApi().playRadio(station);
   }
 
+  async getSelectableScripts(): Promise<{ id: string; name: string }[]> {
+    return (await this.getApi().readSelectableScripts()).map((script) => ({
+      id: script.name, name: script.meta?.name || script.name,
+    }));
+  }
+
+  async showScript(name: string): Promise<void> {
+    await this.getApi().showScript(name);
+  }
+
   async playRadioUrl(url: string): Promise<void> {
     await this.getApi().playRadioUrl(url);
   }

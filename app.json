@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "de.blueforcer.awtrixlight",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "compatibility": ">=12.9.0",
   "sdk": 3,
   "brandColor": "#222222",
@@ -1664,6 +1664,36 @@
           "en": "Requires Soundboard. Homey resolves the current file and sends it directly. MP3 or 16-bit PCM WAV, maximum 2 MiB; no stored copy. Finishes when playback starts.",
           "cs": "Vyžaduje Soundboard. Homey načte aktuální soubor a přímo ho odešle. MP3 nebo WAV s 16bitovým PCM, nejvýše 2 MiB; bez uložené kopie. Končí při zahájení přehrávání."
         }
+      },
+      {
+        "id": "awtrixng_script_show",
+        "title": {
+          "en": "Show an installed script",
+          "cs": "Zobrazit nainstalovaný skript"
+        },
+        "titleFormatted": {
+          "en": "Show script [[script]]",
+          "cs": "Zobrazit skript [[script]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "script",
+            "type": "autocomplete",
+            "title": {
+              "en": "Script",
+              "cs": "Skript"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Select a working, enabled script installed on the clock. Starts on-demand scripts. Next or previous app ends an on-demand script. Background scripts and modules are not shown.",
+          "cs": "Vyberte funkční a zapnutý skript nainstalovaný na hodinách. Spustí i skripty na vyžádání. Další nebo předchozí aplikace takový skript ukončí. Skripty na pozadí a moduly se nenabízejí."
+        }
       }
     ],
     "triggers": [
@@ -2425,6 +2455,10 @@
               "id": "autoBrightness",
               "type": "checkbox",
               "value": false,
+              "hint": {
+                "en": "Requires a light sensor. TC002 has no light sensor and does not support this option.",
+                "cs": "Vyžaduje světelný senzor. TC002 ho nemá a tuto volbu nepodporuje."
+              },
               "label": {
                 "en": "Auto-brightness",
                 "nl": "Automatische helderheid",

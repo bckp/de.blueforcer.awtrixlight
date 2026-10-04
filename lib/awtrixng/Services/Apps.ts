@@ -5,8 +5,19 @@ import {
   AwtrixNgApiOkResponse,
 } from '../Api/Types';
 import { AwtrixNgInvalidResponseError } from '../Api/InvalidResponseError';
+import { isPlainObject } from '../Support/Guards';
 
 const AppsEndpoint = '/api/v1/apps';
+
+/** Only drawable, enabled scripts can be selected. Modules and headless scripts have no screen. */
+export const getAwtrixNgSelectableScripts = (apps: AwtrixNgApiAppsResponse): AwtrixNgApiAppInventoryItem[] => {
+  if (!Array.isArray(apps) || apps.some((app) => !isPlainObject(app) || typeof app.name !== 'string')) {
+    throw new AwtrixNgInvalidResponseError({ endpoint: AppsEndpoint, expectedShape: 'an array of named apps', actualValue: apps });
+  }
+  return apps.filter((app) => app.origin === 'script' && app.present !== false
+    && app.enabled === true && app.headless !== true && app.error == null
+    && app.meta?.display?.fits !== false);
+};
 
 export const AwtrixNgBuiltinAppNamesBySetting = {
   showBuiltinTime: 'Time',

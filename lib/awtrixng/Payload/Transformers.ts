@@ -14,6 +14,7 @@ import {
   AwtrixNgApiSettingsPatch,
   AwtrixNgApiSoundPlayPayload,
   AwtrixNgApiTextCases,
+  AwtrixNgApiTextAlignments,
 } from '../Api/Types';
 import { isPlainObject } from '../Support/Guards';
 import { assertAwtrixNgSound } from '../Services/Audio';
@@ -120,6 +121,7 @@ const pageFieldMap: Record<keyof AwtrixNgApiPagePayload, true> = {
   textBlinkMs: true,
   textCase: true,
   textCenter: true,
+  textAlign: true,
   textColor: true,
   textFadeMs: true,
   textInFront: true,
@@ -773,6 +775,12 @@ const assertPagePayload = (input: Record<string, unknown>, target: 'notification
   assertDrawValue(input, target);
   assertPaletteValue(input, target);
   assertStringEnumField(input, 'textCase', AwtrixNgApiTextCases, target);
+  assertStringEnumField(input, 'textAlign', AwtrixNgApiTextAlignments, target);
+  if (input.textAlign !== undefined && input.textCenter !== undefined) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'textAlign', target, reason: 'invalid-value', details: 'Use either textAlign or the legacy textCenter option, not both.',
+    });
+  }
   if (input.font !== undefined && (typeof input.font !== 'string' || input.font.length === 0)) {
     throw new UnsupportedAwtrixNgPayloadFieldError({
       field: 'font', target, reason: 'invalid-value', details: 'Expected a non-empty font name advertised by the device.',
@@ -780,29 +788,34 @@ const assertPagePayload = (input: Record<string, unknown>, target: 'notification
   }
   if (input.iconGap !== undefined && (!Number.isInteger(input.iconGap) || Number(input.iconGap) < 0 || Number(input.iconGap) > 128)) {
     throw new UnsupportedAwtrixNgPayloadFieldError({
-      field: 'iconGap', target, reason: 'unsupported-field', details: 'Expected an integer from 0 to 128.',
+      field: 'iconGap', target, reason: 'invalid-value', details: 'Expected an integer from 0 to 128.',
     });
   }
   if (input.icons !== undefined) {
     if (!Array.isArray(input.icons) || input.icons.length > 4) {
       throw new UnsupportedAwtrixNgPayloadFieldError({
-        field: 'icons', target, reason: 'unsupported-field', details: 'Expected at most four icons.',
+        field: 'icons', target, reason: 'invalid-value', details: 'Expected an array of at most four icons.',
       });
     }
     input.icons.forEach((item, index) => {
       const path = `icons[${index}]`;
-      if (!isPlainObject(item) || typeof item.icon !== 'string' || item.icon.length === 0) {
+      if (!isPlainObject(item)) {
         throw new UnsupportedAwtrixNgPayloadFieldError({
-          field: `${path}.icon`, target, reason: 'unsupported-field', details: 'Expected a non-empty icon.',
+          field: path, target, reason: 'invalid-value', details: 'Expected an icon object.',
+        });
+      }
+      if (typeof item.icon !== 'string' || item.icon.length === 0) {
+        throw new UnsupportedAwtrixNgPayloadFieldError({
+          field: `${path}.icon`, target, reason: 'invalid-value', details: 'Expected a non-empty icon.',
         });
       }
       for (const key of Object.keys(item)) {
         if (!['icon', 'x', 'y'].includes(key)) {
           throw new UnsupportedAwtrixNgPayloadFieldError({ field: `${path}.${key}`, target, reason: 'unknown-field' });
         }
-        if (key !== 'icon' && (!Number.isInteger(item[key]) || Math.abs(Number(item[key])) > 65535)) {
+        if (key !== 'icon' && item[key] !== undefined && (!Number.isInteger(item[key]) || Math.abs(Number(item[key])) > 65535)) {
           throw new UnsupportedAwtrixNgPayloadFieldError({
-            field: `${path}.${key}`, target, reason: 'unsupported-field', details: 'Expected an integer from -65535 to 65535.',
+            field: `${path}.${key}`, target, reason: 'invalid-value', details: 'Expected an integer from -65535 to 65535.',
           });
         }
       }

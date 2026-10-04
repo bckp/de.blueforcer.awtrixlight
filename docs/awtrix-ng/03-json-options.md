@@ -32,15 +32,16 @@ This table lists the JSON properties accepted by the Homey app for AWTRIX NG not
 | `textColor` | `ColorInput \| "palette"` | X | X |
 | `textBlinkMs` | `number` | X | X |
 | `textFadeMs` | `number` | X | X |
-| `textCenter` | `boolean` | X | X |
+| `textCenter` | `boolean` (legacy compatibility option; see below) | X | X |
+| `textAlign` | `"start" \| "center" \| "end"` (firmware 1.1.7+) | X | X |
 | `textOffsetX` | `number` | X | X |
 | `textInFront` | `boolean` | X | X |
 | `scroll` | `ScrollObject` | X | X |
 | `icon` | `string` | X | X |
 | `iconMode` | `"fixed" \| "pushOnce" \| "push"` | X | X |
 | `iconOffsetX` | `number` | X | X |
-| `iconGap` | integer 0–128; verified NG 1.1.6 contract or newer | X | X |
-| `icons` | up to four `{ icon, x?, y? }` objects; verified NG 1.1.6 contract or newer | X | X |
+| `iconGap` | integer 0–128; NG 1.1.2 or newer | X | X |
+| `icons` | up to four `{ icon, x?, y? }` objects; NG 1.1.2 or newer | X | X |
 | `durationMs` | `number` | X | X |
 | `backgroundColor` | `ColorInput` | X | X |
 | `barChart` | `number[]` | X | X |
@@ -97,15 +98,16 @@ These fields are accepted by both notification/message JSON payloads and pushed 
 | `textColor` | `ColorInput \| "palette"` | Text color. Use `"palette"` together with `palette` for palette-based rendering. |
 | `textBlinkMs` | `number` | Text blink interval in milliseconds. |
 | `textFadeMs` | `number` | Text fade duration in milliseconds. |
-| `textCenter` | `boolean` | Center text when applicable. |
+| `textCenter` | `boolean` | Legacy centering. Before firmware 1.1.7, sent unchanged. On 1.1.7+, explicitly converted to `textAlign: "center"` for true or `"start"` for false. |
+| `textAlign` | `"start" \| "center" \| "end"` | Native still-text alignment, firmware 1.1.7+. Scrolling text is unaffected. Cannot be combined with `textCenter`; older firmware rejects this option instead of emulating it. |
 | `textOffsetX` | `number` | Horizontal text offset. |
 | `textInFront` | `boolean` | Draw text in front of decorations/effects where supported by AWTRIX NG. |
 | `scroll` | `ScrollObject` | Scroll configuration object. String shorthand is not accepted by the Homey transformer; use an object. |
 | `icon` | `string` | Icon ID/name or AWTRIX NG-supported inline icon value. Exact inline data URL compatibility is not guaranteed. |
 | `iconMode` | `"fixed" \| "pushOnce" \| "push"` | Icon movement mode. |
 | `iconOffsetX` | `number` | Horizontal icon offset. |
-| `iconGap` | integer 0–128 | Gap between the main icon and text; NG 1.1.6 or newer. |
-| `icons` | `{ icon: string, x?: integer, y?: integer }[]` | Up to four independent icons; coordinates −65535…65535. NG 1.1.6 or newer. |
+| `iconGap` | integer 0–128 | Gap between the main icon and text; NG 1.1.2 or newer. |
+| `icons` | `{ icon: string, x?: integer, y?: integer }[]` | Up to four independent icons; coordinates −65535…65535. NG 1.1.2 or newer. |
 | `durationMs` | `number` | Page/notification duration in milliseconds. In regular Homey flows this is normally set via Homey's native Add duration option; in JSON-only flows use this field directly. |
 | `backgroundColor` | `ColorInput` | Background color. |
 | `barChart` | `number[]` | Bar chart values. |
@@ -129,8 +131,8 @@ These fields are accepted by both notification/message JSON payloads and pushed 
 Named fonts are checked against the current `capabilities.fonts`, on either panel
 size. Internet icon URLs are accepted only on TC002, including layout regions.
 There is no explicit capability flag for `iconGap` or `icons`: the app deliberately
-requires the verified 1.1.6 payload contract or newer. Support on earlier firmware
-is UNKNOWN. No unsupported field is silently removed. Layout cannot be combined
+requires firmware 1.1.2 or newer, matching the public release contract and current
+documentation. No unsupported field is silently removed. Layout cannot be combined
 with these flat visual fields; place icons in its regions instead.
 
 ### Layout JSON

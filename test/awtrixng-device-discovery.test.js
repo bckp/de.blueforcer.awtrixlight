@@ -465,6 +465,10 @@ test('AWTRIX NG onInit without a stored address registers controls and allows se
 test('AWTRIX NG connection settings send device settings through the candidate before activation', async () => {
   let harness;
   const request = async (httpRequest) => {
+    if (httpRequest.path === '/api/v1/capabilities') {
+      return { status: 200, headers: {}, data: { sensors: { light: true } } };
+    }
+
     if (httpRequest.method === 'GET' && httpRequest.path === '/api/v1/device') {
       return {
         status: 200,
@@ -501,6 +505,7 @@ test('AWTRIX NG connection settings send device settings through the candidate b
 
   assert.deepEqual(harness.transport.calls.map(({ method, path }) => ({ method, path })), [
     { method: 'GET', path: '/api/v1/device' },
+    { method: 'GET', path: '/api/v1/capabilities' },
     { method: 'PATCH', path: '/api/v1/settings' },
     { method: 'GET', path: '/api/v1/device' },
   ]);
@@ -520,7 +525,11 @@ test('AWTRIX NG connection settings preserve the active connection and original 
   });
   let requestCount = 0;
   const harness = createDiscoveryHarness({
-    request: async () => {
+    request: async (httpRequest) => {
+      if (httpRequest.path === '/api/v1/capabilities') {
+        return { status: 200, headers: {}, data: { sensors: { light: true } } };
+      }
+
       requestCount += 1;
 
       if (requestCount === 1) {
@@ -566,6 +575,10 @@ test('AWTRIX NG connection settings prepare apps and settings before the first w
     request: async (httpRequest) => {
       requestSequence.push(`${httpRequest.method} ${httpRequest.path}`);
 
+      if (httpRequest.path === '/api/v1/capabilities') {
+        return { status: 200, headers: {}, data: { sensors: { light: true } } };
+      }
+
       if (httpRequest.method === 'GET' && httpRequest.path === '/api/v1/device') {
         return {
           status: 200,
@@ -609,6 +622,7 @@ test('AWTRIX NG connection settings prepare apps and settings before the first w
 
   assert.deepEqual(requestSequence, [
     'GET /api/v1/device',
+    'GET /api/v1/capabilities',
     'GET /api/v1/apps',
     'PUT /api/v1/apps/order',
     'PATCH /api/v1/settings',
@@ -665,6 +679,10 @@ test('AWTRIX NG settings preserve a getApps error without starting a write', asy
   });
   const harness = createDiscoveryHarness({
     request: async (httpRequest) => {
+      if (httpRequest.path === '/api/v1/capabilities') {
+        return { status: 200, headers: {}, data: { sensors: { light: true } } };
+      }
+
       if (httpRequest.method === 'GET' && httpRequest.path === '/api/v1/apps') {
         throw sourceError;
       }
@@ -686,6 +704,7 @@ test('AWTRIX NG settings preserve a getApps error without starting a write', asy
     (error) => error === sourceError,
   );
   assert.deepEqual(harness.transport.calls.map(({ method, path }) => ({ method, path })), [
+    { method: 'GET', path: '/api/v1/capabilities' },
     { method: 'GET', path: '/api/v1/apps' },
   ]);
 });
@@ -701,6 +720,10 @@ test('AWTRIX NG settings stop before the second write when the first write fails
   });
   const harness = createDiscoveryHarness({
     request: async (httpRequest) => {
+      if (httpRequest.path === '/api/v1/capabilities') {
+        return { status: 200, headers: {}, data: { sensors: { light: true } } };
+      }
+
       if (httpRequest.method === 'GET' && httpRequest.path === '/api/v1/apps') {
         return {
           status: 200,
@@ -730,6 +753,7 @@ test('AWTRIX NG settings stop before the second write when the first write fails
     (error) => error === sourceError,
   );
   assert.deepEqual(harness.transport.calls.map(({ method, path }) => ({ method, path })), [
+    { method: 'GET', path: '/api/v1/capabilities' },
     { method: 'GET', path: '/api/v1/apps' },
     { method: 'PUT', path: '/api/v1/apps/order' },
   ]);
@@ -746,6 +770,10 @@ test('AWTRIX NG settings expose the only possible partial write when the second 
   });
   const harness = createDiscoveryHarness({
     request: async (httpRequest) => {
+      if (httpRequest.path === '/api/v1/capabilities') {
+        return { status: 200, headers: {}, data: { sensors: { light: true } } };
+      }
+
       if (httpRequest.method === 'GET' && httpRequest.path === '/api/v1/apps') {
         return {
           status: 200,
@@ -783,6 +811,7 @@ test('AWTRIX NG settings expose the only possible partial write when the second 
     (error) => error === sourceError,
   );
   assert.deepEqual(harness.transport.calls.map(({ method, path }) => ({ method, path })), [
+    { method: 'GET', path: '/api/v1/capabilities' },
     { method: 'GET', path: '/api/v1/apps' },
     { method: 'PUT', path: '/api/v1/apps/order' },
     { method: 'PATCH', path: '/api/v1/settings' },

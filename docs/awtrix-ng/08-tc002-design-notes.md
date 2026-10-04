@@ -2,6 +2,8 @@
 
 Status: implementation notes, updated 2026-10-03. TC002 stays in the AWTRIX NG driver.
 
+Update 2026-10-05: these notes preserve the beta investigation and physical 1.1.6 tests. Current 1.2.0 readiness and subsequent changes are in [firmware 1.2.0 readiness](09-firmware-1.2.0-readiness.md). In particular, the earlier uncertainty about `icons`/`iconGap` is resolved: the app now supports them from 1.1.2. Text alignment and installed script selection are covered by the new snapshot; no physical 1.2.0 test is implied here.
+
 ## Mixer, radio, clips and flat JSON extensions (2026-10-03)
 
 - Owner-approved scope: mixer, internet radio, group stops, sending transient files

@@ -207,7 +207,7 @@ test('extended JSON works on both panel sizes but fails for unknown fonts and ol
     await api.putPushedApp('test', page);
     assert.deepEqual(calls.at(-1).body, page);
   }
-  const { api, calls } = createApi({ 'GET /api/v1/version': { version: '1.1.5' } });
+  const { api, calls } = createApi({ 'GET /api/v1/version': { version: '1.1.1' } });
   await assert.rejects(api.sendNotification(page), (error) => error.field === 'iconGap');
   await assert.rejects(api.sendNotification({ font: 'unknown' }), (error) => error.field === 'font');
   assert.equal(calls.some((call) => call.method === 'POST'), false);
