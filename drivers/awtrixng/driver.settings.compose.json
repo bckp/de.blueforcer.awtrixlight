@@ -370,6 +370,71 @@
   {
     "type": "group",
     "label": {
+      "en": "Panel colors",
+      "cs": "Obraz displeje"
+    },
+    "children": [
+      {
+        "id": "saturation",
+        "type": "number",
+        "value": 100,
+        "min": 0,
+        "max": 100,
+        "label": {
+          "en": "Saturation (%)",
+          "cs": "Sytost (%)"
+        },
+        "hint": {
+          "en": "0 shows grayscale; 100 keeps the original colors.",
+          "cs": "0 zobrazí odstíny šedi; 100 zachová původní barvy."
+        }
+      },
+      {
+        "id": "gamma",
+        "type": "number",
+        "value": 1.9,
+        "decimals": 2,
+        "min": 0,
+        "label": {
+          "en": "Gamma",
+          "cs": "Gamma"
+        },
+        "hint": {
+          "en": "Must be greater than zero. Default: 1.9.",
+          "cs": "Musí být větší než nula. Výchozí hodnota: 1,9."
+        }
+      },
+      {
+        "id": "colorCorrection",
+        "type": "text",
+        "value": "",
+        "label": {
+          "en": "Color correction",
+          "cs": "Barevná korekce"
+        },
+        "hint": {
+          "en": "Enter #RRGGBB. Leave empty to turn off. Multiplies the color of every pixel; #000000 makes the panel black.",
+          "cs": "Zadejte #RRGGBB. Prázdné pole funkci vypne. Násobí barvu každého pixelu; #000000 vytvoří černý obraz."
+        }
+      },
+      {
+        "id": "colorTint",
+        "type": "text",
+        "value": "",
+        "label": {
+          "en": "Color tint",
+          "cs": "Barevný nádech"
+        },
+        "hint": {
+          "en": "Enter #RRGGBB. Leave empty to turn off. Multiplies the color of every pixel; #000000 makes the panel black.",
+          "cs": "Zadejte #RRGGBB. Prázdné pole funkci vypne. Násobí barvu každého pixelu; #000000 vytvoří černý obraz."
+        }
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
       "en": "Default apps",
       "nl": "Standaard apps",
       "de": "Standard-Apps",

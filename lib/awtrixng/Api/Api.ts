@@ -10,6 +10,7 @@ import {
   createAwtrixNgSettingsPatchFromChangedSettings,
   toAwtrixNgHomeySettingsUpdate,
   writeAwtrixNgSettingsPatch,
+  AwtrixNgPanelSettingsFields,
 } from '../Services/Settings';
 import {
   AwtrixNgBuiltinAppSettingIds,
@@ -414,6 +415,21 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     const settingsPatch = createAwtrixNgSettingsPatchFromChangedSettings(newSettings, remoteSettingsKeys);
 
     validateAwtrixNgBuiltinAppSettingsChange(newSettings, changedKeys);
+
+    const panelFields = AwtrixNgPanelSettingsFields.filter((field) => settingsPatch?.[field] !== undefined);
+    if (panelFields.length > 0) {
+      const settings = await this.#client.getSettings();
+      if (!isPlainObject(settings)) {
+        throw new AwtrixNgInvalidResponseError({ endpoint: SettingsEndpoint, expectedShape: 'a settings object', actualValue: settings });
+      }
+      for (const field of panelFields) {
+        if (!Object.hasOwn(settings, field)) {
+          throw new UnsupportedAwtrixNgPayloadFieldError({
+            field, target: 'settings', reason: 'unsupported-field', details: 'This device does not advertise this panel setting.',
+          });
+        }
+      }
+    }
 
     if (settingsPatch?.autoBrightness !== undefined) {
       const caps = await this.#client.getCapabilities();

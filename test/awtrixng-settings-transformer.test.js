@@ -83,6 +83,10 @@ const assertSettingsError = (input, field, reason = 'unknown-field') => {
   });
 };
 
+const panelSettings = {
+  saturation: 100, gamma: 1.9, colorCorrection: '', colorTint: '',
+};
+
 test('AWTRIX NG settings transformer accepts autoBrightness', () => {
   assert.deepEqual(toAwtrixNgSettingsPatch({
     autoBrightness: true,
@@ -224,6 +228,7 @@ test('AWTRIX NG settings response mapper keeps only Homey-supported settings sub
     uppercase: false,
     transitionEffect: 'Slide',
   })), {
+    ...panelSettings,
     autoBrightness: true,
     autoTransition: false,
     blockNavigation: true,
@@ -237,6 +242,7 @@ test('AWTRIX NG settings response update includes only values changed by returne
     autoBrightness: true,
     transitionEffect: 'Rain',
   }), {
+    ...panelSettings,
     autoBrightness: false,
     autoTransition: true,
     blockNavigation: false,
@@ -253,6 +259,7 @@ test('AWTRIX NG settings response update omits undefined values from a partial r
     transitionEffect: 'Slide',
     uppercase: undefined,
   }), {
+    ...panelSettings,
     autoBrightness: false,
     autoTransition: true,
     blockNavigation: false,
@@ -276,6 +283,7 @@ test('AWTRIX NG settings apply helper calls PATCH directly, then returns Homey u
   };
 
   const result = await applyAwtrixNgHomeySettingsChange(client, {
+    ...panelSettings,
     authUser: 'homey',
     transitionEffect: 'Rain',
     autoBrightness: true,

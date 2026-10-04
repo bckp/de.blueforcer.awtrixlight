@@ -88,6 +88,10 @@ export interface AwtrixNgSettingsPatchInput {
   blockNavigation?: boolean;
   uppercase?: boolean;
   transitionEffect?: string;
+  saturation?: number;
+  gamma?: number;
+  colorCorrection?: string | null;
+  colorTint?: string | null;
 }
 
 const pageFieldMap: Record<keyof AwtrixNgApiPagePayload, true> = {
@@ -179,6 +183,10 @@ const settingsFieldMap: Record<keyof AwtrixNgSettingsPatchInput, true> = {
   blockNavigation: true,
   transitionEffect: true,
   uppercase: true,
+  saturation: true,
+  gamma: true,
+  colorCorrection: true,
+  colorTint: true,
 };
 
 export const AwtrixNgWritableSettingsFields = Object.keys(settingsFieldMap);
@@ -853,6 +861,23 @@ const assertSettingsPatch = (input: Record<string, unknown>): void => {
   assertBooleanField(input, 'autoTransition', 'settings');
   assertBooleanField(input, 'blockNavigation', 'settings');
   assertBooleanField(input, 'uppercase', 'settings');
+  if (input.saturation !== undefined && (!Number.isInteger(input.saturation) || Number(input.saturation) < 0 || Number(input.saturation) > 100)) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'saturation', target: 'settings', reason: 'invalid-value', details: 'Expected an integer from 0 to 100.',
+    });
+  }
+  if (input.gamma !== undefined && (typeof input.gamma !== 'number' || !Number.isFinite(input.gamma) || input.gamma <= 0)) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'gamma', target: 'settings', reason: 'invalid-value', details: 'Gamma must be a finite number greater than zero.',
+    });
+  }
+  for (const field of ['colorCorrection', 'colorTint']) {
+    if (input[field] !== undefined && input[field] !== null && (typeof input[field] !== 'string' || !/^#[0-9a-f]{6}$/i.test(input[field] as string))) {
+      throw new UnsupportedAwtrixNgPayloadFieldError({
+        field, target: 'settings', reason: 'invalid-value', details: 'Expected #RRGGBB or null to turn off the correction.',
+      });
+    }
+  }
 
   if (input.transitionEffect !== undefined && typeof input.transitionEffect !== 'string') {
     throw new UnsupportedAwtrixNgPayloadFieldError({
