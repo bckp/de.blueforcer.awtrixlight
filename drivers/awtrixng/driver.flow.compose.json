@@ -526,6 +526,33 @@
         "en": "Select a working, enabled script installed on the clock. Starts on-demand scripts. Next or previous app ends an on-demand script. Background scripts and modules are not shown.",
         "cs": "Vyberte funkční a zapnutý skript nainstalovaný na hodinách. Spustí i skripty na vyžádání. Další nebo předchozí aplikace takový skript ukončí. Skripty na pozadí a moduly se nenabízejí."
       }
+    },
+    {
+      "id": "awtrixng_brightness",
+      "title": {
+        "en": "Set panel brightness",
+        "cs": "Nastavit jas displeje"
+      },
+      "titleFormatted": {
+        "en": "Set panel brightness to [[brightness]]%",
+        "cs": "Nastavit jas displeje na [[brightness]] %"
+      },
+      "args": [
+        {
+          "name": "brightness",
+          "type": "number",
+          "min": 0,
+          "max": 100,
+          "title": {
+            "en": "Brightness (%)",
+            "cs": "Jas (%)"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Sets manual brightness. Disables automatic brightness on devices with a light sensor. Does not switch display power.",
+        "cs": "Nastaví ruční jas. U zařízení se světelným senzorem vypne automatický jas. Nemění zapnutí displeje."
+      }
     }
   ]
 }

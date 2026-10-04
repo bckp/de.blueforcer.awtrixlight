@@ -276,6 +276,7 @@ class AwtrixNgDevice extends Device {
   }
 
   private initCapabilityListeners(): void {
+    this.registerCapabilityListener('dim', async (value: number): Promise<void> => this.setBrightness(value));
     this.registerCapabilityListener('awtrix_matrix', async (value: unknown): Promise<void> => {
       await this.getApi().setMatrixPower(value);
     });
@@ -367,6 +368,12 @@ class AwtrixNgDevice extends Device {
       throw new Error('This AWTRIX NG device does not support synthesized audio.');
     }
     await this.getApi().playSynthFx(fx);
+  }
+
+  async setBrightness(value: number): Promise<void> {
+    const actual = await this.getApi().setBrightness(value);
+    await this.setCapabilityValue('dim', actual.brightness).catch(this.error);
+    await this.setSettings({ autoBrightness: actual.autoBrightness });
   }
 
   async sendHeaderNotification(input: AwtrixNgHeaderLayoutInput): Promise<void> {

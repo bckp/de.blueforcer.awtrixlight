@@ -10,6 +10,7 @@
     "alarm_generic.indicator2",
     "alarm_generic.indicator3",
     "awtrix_matrix",
+    "dim",
     "awtrixng_weather_overlay",
     "rssi",
     "ip",
@@ -104,6 +105,13 @@
         "de": "Suchvorgang nach neuer IP-Adresse des Geräts starten.",
         "cs": "Spustit vyhledávání nové IP adresy zařízení."
       }
+    },
+    "dim": {
+      "title": {
+        "en": "Brightness",
+        "cs": "Jas"
+      },
+      "preventInsights": true
     }
   },
   "discovery": "awtrixng-mdns",

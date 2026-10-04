@@ -424,6 +424,7 @@ test('AWTRIX NG onInit without a stored address registers controls and allows se
   assert.equal(device.available, false);
   assert.equal(events[0].message, 'states.awtrixNg.connectionNotConfigured');
   assert.deepEqual([...capabilityListeners.keys()], [
+    'dim',
     'awtrix_matrix',
     'button_next',
     'button_prev',

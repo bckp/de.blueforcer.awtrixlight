@@ -782,6 +782,7 @@ test('AWTRIX NG onInit registers capability listeners and polls even without a s
   await harness.device.onInit();
 
   assert.deepEqual(harness.capabilityListeners.map(({ capabilityId }) => capabilityId), [
+    'dim',
     'awtrix_matrix',
     'button_next',
     'button_prev',

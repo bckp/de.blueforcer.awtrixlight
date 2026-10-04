@@ -455,6 +455,30 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     await runAwtrixNgMatrixPowerCapability(this.#client, value);
   }
 
+  /** Homey's normalized dim value maps to the documented 0..255 panel brightness. */
+  async setBrightness(value: number): Promise<{ brightness: number; autoBrightness: boolean }> {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
+      throw new TypeError('Brightness must be a number between 0 and 1.');
+    }
+    const settings = await this.#client.getSettings();
+    if (!isPlainObject(settings) || typeof settings.autoBrightness !== 'boolean') {
+      throw new AwtrixNgInvalidResponseError({ endpoint: SettingsEndpoint, expectedShape: 'settings with an autoBrightness boolean', actualValue: settings });
+    }
+    let disableAutomatic = settings.autoBrightness;
+    if (disableAutomatic) {
+      const caps = await this.readAudioCapabilities();
+      disableAutomatic = caps.sensors?.light !== false && caps.platform?.id !== 'tc002';
+    }
+    const result = await this.#client.patchSettings({
+      brightness: Math.round(value * 255), ...(disableAutomatic ? { autoBrightness: false } : {}),
+    });
+    if (!isPlainObject(result) || !Number.isInteger(result.brightness) || result.brightness < 0 || result.brightness > 255
+      || typeof result.autoBrightness !== 'boolean') {
+      throw new AwtrixNgInvalidResponseError({ endpoint: SettingsEndpoint, expectedShape: 'settings with brightness 0..255 and autoBrightness', actualValue: result });
+    }
+    return { brightness: result.brightness / 255, autoBrightness: result.autoBrightness };
+  }
+
   async nextApp(): Promise<void> {
     await runAwtrixNgNextAppCapability(this.#client);
   }

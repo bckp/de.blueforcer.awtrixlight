@@ -171,6 +171,14 @@ class AwtrixNgDriver extends Driver {
     this.#knobTurnedTrigger = this.homey.flow.getDeviceTriggerCard('awtrixng_knob_turned');
     this.registerHeaderLayoutCards();
     this.registerAudioCards();
+    this.homey.flow.getActionCard('awtrixng_brightness').registerRunListener(async (args: {
+      device: import('./device').default; brightness: number;
+    }): Promise<void> => {
+      if (typeof args.brightness !== 'number' || !Number.isFinite(args.brightness) || args.brightness < 0 || args.brightness > 100) {
+        throw new TypeError('Brightness must be between 0 and 100%.');
+      }
+      await args.device.setBrightness(args.brightness / 100);
+    });
     const scriptCard = this.homey.flow.getActionCard('awtrixng_script_show');
     scriptCard.registerRunListener(async (args: {
       device: import('./device').default; script: { id: string };

@@ -7,6 +7,7 @@ export type AwtrixNgHomeyBaseCapabilityId = 'button_prev'
   | 'alarm_generic.indicator2'
   | 'alarm_generic.indicator3'
   | 'awtrix_matrix'
+  | 'dim'
   | typeof AwtrixNgWeatherOverlayCapabilityId
   | 'rssi'
   | 'ip'
@@ -62,6 +63,7 @@ export const AwtrixNgBaseCapabilityIds: readonly AwtrixNgHomeyBaseCapabilityId[]
   'alarm_generic.indicator2',
   'alarm_generic.indicator3',
   'awtrix_matrix',
+  'dim',
   AwtrixNgWeatherOverlayCapabilityId,
   'rssi',
   'ip',
@@ -165,6 +167,10 @@ export const createAwtrixNgCapabilityUpdatePlan = (
     if (value !== undefined) {
       addValue(capabilityId, value);
     }
+  }
+
+  if (Number.isInteger(deviceState.brightness) && deviceState.brightness >= 0 && deviceState.brightness <= 255) {
+    addValue('dim', deviceState.brightness / 255);
   }
 
   for (const mapping of optionalCapabilityFields) {
