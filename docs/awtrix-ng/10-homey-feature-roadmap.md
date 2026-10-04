@@ -2,12 +2,43 @@
 
 Rozhodnutí majitele, 5. října 2026. Každá implementovaná funkce má samostatný lokální commit a automatické testy. Soukromá TC002 větev se nepublikuje na veřejný Git server. Při zablokování jedné funkce se její rozpracování uloží do oddělené lokální větve a pokračuje se další funkcí.
 
-## Teď
+## Hotovo v soukromé testovací verzi 2.3.2
 
 - **Jas:** standardní Homey ovladač `dim`, Flow karta s procenty a synchronizace skutečné hodnoty z hodin. Rozsah 0–100 % se převádí na 0–255; nula je platná. Ruční nastavení vypne automatický jas tam, kde řídí panel, a nemění napájení displeje. TC002 nedostává neúčinnou senzorovou volbu. Starší firmware bez senzorového flagu se při aktivním automatickém režimu přepne na ruční jas. Homey nastavení se aktualizuje z odpovědi hodin.
-- **Nastavení obrazu:** sytost, gamma, barevná korekce a tint do nastavení NG zařízení.
+- **Nastavení obrazu:** sytost 0–100, kladná gamma, barevná korekce a tint v nastavení NG zařízení. Barvy přijímají `#RRGGBB`; prázdné pole korekci vypne. Černá `#000000` je platná barva. Podpora se ověřuje z aktuálního nastavení zařízení před prvním zápisem; chybějící pole není předstíraná podporovaná funkce.
 - **Scripty:** nastavování jejich deklarovaných voleb, čtení a změna uložených dat a čtení sdílených hodnot. Spuštění nainstalovaného scriptu je již v 2.3.1. Změna nastavení/dat restartuje script; také odpověď HTTP 200 s `error` musí být nahlášena jako selhání běhu scriptu, nikoli ignorována.
 - **Notifikace:** zrušení konkrétní notifikace podle názvu, i ve frontě; aktivní notifikace má nadále samostatnou kartu.
+
+## Použití nových Flow karet
+
+| Karta | Vstup / výstup |
+|---|---|
+| Nastavit jas | Procenta 0–100; synchronizace standardního Homey ovladače. |
+| Nastavit volbu skriptu | Vybrat nainstalovaný skript a deklarovanou volbu. Text/výběr přímo, číslo jako číslo, boolean `true`/`false`, barva `#RRGGBB` nebo celé číslo 0–16777215. |
+| Načíst volbu skriptu | Aktuální volba → textový token **Hodnota** v Advanced Flow. |
+| Změnit uložená data skriptu | Neprázdný JSON objekt, např. `{"counter":0,"old":null}`. Mění jen uvedené klíče, `null` klíč odstraňuje. Deklarované volby patří do samostatné karty. |
+| Načíst uloženou hodnotu skriptu | Vybrat skript a existující klíč → token **Hodnota**. |
+| Načíst sdílenou hodnotu skriptu | Vybrat `owner.key` → token **Hodnota**. Pouze čtení, bez emulace sdíleného úložiště v Homey. |
+| Zrušit pojmenovanou notifikaci | Přesný název z jejího JSON `name`. `active` patří do původní karty pro aktivní notifikaci. Nenalezená notifikace hlásí nativní 404, bez náhradního zrušení aktivní. |
+
+Token vrací řetězec přímo; čísla, booleany, `null`, pole a objekty mají podobu JSON. Nula, `false` a prázdný text se zachovají. Chybějící klíč způsobí chybu, nevytváří náhradní hodnotu.
+
+Konfigurace používá čerstvé schéma při každém spuštění Flow. Homey odmítá čísla mimo deklarované hranice před zápisem, přestože firmware je podle dokumentace umí oříznout. To je vědomá přísnější validace; žádná hodnota se v aplikaci tiše neupravuje. Maxlen textu vyhodnocujeme v Unicode znacích (code points), dle dokumentovaného limitu znaků; na zařízení ověřit i emoji.
+
+Konfigurovat lze také vypnuté, chybující nebo headless skripty; jsou užitečné pro obnovu či nastavení. Karta pro **zobrazení** dál vyžaduje zobrazitelný funkční skript. Moduly/built-in aplikace mají jiný význam a zatím se těmito kartami nespravují. Zdrojáky, OAuth ani instalace skriptů nejsou součástí těchto funkcí; instalace zůstává Hubu/webu hodin.
+
+## Ověření a další test na zařízení
+
+Automaticky: **518/518 testů**, TypeScript a ESLint bez chyb, Homey validace `publish` úspěšná. Funkce mají čtyři samostatné lokální commity bez podpisu. Žádná funkce nezůstala blokovaná ani odložená do rozpracované větve.
+
+Před vydáním do Store ručně ověřit:
+
+1. Migraci již spárovaného NG zařízení: objeví se ovladač jasu; polling odráží jas změněný ve webu. Jas 0/50/100 %, automatický jas TC001 a TC002 bez LDR.
+2. Uložení a opětovné načtení sytosti/gammy/korekce/tintu; vizuálně ověřit černou a vypnutí prázdným polem. U staršího firmwaru ověřit explicitní odmítnutí nepodporovaného pole.
+3. Skript s deklaracemi bool/text/number/slider/select/color: autocomplete, zápis, restart a tokeny v Advanced Flow. Ověřit nulu, `false`, emoji a chybu init/setup. Změna nastavení/dat může být uložená i při chybě restartu; Flow to výslovně hlásí.
+4. Částečné změny dat, odstranění přes `null`, zaniklý klíč nebo sdílená hodnota po restartu. Vypnuté scripting, zaneprázdněný script a změněné schéma musí vrátit chybu.
+5. Pošlete pojmenovanou čekající notifikaci za jinou aktivní. Zrušte čekající podle jména a ověřte zachování aktivní; opakování musí ohlásit 404. Původní aktivní karta zůstává funkční.
+6. Běžné Flow, notifikace, ikony a ovládání původního AWTRIX 3 i staršího NG.
 
 ## TODO — společně navrhnout a důkladně otestovat
 

@@ -151,5 +151,9 @@
   },
   "2.2.12": {
     "en": "Added support fro button callbacks (require AwtrixNG 1.1.1+)"
+  },
+  "2.3.2": {
+    "en": "Private NG test build: manual brightness, panel color settings, script settings and data Flow cards, and named notification dismissal.",
+    "cs": "Soukromá testovací NG verze: ruční jas, nastavení obrazu, Flow pro volby a data skriptů a zrušení pojmenovaných notifikací."
   }
 }

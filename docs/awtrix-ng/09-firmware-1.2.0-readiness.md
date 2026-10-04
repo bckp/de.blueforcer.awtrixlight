@@ -2,6 +2,8 @@
 
 Kontrola dokumentace: **5. října 2026**. Primárním podkladem je aktuální dokumentace Blueforceru; dostupnost nebo stáří veřejných zdrojáků její kontrakt nepřebíjí. Pro rozlišení API starších zařízení ponecháváme již ověřené starší kontrakty.
 
+Navazující testovací sestava **2.3.2** přidává jas, nastavení obrazu, konfiguraci/data scriptů a pojmenované rušení notifikací. Aktuální stav, použití a ruční testy jsou v [roadmapě](10-homey-feature-roadmap.md). Audit 2.3.1 níže zůstává jako historický podklad.
+
 Tento soubor popisuje lokální soukromou větev `codex/tc002-development`. Nejde o vydání do Homey Store ani o potvrzení testu s fyzickými hodinami na firmwaru 1.2.0.
 
 ## Co vydal Blueforcer

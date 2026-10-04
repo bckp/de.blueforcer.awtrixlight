@@ -370,6 +370,21 @@ Sticky notification example:
 }
 ```
 
+### Dismiss a named notification
+
+Set `name` in notification JSON, for example:
+
+```json
+{"name":"backup-job","text":"Backup running","hold":true}
+```
+
+The NG Flow card **Dismiss a named notification** removes that exact name anywhere
+in the queue. It sends `DELETE /api/v1/notifications/{name}` and preserves a native
+404 when the notification has already disappeared. It never substitutes an active
+notification dismissal. `active` is reserved by firmware; use the existing active
+dismissal card for that operation. Empty names and URL dot segments `.` / `..`
+are rejected locally; other names are encoded as one URL segment without rewriting.
+
 ## App / pushed app JSON options
 
 Pushed app JSON payloads are sent to:
