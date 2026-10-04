@@ -172,6 +172,9 @@ class AwtrixNgDriver extends Driver {
     this.registerHeaderLayoutCards();
     this.registerAudioCards();
     this.registerScriptSettingsCards();
+    this.homey.flow.getActionCard('awtrixng_notification_dismiss_named').registerRunListener(
+      async (args: { device: import('./device').default; name: string }) => args.device.dismissNamedNotification(args.name),
+    );
     this.homey.flow.getActionCard('awtrixng_brightness').registerRunListener(async (args: {
       device: import('./device').default; brightness: number;
     }): Promise<void> => {

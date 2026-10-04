@@ -544,6 +544,17 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     return this.#client.dismissActiveNotification();
   }
 
+  async dismissNamedNotification(name: string): Promise<void> {
+    if (typeof name !== 'string' || name.length === 0) throw new TypeError('A notification name is required.');
+    if (name === 'active') throw new TypeError('The name active is reserved; use the active notification card instead.');
+    // URL dot segments are normalized by fetch and cannot safely identify a named notification.
+    if (name === '.' || name === '..') throw new TypeError('A notification name cannot be a URL dot segment.');
+    const result = await this.#client.dismissNamedNotification(name);
+    if (!isPlainObject(result) || result.ok !== true) {
+      throw new AwtrixNgInvalidResponseError({ endpoint: `/api/v1/notifications/${encodeURIComponent(name)}`, expectedShape: 'an ok true response', actualValue: result });
+    }
+  }
+
   patchDisplay(patch: AwtrixNgApiDisplayPatch): Promise<AwtrixNgApiOkResponse> {
     return this.#client.patchDisplay(patch);
   }

@@ -1946,6 +1946,36 @@
             }
           }
         ]
+      },
+      {
+        "id": "awtrixng_notification_dismiss_named",
+        "title": {
+          "en": "Dismiss a named notification",
+          "cs": "Zrušit pojmenovanou notifikaci"
+        },
+        "titleFormatted": {
+          "en": "Dismiss notification [[name]]",
+          "cs": "Zrušit notifikaci [[name]]"
+        },
+        "hint": {
+          "en": "Removes the named notification even while waiting in the queue. Use the same name as in notification JSON. The reserved name active uses the existing active notification card. A missing name reports an error.",
+          "cs": "Odstraní pojmenovanou notifikaci i při čekání ve frontě. Použijte stejný název jako v JSON notifikace. Rezervovaný název active používá stávající kartu pro aktivní notifikaci. Nenalezená notifikace ohlásí chybu."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "title": {
+              "en": "Notification name",
+              "cs": "Název notifikace"
+            }
+          }
+        ]
       }
     ],
     "triggers": [

@@ -123,6 +123,13 @@ export default class AwtrixNgClient {
     });
   }
 
+  dismissNamedNotification(name: string): Promise<AwtrixNgApiOkResponse> {
+    return this.#request<AwtrixNgApiOkResponse>({
+      method: 'DELETE',
+      path: `/api/v1/notifications/${this.#pathSegment(name)}`,
+    });
+  }
+
   putIndicator(id: AwtrixNgIndicatorId, payload: AwtrixNgApiIndicatorPayload): Promise<AwtrixNgApiOkResponse> {
     return this.#request<AwtrixNgApiOkResponse, AwtrixNgApiIndicatorPayload>({
       method: 'PUT',

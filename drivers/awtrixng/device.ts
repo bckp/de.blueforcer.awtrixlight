@@ -430,6 +430,10 @@ class AwtrixNgDevice extends Device {
     return (await this.getApi().readManageableScripts()).map((script) => ({ id: script.name, name: script.meta?.name || script.name }));
   }
 
+  async dismissNamedNotification(name: string): Promise<void> {
+    await this.getApi().dismissNamedNotification(name);
+  }
+
   async getScriptSettingChoices(name: string) {
     return this.getApi().readScriptSettingChoices(name);
   }
