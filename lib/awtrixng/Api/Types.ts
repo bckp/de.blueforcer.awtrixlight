@@ -354,6 +354,8 @@ export interface AwtrixNgApiPagePayload {
   icon?: string;
   iconMode?: AwtrixNgApiIconMode;
   iconOffsetX?: number;
+  iconGap?: number;
+  icons?: { icon: string; x?: number; y?: number }[];
   durationMs?: number;
   repeat?: number;
   backgroundColor?: AwtrixNgApiColorInput;

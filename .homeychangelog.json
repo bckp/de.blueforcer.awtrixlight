@@ -151,5 +151,9 @@
   },
   "2.2.12": {
     "en": "Added support fro button callbacks (require AwtrixNG 1.1.1+)"
+  },
+  "2.2.13": {
+    "en": "Added multiple positioned icons (icons) and adjustable icon spacing (iconGap) to AWTRIX NG JSON notifications and custom apps. Requires AWTRIX NG firmware 1.1.2 or newer.",
+    "cs": "Přidány ikony s vlastní pozicí (icons) a nastavitelná mezera mezi hlavní ikonou a textem (iconGap) do AWTRIX NG JSON notifikací a vlastních aplikací. Vyžaduje firmware AWTRIX NG 1.1.2 nebo novější."
   }
 }

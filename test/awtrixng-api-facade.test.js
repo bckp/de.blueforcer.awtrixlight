@@ -73,6 +73,59 @@ const createApi = (routes = {}) => {
   return { api, transport };
 };
 
+test('positioned icons and iconGap reach both public endpoints on firmware 1.1.2 and newer', async () => {
+  for (const version of ['1.1.2', '1.2.0']) {
+    const { api, transport } = createApi({
+      'GET /api/v1/device': { ...deviceStateResponse, version },
+      'POST /api/v1/notifications': { ok: true },
+      'PUT /api/v1/apps/pushed/homey-weather': { ok: true },
+    });
+    await api.probe();
+    const payload = { icon: 'homey', iconGap: 0, icons: [{ icon: '2422', x: 24, y: -1 }] };
+    assert.deepEqual(await api.sendNotification(payload), { ok: true });
+    assert.deepEqual(await api.putPushedApp('homey-weather', payload), { ok: true });
+    assert.deepEqual(transport.calls.slice(1).map(({ method, path, body }) => ({ method, path, body })), [
+      { method: 'POST', path: '/api/v1/notifications', body: payload },
+      { method: 'PUT', path: '/api/v1/apps/pushed/homey-weather', body: payload },
+    ]);
+  }
+});
+
+test('positioned icons and even zero iconGap are rejected on older or unknown firmware before HTTP', async () => {
+  for (const version of ['1.0.14', '1.1.1', undefined]) {
+    const { api, transport } = createApi({
+      'GET /api/v1/device': { ...deviceStateResponse, version },
+    });
+    if (version !== undefined) await api.probe();
+    for (const payload of [{ icons: [] }, { iconGap: 0 }]) {
+      for (const send of [() => api.sendNotification(payload), () => api.putPushedApp('homey-weather', payload)]) {
+        await assert.rejects(send, (error) => {
+          assert.ok(error instanceof AwtrixNgUnsupportedVersionError);
+          assert.equal(error.currentVersion, version);
+          assert.equal(error.minimumVersion, '1.1.2');
+          return true;
+        });
+      }
+    }
+    assert.deepEqual(transport.calls.map(({ method }) => method), version === undefined ? [] : ['GET']);
+  }
+});
+
+test('legacy icon payloads still work on older and unknown firmware without an extra request', async () => {
+  for (const version of ['1.0.14', undefined]) {
+    const { api, transport } = createApi({
+      'GET /api/v1/device': { ...deviceStateResponse, version },
+      'POST /api/v1/notifications': { ok: true },
+      'PUT /api/v1/apps/pushed/homey-weather': { ok: true },
+    });
+    if (version !== undefined) await api.probe();
+    const payload = { icon: 'homey', iconOffsetX: 0 };
+    await api.sendNotification(payload);
+    await api.putPushedApp('homey-weather', payload);
+    assert.equal(transport.calls.length, version === undefined ? 2 : 3);
+  }
+});
+
 test('fromConnection constructs a facade with baseUrl and icons', () => {
   const api = AwtrixNgApi.fromConnection({ baseUrl: BaseUrl }, { emptyIcon });
 

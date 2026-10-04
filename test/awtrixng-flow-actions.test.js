@@ -15,6 +15,9 @@ const {
   runAwtrixNgWeatherOverlayAction,
 } = require('../.homeybuild/drivers/awtrixng/flow-actions');
 const { AwtrixNgApiError } = require('../.homeybuild/lib/awtrixng/Api/ErrorParser');
+const AwtrixNgApi = require('../.homeybuild/lib/awtrixng/Api/Api').default;
+const AwtrixNgClient = require('../.homeybuild/lib/awtrixng/Api/Client').default;
+const { AwtrixNgHttpError } = require('../.homeybuild/lib/awtrixng/Http/Transport');
 const { UnsupportedAwtrixNgPayloadFieldError } = require('../.homeybuild/lib/awtrixng/Payload/Transformers');
 const { AwtrixNgWeatherOverlayCapabilityId } = require('../.homeybuild/lib/awtrixng/Services/Display');
 
@@ -78,6 +81,99 @@ const createFakeClient = () => {
     },
   };
 };
+
+test('public firmware 1.1.2 receives icons and iconGap through notification, raw app and custom app flows', async () => {
+  const calls = [];
+  const api = new AwtrixNgApi(new AwtrixNgClient({
+    async request(request) {
+      calls.push(request);
+      return {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        data: request.path === '/api/v1/device'
+          ? {
+            uid: 'aabbccddeeff',
+            version: '1.1.2',
+            boardType: 'awtrixng',
+            ipAddress: '192.0.2.1',
+            matrixPower: true,
+            indicators: [],
+            currentApp: 'Time',
+          }
+          : ok,
+      };
+    },
+  }), { baseUrl: 'http://192.0.2.1', icons: { emptyIcon: { id: '-', name: 'None', description: 'None' } } });
+  await api.probe();
+  const payload = {
+    text: 'Weather', icon: 'homey', iconGap: 0, icons: [{ icon: '2422', x: 24, y: -1 }],
+  };
+  const options = JSON.stringify(payload);
+  const device = { client: api };
+  await runAwtrixNgNotificationRawAction({ device, options });
+  await runAwtrixNgCustomAppRawAction({ device, name: 'weather', options });
+  await runAwtrixNgCustomAppAction({
+    device, name: 'weather', msg: 'Weather', options,
+  });
+  assert.deepEqual(calls.slice(1).map(({ method, path, body }) => ({ method, path, body })), [
+    { method: 'POST', path: '/api/v1/notifications', body: payload },
+    { method: 'PUT', path: '/api/v1/apps/pushed/homey-weather', body: payload },
+    { method: 'PUT', path: '/api/v1/apps/pushed/homey-weather', body: payload },
+  ]);
+});
+
+test('icon validation errors from firmware retain HTTP status, code, message and nested field in both raw flows', async () => {
+  const api = new AwtrixNgApi(new AwtrixNgClient({
+    async request(request) {
+      if (request.path === '/api/v1/device') {
+        return {
+          status: 200,
+          headers: {},
+          data: {
+            uid: 'aabbccddeeff',
+            version: '1.1.2',
+            boardType: 'awtrixng',
+            ipAddress: '192.0.2.1',
+            matrixPower: true,
+            indicators: [],
+            currentApp: 'Time',
+          },
+        };
+      }
+      throw new AwtrixNgHttpError({
+        method: request.method,
+        url: `http://192.0.2.1${request.path}`,
+        status: 422,
+        message: 'HTTP 422',
+        rawBody: { error: { code: 'validationFailed', message: 'icon is unavailable', field: 'icons[0].icon' } },
+      });
+    },
+  }), { baseUrl: 'http://192.0.2.1', icons: { emptyIcon: { id: '-', name: 'None', description: 'None' } } });
+  await api.probe();
+  const args = { device: { client: api }, name: 'weather', options: '{"icons":[{"icon":"missing"}],"iconGap":1}' };
+  for (const run of [runAwtrixNgNotificationRawAction, runAwtrixNgCustomAppRawAction]) {
+    await assert.rejects(() => run(args), (error) => {
+      assert.ok(error instanceof AwtrixNgApiError);
+      assert.equal(error.httpStatus, 422);
+      assert.equal(error.code, 'validationFailed');
+      assert.equal(error.message, 'icon is unavailable');
+      assert.equal(error.field, 'icons[0].icon');
+      return true;
+    });
+  }
+});
+
+test('invalid icon fields are rejected by both JSON flows before reaching the client', async () => {
+  const fake = createFakeClient();
+  for (const run of [runAwtrixNgNotificationRawAction, runAwtrixNgCustomAppRawAction]) {
+    for (const options of ['{"iconGap":129}', '{"icons":[{"icon":"homey","x":0.5}]}',
+      '{"icons":[{"icon":"homey","extra":true}]}']) {
+      await assert.rejects(() => run({ device: { client: fake.client }, name: 'weather', options }),
+        UnsupportedAwtrixNgPayloadFieldError);
+    }
+  }
+  assert.deepEqual(fake.calls, []);
+});
 
 test('AWTRIX NG notification flow sends Homey duration as NG durationMs', async () => {
   const fake = createFakeClient();

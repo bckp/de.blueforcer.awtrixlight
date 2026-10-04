@@ -38,6 +38,8 @@ This table lists the JSON properties accepted by the Homey app for AWTRIX NG not
 | `icon` | `string` | X | X |
 | `iconMode` | `"fixed" \| "pushOnce" \| "push"` | X | X |
 | `iconOffsetX` | `number` | X | X |
+| `iconGap` | integer 0–128 (firmware ≥1.1.2) | X | X |
+| `icons` | `PositionedIcon[]`, up to four (firmware ≥1.1.2) | X | X |
 | `durationMs` | `number` | X | X |
 | `backgroundColor` | `ColorInput` | X | X |
 | `barChart` | `number[]` | X | X |
@@ -81,6 +83,8 @@ Nested object summaries:
 | `ScrollObject` | `holdMs` | `number` |
 | `PaletteStop` | `color` | `ColorInput` |
 | `PaletteStop` | `pos` | `number` in range 0–100 |
+| `PositionedIcon` | `icon` | required nonempty `string` |
+| `PositionedIcon` | `x`, `y` | optional integer −65535–65535 |
 
 ## Common page options
 
@@ -101,6 +105,8 @@ These fields are accepted by both notification/message JSON payloads and pushed 
 | `icon` | `string` | Icon ID/name or AWTRIX NG-supported inline icon value. Exact inline data URL compatibility is not guaranteed. |
 | `iconMode` | `"fixed" \| "pushOnce" \| "push"` | Icon movement mode. |
 | `iconOffsetX` | `number` | Horizontal icon offset. |
+| `iconGap` | integer 0–128 | Gap between the main icon and text; device default is one pixel. Requires firmware ≥1.1.2. |
+| `icons` | `PositionedIcon[]` | Up to four independently animated icons at chosen positions, alongside the main `icon`. Requires firmware ≥1.1.2. |
 | `durationMs` | `number` | Page/notification duration in milliseconds. In regular Homey flows this is normally set via Homey's native Add duration option; in JSON-only flows use this field directly. |
 | `backgroundColor` | `ColorInput` | Background color. |
 | `barChart` | `number[]` | Bar chart values. |
@@ -118,6 +124,36 @@ These fields are accepted by both notification/message JSON payloads and pushed 
 | `paletteSpeed` | `number` | Palette animation speed. |
 | `overlay` | `string` | Per-page overlay string. Use documented AWTRIX NG overlay names. `"clear"` semantics are UNKNOWN and not treated as AWTRIX 3 compatibility. |
 | `draw` | `DrawCommand[]` | Low-level draw commands accepted by AWTRIX NG. |
+
+### Positioned icons and spacing (AWTRIX NG 1.1.2)
+
+The JSON notification, JSON custom app and regular custom app's JSON options accept
+`icons` and `iconGap`. They are page payload fields, not global device settings.
+Each positioned icon requires a nonempty `icon` string. Optional `x` and `y` are
+integers from −65535 to 65535 and default to zero on the device. An empty `icons`
+array is valid. Unknown nested keys, more than four icons, invalid coordinates
+and invalid gaps are rejected before HTTP; no fields are silently discarded.
+
+The driver checks the firmware version last obtained during initialization or
+polling. Requests using either field fail explicitly on firmware below 1.1.2 or
+when its version is unknown. Existing payloads without these fields keep working
+on older firmware. After a firmware upgrade, let the next poll refresh the version.
+
+```json
+{
+  "text": "21°C",
+  "icon": "homey",
+  "iconGap": 0,
+  "icons": [
+    { "icon": "2422", "x": 24, "y": 0 }
+  ]
+}
+```
+
+The supported fields and limits were verified against the public
+[v1.1.2 release](https://github.com/Blueforcer/awtrix-ng/releases/tag/v1.1.2),
+[PayloadParser.cpp](https://github.com/Blueforcer/awtrix-ng/blob/6d6cc64aa6739724d8501199de70c6692cbb2c6c/src/core/payload/PayloadParser.cpp)
+and [MatrixLayout.h](https://github.com/Blueforcer/awtrix-ng/blob/6d6cc64aa6739724d8501199de70c6692cbb2c6c/src/core/render/MatrixLayout.h).
 
 ### Text fragments
 

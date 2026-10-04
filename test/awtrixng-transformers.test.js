@@ -23,6 +23,53 @@ const assertUnsupportedField = (fn, field, target, reason = 'unsupported-field')
   });
 };
 
+for (const [target, transform] of [
+  ['notification', toAwtrixNgNotificationPayload],
+  ['pushedApp', toAwtrixNgPushedAppPayload],
+]) {
+  test(`AWTRIX NG ${target} accepts positioned icons and iconGap boundaries unchanged`, () => {
+    for (const iconGap of [0, 1, 128]) {
+      for (const icons of [[], [{ icon: 'homey' }], [
+        { icon: 'homey', x: -65535, y: 65535 },
+        { icon: '2422', x: 24, y: 0 },
+        { icon: 'sun', x: 0 },
+        { icon: 'rain', y: -1 },
+      ]]) {
+        const input = {
+          text: 'Weather', icon: 'homey', iconGap, icons,
+        };
+        assert.deepEqual(transform(input), input);
+      }
+    }
+  });
+
+  test(`AWTRIX NG ${target} rejects invalid iconGap with its field`, () => {
+    for (const iconGap of [-1, 129, 0.5, NaN, Infinity, -Infinity, '1', null, true]) {
+      assertUnsupportedField(() => transform({ iconGap }), 'iconGap', target, 'invalid-value');
+    }
+  });
+
+  test(`AWTRIX NG ${target} rejects malformed positioned icons with precise fields`, () => {
+    for (const icons of [null, {}, 'homey', Array(5).fill({ icon: 'homey' })]) {
+      assertUnsupportedField(() => transform({ icons }), 'icons', target, 'invalid-value');
+    }
+    for (const icon of [null, [], 'homey', 1]) {
+      assertUnsupportedField(() => transform({ icons: [icon] }), 'icons[0]', target, 'invalid-value');
+    }
+    for (const icon of [undefined, '', 1, null]) {
+      assertUnsupportedField(() => transform({ icons: [{ icon }] }), 'icons[0].icon', target, 'invalid-value');
+    }
+    for (const key of ['x', 'y']) {
+      for (const value of [-65536, 65536, 0.5, NaN, Infinity, '0', null, false]) {
+        assertUnsupportedField(() => transform({ icons: [{ icon: 'homey', [key]: value }] }),
+          `icons[0].${key}`, target, 'invalid-value');
+      }
+    }
+    assertUnsupportedField(() => transform({ icons: [{ icon: 'homey', animation: true }] }),
+      'icons[0].animation', target, 'unknown-field');
+  });
+}
+
 test('AWTRIX NG Homey pushed app name mapper adds the internal prefix without using homey colon', () => {
   assert.equal(toAwtrixNgHomeyPushedAppName('weather'), 'homey-weather');
   assert.equal(toAwtrixNgHomeyPushedAppName('Weather_1-2'), 'homey-Weather_1-2');

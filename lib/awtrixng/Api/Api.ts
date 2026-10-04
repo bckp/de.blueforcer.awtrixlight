@@ -58,6 +58,7 @@ const SettingsEndpoint = '/api/v1/settings';
 const AppsEndpoint = '/api/v1/apps';
 const RtttlMinimumFirmwareVersion = '1.1.0';
 const ButtonCallbackMinimumFirmwareVersion = '1.1.1';
+const PositionedIconsMinimumFirmwareVersion = '1.1.2';
 
 export interface AwtrixNgConnectionOptions {
   baseUrl: string;
@@ -339,7 +340,10 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
 
   // ---- AwtrixNgFlowActionClient (delegation to the client) --------------------
 
-  sendNotification(payload: AwtrixNgApiNotificationPayload): Promise<AwtrixNgApiOkResponse> {
+  async sendNotification(payload: AwtrixNgApiNotificationPayload): Promise<AwtrixNgApiOkResponse> {
+    if (payload.icons !== undefined || payload.iconGap !== undefined) {
+      this.#requireFirmwareVersion(PositionedIconsMinimumFirmwareVersion);
+    }
     return this.#client.sendNotification(payload);
   }
 
@@ -364,7 +368,10 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     return this.#client.deleteIndicator(id);
   }
 
-  putPushedApp(name: string, payload: AwtrixNgApiPushedAppPayload): Promise<AwtrixNgApiOkResponse> {
+  async putPushedApp(name: string, payload: AwtrixNgApiPushedAppPayload): Promise<AwtrixNgApiOkResponse> {
+    if (payload.icons !== undefined || payload.iconGap !== undefined) {
+      this.#requireFirmwareVersion(PositionedIconsMinimumFirmwareVersion);
+    }
     return this.#client.putPushedApp(name, payload);
   }
 

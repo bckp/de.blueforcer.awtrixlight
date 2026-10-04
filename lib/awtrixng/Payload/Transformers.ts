@@ -100,6 +100,8 @@ const pageFieldMap: Record<keyof AwtrixNgApiPagePayload, true> = {
   effectSpeed: true,
   font: true,
   icon: true,
+  iconGap: true,
+  icons: true,
   iconMode: true,
   iconOffsetX: true,
   lineChart: true,
@@ -614,7 +616,58 @@ const assertBooleanField = (input: Record<string, unknown>, field: string, targe
   });
 };
 
+// Bounds verified against the public AWTRIX NG v1.1.2 PayloadParser.cpp.
+const assertIconValues = (input: Record<string, unknown>, target: 'notification' | 'pushedApp'): void => {
+  if (input.iconGap !== undefined
+    && (!Number.isInteger(input.iconGap) || Number(input.iconGap) < 0 || Number(input.iconGap) > 128)) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'iconGap', target, reason: 'invalid-value', details: 'Expected an integer from 0 to 128.',
+    });
+  }
+
+  if (input.icons === undefined) return;
+
+  if (!Array.isArray(input.icons) || input.icons.length > 4) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'icons', target, reason: 'invalid-value', details: 'Expected an array of at most four positioned icons.',
+    });
+  }
+
+  input.icons.forEach((item, index) => {
+    const field = `icons[${index}]`;
+    if (!isPlainObject(item)) {
+      throw new UnsupportedAwtrixNgPayloadFieldError({
+        field, target, reason: 'invalid-value', details: 'Expected an icon object.',
+      });
+    }
+
+    for (const key of Object.keys(item)) {
+      if (key !== 'icon' && key !== 'x' && key !== 'y') {
+        throw new UnsupportedAwtrixNgPayloadFieldError({
+          field: `${field}.${key}`, target, reason: 'unknown-field',
+        });
+      }
+    }
+
+    if (typeof item.icon !== 'string' || item.icon.length === 0) {
+      throw new UnsupportedAwtrixNgPayloadFieldError({
+        field: `${field}.icon`, target, reason: 'invalid-value', details: 'Expected a nonempty icon string.',
+      });
+    }
+
+    for (const key of ['x', 'y']) {
+      const value = item[key];
+      if (value !== undefined && (!Number.isInteger(value) || Math.abs(Number(value)) > 65535)) {
+        throw new UnsupportedAwtrixNgPayloadFieldError({
+          field: `${field}.${key}`, target, reason: 'invalid-value', details: 'Expected an integer from -65535 to 65535.',
+        });
+      }
+    }
+  });
+};
+
 const assertPagePayload = (input: Record<string, unknown>, target: 'notification' | 'pushedApp'): void => {
+  assertIconValues(input, target);
   assertTextValue(input, target);
   assertScrollValue(input, target);
   assertDrawValue(input, target);
