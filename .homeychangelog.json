@@ -155,5 +155,9 @@
   "2.3.2": {
     "en": "Private NG test build: manual brightness, panel color settings, script settings and data Flow cards, and named notification dismissal.",
     "cs": "Soukromá testovací NG verze: ruční jas, nastavení obrazu, Flow pro volby a data skriptů a zrušení pojmenovaných notifikací."
+  },
+  "2.3.3": {
+    "en": "Private NG test build: state Flow triggers for active application, audio and radio changes, and new playback errors. Polling only while the cards are configured.",
+    "cs": "Soukromá testovací NG verze: stavové Flow pro změnu aktivní aplikace, audia a rádia a nové chyby přehrávání. Sledování jen při použití příslušných karet."
   }
 }

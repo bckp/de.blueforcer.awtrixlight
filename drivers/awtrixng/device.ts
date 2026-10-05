@@ -13,6 +13,10 @@ import AwtrixNgApi, {
   AwtrixNgMixerLevels,
   AwtrixNgWeatherOverlayCapabilityId,
   formatAwtrixNgErrorDetails,
+  AwtrixNgStateFlowCardIds,
+  AwtrixNgStateFlowSnapshot,
+  AwtrixNgStateFlowSubscriptions,
+  createAwtrixNgStateFlowEvents,
 } from '../../lib/awtrixng/Api/Api';
 import Poll from '../../lib/shared/Poll';
 import { toAwtrixNgBaseUrl } from '../../lib/awtrixng/Discovery/Detection';
@@ -25,6 +29,7 @@ import { toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
 import { AwtrixDeviceType } from '../awtrix-device-type';
 
 const PollIntervalMs = 60000;
+const StateFlowPollIntervalMs = 5000;
 const BundledIconsDirectory = path.join(__dirname, 'assets/images/icons');
 const BundledIcons16Directory = path.join(__dirname, 'assets/images/icons-16');
 const Tc002BundledIconsRevision = 1;
@@ -103,6 +108,16 @@ class AwtrixNgDevice extends Device {
 
   poll?: Poll;
 
+  private stateFlowPoll?: Poll;
+
+  private stateFlowSnapshot?: AwtrixNgStateFlowSnapshot;
+
+  private stateFlowSubscriptionKey?: string;
+
+  private stateFlowEpoch = 0;
+
+  private deleted = false;
+
   /** Resolves once the deferred Homey settings sync scheduled by onSettings() has finished. */
   pendingSettingsSync?: Promise<void>;
 
@@ -166,6 +181,7 @@ class AwtrixNgDevice extends Device {
       );
     } finally {
       poll.start();
+      this.startStateFlowPoll();
     }
   }
 
@@ -176,6 +192,9 @@ class AwtrixNgDevice extends Device {
 
   async onDeleted(): Promise<void> {
     this.log('AwtrixNgDevice has been deleted');
+    this.deleted = true;
+    this.stateFlowEpoch += 1;
+    this.stateFlowPoll?.stop();
     await this.clearOwnedButtonCallbackOnDelete();
     this.poll?.stop();
     this.icons?.invalidate();
@@ -361,6 +380,42 @@ class AwtrixNgDevice extends Device {
     }
 
     return this.api;
+  }
+
+  private startStateFlowPoll(): void {
+    if (this.deleted || this.stateFlowPoll?.isActive()) return;
+    this.stateFlowPoll = new Poll(() => this.refreshStateFlows(), this.homey, {
+      intervalMs: StateFlowPollIntervalMs,
+      onError: (error: unknown) => this.error(error),
+    });
+    this.stateFlowPoll.start();
+  }
+
+  private async refreshStateFlows(): Promise<void> {
+    const epoch = this.stateFlowEpoch;
+    let next: AwtrixNgStateFlowSnapshot;
+    const subscriptions = {} as AwtrixNgStateFlowSubscriptions;
+    try {
+      for (const [key, id] of Object.entries(AwtrixNgStateFlowCardIds)) {
+        subscriptions[key as keyof AwtrixNgStateFlowSubscriptions] = (await this.homey.flow.getDeviceTriggerCard(id).getArgumentValues(this)).length > 0;
+      }
+      const subscriptionKey = JSON.stringify(subscriptions);
+      if (subscriptionKey !== this.stateFlowSubscriptionKey) this.stateFlowSnapshot = undefined;
+      this.stateFlowSubscriptionKey = subscriptionKey;
+      if (!Object.values(subscriptions).some(Boolean)) return;
+      next = await this.getApi().readStateFlowSnapshot(this.getData().id as string, subscriptions);
+    } catch (error: unknown) {
+      if (epoch === this.stateFlowEpoch) this.stateFlowSnapshot = undefined;
+      throw error;
+    }
+    // Ignore observations from a deleted device or a connection replaced while awaiting HTTP.
+    if (this.deleted || epoch !== this.stateFlowEpoch) return;
+    const events = createAwtrixNgStateFlowEvents(this.stateFlowSnapshot, next, subscriptions);
+    this.stateFlowSnapshot = next;
+    for (const event of events) {
+      if (this.deleted || epoch !== this.stateFlowEpoch) return;
+      await this.homey.flow.getDeviceTriggerCard(AwtrixNgStateFlowCardIds[event.card]).trigger(this, event.tokens).catch(this.error);
+    }
   }
 
   async playSynthEffect(fx: string): Promise<void> {
@@ -833,6 +888,9 @@ class AwtrixNgDevice extends Device {
   }
 
   private activateApi(api: AwtrixNgApi): void {
+    this.stateFlowEpoch += 1;
+    this.stateFlowSnapshot = undefined;
+    this.stateFlowSubscriptionKey = undefined;
     this.api = api;
   }
 
@@ -1018,6 +1076,7 @@ class AwtrixNgDevice extends Device {
     if (!poll.isActive()) {
       poll.start();
     }
+    this.startStateFlowPoll();
   }
 
   /**

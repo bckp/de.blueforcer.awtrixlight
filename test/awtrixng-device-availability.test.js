@@ -440,8 +440,9 @@ test('AWTRIX NG starts polling and preserves API error details when initial sett
   assert.deepEqual(calls.setUnavailable, [
     'states.awtrixNg.initialSynchronizationFailed: invalid brightness | field: brightness | code: validationFailed | HTTP status: 422',
   ]);
-  assert.equal(homey.setIntervalCalls.length, 1);
+  assert.equal(homey.setIntervalCalls.length, 2);
   assert.equal(homey.setIntervalCalls[0].intervalMs, 60000);
+  assert.equal(homey.setIntervalCalls[1].intervalMs, 5000);
   assert.equal(awtrixNgDevice.poll.isActive(), true);
 
   const pollingError = calls.error[0];

@@ -43,8 +43,10 @@ Před vydáním do Store ručně ověřit:
 ## TODO — společně navrhnout a důkladně otestovat
 
 - [ ] **Ciferníky TC002:** nabídka podporovaných tváří podle capabilities, barvy, formát času/data a animace. Jde o dlouhodobé nastavení, proto není prioritou pro první test.
-- [ ] **Stavové Flow:** změna aktivní aplikace, stav audio/radia a chyba přehrávání. Vyřešit polling, první načtení versus změnu, odpojování a deduplikaci událostí.
+- [x] **Stavové Flow:** implementované čtyři spouštěče v navazující práci; polling, výchozí stav, odpojování a deduplikace jsou popsané v [11-state-flows.md](11-state-flows.md). Skutečné Homey/hodiny ještě ověřit dle tohoto návodu.
 - [ ] **Layouty a nadpis + text:** kompletní revize současného návrhu. Ověřit 32 × 8 a 52 × 16, fonty/ascent/descent, hranice regionů a rozpočty, clipping ikon, nezávislé scrollery, dobu zobrazení, dlouhé/krátké/prázdné texty a skutečný výstup na zařízení. Současný prototyp nepovažovat za hotový finální návrh.
+
+Upřesnění majitele pro další krok: zachovat RAW podporu, přepracovat existující header notification (a odpovídající app kartu), přidat **color = barva headeru**, přidat **JSON options** a v nich výslovně odmítnout pole patřící do generovaného layoutu. Navrhnout přesné názvy karet a jejich argumentů; před změnou ověřit kompatibilitu existujících Flow. Tato úprava nyní není implementovaná, budeme ji řešit společně po stavových Flow.
 
 ## Záměrně neimplementovat
 

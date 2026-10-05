@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "de.blueforcer.awtrixlight",
-  "version": "2.3.2",
+  "version": "2.3.3",
   "compatibility": ">=12.9.0",
   "sdk": 3,
   "brandColor": "#222222",
@@ -2070,6 +2070,198 @@
             "type": "device",
             "name": "device",
             "filter": "driver_id=awtrixng&capabilities=awtrixng_knob"
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_app_changed",
+        "title": {
+          "en": "The active application changed",
+          "cs": "Aktivní aplikace se změnila"
+        },
+        "hint": {
+          "en": "Observed via HTTP every 5 seconds while this card is used. Initial load and reconnection do not trigger. Brief changes between observations may be missed. Uses rotation names, including homey-. Notifications do not change the active app.",
+          "cs": "Sleduje stav přes HTTP každých 5 sekund při použití karty. První načtení ani návrat po výpadku nespouští Flow. Krátké změny mezi kontrolami se nemusí zachytit. Používá názvy z rotace včetně homey-. Notifikace aktivní aplikaci nemění."
+        },
+        "tokens": [
+          {
+            "name": "application",
+            "type": "string",
+            "title": {
+              "en": "Application",
+              "cs": "Aplikace"
+            }
+          },
+          {
+            "name": "previous",
+            "type": "string",
+            "title": {
+              "en": "Previous application",
+              "cs": "Předchozí aplikace"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_audio_changed",
+        "title": {
+          "en": "Audio playback changed",
+          "cs": "Přehrávání zvuku se změnilo"
+        },
+        "hint": {
+          "en": "Observed via HTTP every 5 seconds while this card is used. Initial load and reconnection do not trigger. Brief changes between observations may be missed.",
+          "cs": "Sleduje stav přes HTTP každých 5 sekund při použití karty. První načtení ani návrat po výpadku nespouští Flow. Krátké změny mezi kontrolami se nemusí zachytit."
+        },
+        "tokens": [
+          {
+            "name": "group",
+            "type": "string",
+            "title": {
+              "en": "Group (alert/app)",
+              "cs": "Skupina (alert/app)"
+            }
+          },
+          {
+            "name": "playing",
+            "type": "boolean",
+            "title": {
+              "en": "Playing",
+              "cs": "Přehrává se"
+            }
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "title": {
+              "en": "Sound name",
+              "cs": "Název zvuku"
+            }
+          },
+          {
+            "name": "previous_playing",
+            "type": "boolean",
+            "title": {
+              "en": "Previously playing",
+              "cs": "Předtím se přehrávalo"
+            }
+          },
+          {
+            "name": "previous_name",
+            "type": "string",
+            "title": {
+              "en": "Previous sound name",
+              "cs": "Předchozí název zvuku"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_groups"
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_radio_changed",
+        "title": {
+          "en": "Radio playback changed",
+          "cs": "Přehrávání rádia se změnilo"
+        },
+        "hint": {
+          "en": "Observed via HTTP every 5 seconds while this card is used. Initial load and reconnection do not trigger. Brief changes between observations may be missed.",
+          "cs": "Sleduje stav přes HTTP každých 5 sekund při použití karty. První načtení ani návrat po výpadku nespouští Flow. Krátké změny mezi kontrolami se nemusí zachytit."
+        },
+        "tokens": [
+          {
+            "name": "playing",
+            "type": "boolean",
+            "title": {
+              "en": "Playing",
+              "cs": "Přehrává se"
+            }
+          },
+          {
+            "name": "station",
+            "type": "string",
+            "title": {
+              "en": "Station",
+              "cs": "Stanice"
+            }
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "title": {
+              "en": "Track title",
+              "cs": "Název skladby"
+            }
+          },
+          {
+            "name": "previous_playing",
+            "type": "boolean",
+            "title": {
+              "en": "Previously playing",
+              "cs": "Předtím se přehrávalo"
+            }
+          },
+          {
+            "name": "previous_station",
+            "type": "string",
+            "title": {
+              "en": "Previous station",
+              "cs": "Předchozí stanice"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_radio"
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_audio_error",
+        "title": {
+          "en": "A new playback error was observed",
+          "cs": "Byla zjištěna nová chyba přehrávání"
+        },
+        "hint": {
+          "en": "Observed via HTTP every 5 seconds while this card is used. Initial load and reconnection do not trigger. Brief changes between observations may be missed. The same persistent error is reported once. HTTP connectivity failures are logged separately.",
+          "cs": "Sleduje stav přes HTTP každých 5 sekund při použití karty. První načtení ani návrat po výpadku nespouští Flow. Krátké změny mezi kontrolami se nemusí zachytit. Stejná trvající chyba se hlásí jednou. Chyby HTTP připojení se zaznamenávají zvlášť."
+        },
+        "tokens": [
+          {
+            "name": "group",
+            "type": "string",
+            "title": {
+              "en": "Group (alert/app/radio)",
+              "cs": "Skupina (alert/app/radio)"
+            }
+          },
+          {
+            "name": "error",
+            "type": "string",
+            "title": {
+              "en": "Error",
+              "cs": "Chyba"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_groups"
           }
         ]
       }

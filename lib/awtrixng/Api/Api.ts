@@ -65,6 +65,7 @@ import {
   assertAwtrixNgSharedScriptValues, toAwtrixNgScriptValueToken, AwtrixNgScriptValueError,
 } from '../Services/Scripts';
 import { AwtrixNgUnsupportedVersionError } from './UnsupportedVersionError';
+import { AwtrixNgStateFlowSnapshot, AwtrixNgStateFlowSubscriptions, readAwtrixNgObservedAudio } from '../Services/StateFlows';
 import {
   AwtrixNgApiCapabilitiesResponse,
   AwtrixNgApiDeviceStateResponse,
@@ -84,6 +85,8 @@ export { formatAwtrixNgErrorDetails } from '../Device/Availability';
 export { AwtrixNgWeatherOverlayCapabilityId } from '../Services/Display';
 export { AwtrixNgFeatureCapabilityIds } from '../Device/State';
 export type { AwtrixNgHeaderLayoutInput } from '../Services/Layouts';
+export { AwtrixNgStateFlowCardIds, createAwtrixNgStateFlowEvents } from '../Services/StateFlows';
+export type { AwtrixNgStateFlowSnapshot, AwtrixNgStateFlowSubscriptions } from '../Services/StateFlows';
 export { AwtrixNgMixerFields } from '../Services/Audio';
 export type { AwtrixNgAudioGroup, AwtrixNgMixerField, AwtrixNgMixerLevels } from '../Services/Audio';
 export type { AwtrixNgBasicAuthOptions } from '../Http/Transport';
@@ -650,6 +653,25 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
   async readMixer(): Promise<AwtrixNgMixerLevels> {
     await this.requireGroupAudio();
     return readAwtrixNgMixerLevels(await this.#client.getSettings());
+  }
+
+  async readStateFlowSnapshot(expectedUid: string, subscriptions: AwtrixNgStateFlowSubscriptions): Promise<AwtrixNgStateFlowSnapshot> {
+    const { device } = await this.verifyIdentity(expectedUid);
+    const result: AwtrixNgStateFlowSnapshot = { uid: device.uid };
+    if (device.uptimeSeconds !== undefined) {
+      if (!Number.isInteger(device.uptimeSeconds) || device.uptimeSeconds < 0) {
+        throw new AwtrixNgInvalidResponseError({ endpoint: DeviceEndpoint, expectedShape: 'non-negative integer uptimeSeconds', actualValue: device.uptimeSeconds });
+      }
+      result.uptime = device.uptimeSeconds;
+    }
+    if (subscriptions.application) result.application = device.currentApp;
+    if (subscriptions.audio || subscriptions.radio || subscriptions.error) {
+      const caps = await this.requireGroupAudio();
+      if (subscriptions.radio && caps.audio?.radio !== true) throw new Error('This AWTRIX NG device has no internet radio.');
+      Object.assign(result, readAwtrixNgObservedAudio(await this.#client.getAudio(),
+        subscriptions.audio || subscriptions.error, subscriptions.radio || (subscriptions.error && caps.audio?.radio === true)));
+    }
+    return result;
   }
 
   async setMixerLevel(field: AwtrixNgMixerField, value: number): Promise<AwtrixNgMixerLevels> {

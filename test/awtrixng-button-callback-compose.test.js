@@ -17,7 +17,7 @@ test('button callback API route is public POST-only with both security path para
 
 test('AWTRIX NG driver compose declares physical and knob Flow cards', () => {
   const flow = readJson('drivers/awtrixng/driver.flow.compose.json');
-  assert.deepEqual(flow.triggers.map(({ id, title }) => ({ id, title: title.en })), [
+  assert.deepEqual(flow.triggers.slice(0, 5).map(({ id, title }) => ({ id, title: title.en })), [
     { id: 'awtrixng_button_left_pressed', title: 'Left button was pressed' },
     { id: 'awtrixng_button_middle_pressed', title: 'Middle button was pressed' },
     { id: 'awtrixng_button_right_pressed', title: 'Right button was pressed' },
@@ -27,7 +27,7 @@ test('AWTRIX NG driver compose declares physical and knob Flow cards', () => {
   for (const trigger of flow.triggers.slice(0, 4)) {
     assert.equal(trigger.hint.en, buttonCallbackTriggerHint);
   }
-  assert.deepEqual(flow.triggers.slice(3).map((trigger) => trigger.$filter), [
+  assert.deepEqual(flow.triggers.slice(3, 5).map((trigger) => trigger.$filter), [
     'capabilities=awtrixng_knob', 'capabilities=awtrixng_knob',
   ]);
   assert.deepEqual(flow.triggers[4].tokens, [{ name: 'turn', type: 'number', title: { en: 'Turn', cs: 'Otočení' } }]);
@@ -40,14 +40,14 @@ test('generated manifest includes the App API route and NG device triggers', () 
   assert.deepEqual(app.api.awtrixNgButtonCallback, {
     method: 'POST', path: '/awtrixng/button/:uid/:token', public: true,
   });
-  assert.deepEqual(app.flow.triggers.map(({ id, title }) => ({ id, title: title.en })), [
+  assert.deepEqual(app.flow.triggers.slice(0, 5).map(({ id, title }) => ({ id, title: title.en })), [
     { id: 'awtrixng_button_left_pressed', title: 'Left button was pressed' },
     { id: 'awtrixng_button_middle_pressed', title: 'Middle button was pressed' },
     { id: 'awtrixng_button_right_pressed', title: 'Right button was pressed' },
     { id: 'awtrixng_knob_pressed', title: 'Knob was pressed' },
     { id: 'awtrixng_knob_turned', title: 'Knob was turned' },
   ]);
-  assert.deepEqual(app.flow.triggers.map((trigger) => trigger.args[0].filter), [
+  assert.deepEqual(app.flow.triggers.slice(0, 5).map((trigger) => trigger.args[0].filter), [
     'driver_id=awtrixng', 'driver_id=awtrixng', 'driver_id=awtrixng',
     'driver_id=awtrixng&capabilities=awtrixng_knob',
     'driver_id=awtrixng&capabilities=awtrixng_knob',
