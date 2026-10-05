@@ -843,7 +843,7 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
   }
 
   async putHeaderApp(name: string, input: AwtrixNgHeaderLayoutInput): Promise<void> {
-    await this.putPushedApp(toAwtrixNgHomeyPushedAppName(name), createAwtrixNgHeaderLayout(input));
+    await this.putPushedApp(toAwtrixNgHomeyPushedAppName(name), createAwtrixNgHeaderLayout(input, 'pushedApp'));
   }
 
   private async requireScripting(): Promise<void> {

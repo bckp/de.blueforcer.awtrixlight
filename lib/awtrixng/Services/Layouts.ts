@@ -1,6 +1,12 @@
-import { AwtrixNgApiCapabilitiesResponse, AwtrixNgApiLayout, AwtrixNgApiPagePayload } from '../Api/Types';
+import {
+  AwtrixNgApiCapabilitiesResponse, AwtrixNgApiLayout, AwtrixNgApiNotificationPayload, AwtrixNgApiPushedAppPayload,
+} from '../Api/Types';
 import { AwtrixNgInvalidResponseError } from '../Api/InvalidResponseError';
-import { AwtrixNgTransformTarget, UnsupportedAwtrixNgPayloadFieldError } from '../Payload/Transformers';
+import {
+  AwtrixNgTransformTarget, UnsupportedAwtrixNgPayloadFieldError,
+  toAwtrixNgNotificationPayload, toAwtrixNgPushedAppPayload,
+} from '../Payload/Transformers';
+import parseAwtrixNgJsonObjectPayload from '../Payload/JsonPayload';
 import { isPlainObject } from '../Support/Guards';
 
 export interface AwtrixNgHeaderLayoutInput {
@@ -8,33 +14,88 @@ export interface AwtrixNgHeaderLayoutInput {
   text: string;
   icon?: string;
   durationMs?: number;
+  color?: string;
+  options?: string;
 }
 
 /** This preset is deliberately for a 52x16 panel. Smaller panels need their own layout. */
-export const createAwtrixNgHeaderLayout = (input: AwtrixNgHeaderLayoutInput): AwtrixNgApiPagePayload => {
+export const createAwtrixNgHeaderLayout = (
+  input: AwtrixNgHeaderLayoutInput, target: 'notification' | 'pushedApp' = 'notification',
+): AwtrixNgApiNotificationPayload | AwtrixNgApiPushedAppPayload => {
   if (typeof input.header !== 'string' || typeof input.text !== 'string') throw new TypeError('Header and text must be strings.');
   if (input.durationMs !== undefined && (!Number.isInteger(input.durationMs) || input.durationMs <= 0)) {
     throw new TypeError('Duration must be a positive integer in milliseconds.');
   }
   if (input.icon !== undefined && (typeof input.icon !== 'string' || input.icon.length === 0)) throw new TypeError('Icon must be a non-empty ID.');
+  const color = input.color === undefined ? '#00AAFF' : input.color;
+  if (typeof color !== 'string' || !/^#[0-9a-f]{6}$/i.test(color)) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'color', target, reason: 'invalid-value', details: 'Header color must be #RRGGBB.',
+    });
+  }
+  if (input.options !== undefined && typeof input.options !== 'string') throw new TypeError('JSON options must be a string.');
+  const options = parseAwtrixNgJsonObjectPayload(input.options, target);
+  const allowed = new Set(['durationMs', 'repeat', ...(target === 'notification'
+    ? ['name', 'hold', 'stack', 'wakeup', 'sound', 'soundRtttl', 'soundLoop'] : ['lifetimeMs', 'lifetimeExpiry'])]);
+  for (const key of Object.keys(options)) {
+    if (!allowed.has(key)) {
+      throw new UnsupportedAwtrixNgPayloadFieldError({
+        field: key,
+        target,
+        reason: 'unsupported-field',
+        details: 'These options only accept timing and notification/app behavior. Visual fields belong to the generated layout; use a RAW card for a custom layout.',
+      });
+    }
+  }
+  if (input.durationMs !== undefined && Object.hasOwn(options, 'durationMs')) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'durationMs', target, reason: 'invalid-value', details: 'Set duration using Add duration or JSON options, not both.',
+    });
+  }
+  if (options.durationMs !== undefined && !Number.isSafeInteger(options.durationMs)) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'durationMs', target, reason: 'invalid-value', details: 'Expected an integer in milliseconds; zero or less uses the device default duration.',
+    });
+  }
+  if (options.repeat !== undefined && (!Number.isSafeInteger(options.repeat) || Number(options.repeat) < 0)) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'repeat', target, reason: 'invalid-value', details: 'Expected a non-negative integer; zero disables waiting for scrolling text.',
+    });
+  }
+  for (const key of ['name', 'soundRtttl']) {
+    if (options[key] !== undefined && typeof options[key] !== 'string') {
+      throw new UnsupportedAwtrixNgPayloadFieldError({
+        field: key, target, reason: 'invalid-value', details: 'Expected a string.',
+      });
+    }
+  }
+  if (options.lifetimeMs !== undefined && !Number.isSafeInteger(options.lifetimeMs)) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'lifetimeMs', target, reason: 'invalid-value', details: 'Expected an integer in milliseconds.',
+    });
+  }
   const icon = input.icon !== undefined && input.icon !== '-';
   const x = icon ? 17 : 0;
   const width = 52 - x;
-  return {
-    ...(input.durationMs === undefined ? { repeat: 1 } : { durationMs: input.durationMs }),
-    layout: {
-      version: 1,
-      regions: [
-        ...(icon ? [{ id: 'icon', box: [0, 0, 16, 16] as [number, number, number, number], icon: input.icon }] : []),
-        {
-          id: 'header', box: [x, 0, width, 8], text: input.header, font: 'small', align: 'center', color: '#00AAFF', scroll: { mode: 'loop' },
-        },
-        {
-          id: 'text', box: [x, 8, width, 8], text: input.text, font: 'small', align: 'start', color: '#FFFFFF', scroll: { mode: 'loop' },
-        },
-      ],
-    },
+  const layout: AwtrixNgApiLayout = {
+    version: 1,
+    regions: [
+      ...(icon ? [{ id: 'icon', box: [0, 0, 16, 16] as [number, number, number, number], icon: input.icon }] : []),
+      {
+        id: 'header', box: [x, 0, width, 8], text: input.header, font: 'small', align: 'center', valign: 'center', color, scroll: { mode: 'loop', whenFits: 'static' },
+      },
+      {
+        id: 'text', box: [x, 8, width, 8], text: input.text, font: 'small', align: 'start', valign: 'center', color: '#FFFFFF', scroll: { mode: 'loop', whenFits: 'static' },
+      },
+    ],
   };
+  const payload = {
+    ...(input.durationMs === undefined && !Object.hasOwn(options, 'durationMs') && !Object.hasOwn(options, 'repeat') ? { repeat: 1 } : {}),
+    ...options,
+    ...(input.durationMs === undefined ? {} : { durationMs: input.durationMs }),
+    layout,
+  };
+  return target === 'notification' ? toAwtrixNgNotificationPayload(payload) : toAwtrixNgPushedAppPayload(payload);
 };
 
 const unsupported = (field: string, target: AwtrixNgTransformTarget, details: string): never => {

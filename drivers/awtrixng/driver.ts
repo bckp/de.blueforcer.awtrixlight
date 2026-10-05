@@ -289,7 +289,7 @@ class AwtrixNgDriver extends Driver {
   private registerHeaderLayoutCards(): void {
     type LayoutArgs = {
       device: import('./device').default;
-      header: string; text: string; icon?: { id: string }; duration?: number; name: string;
+      header: string; text: string; icon?: { id: string }; duration?: number; name: string; color?: string; options?: string;
     };
     const cards = [
       { card: this.homey.flow.getActionCard('awtrixng_notification_header'), isApp: false },
@@ -298,7 +298,12 @@ class AwtrixNgDriver extends Driver {
     for (const { card, isApp } of cards) {
       card.registerRunListener(async (args: LayoutArgs): Promise<void> => {
         const input = {
-          header: args.header, text: args.text, icon: args.icon?.id, durationMs: args.duration,
+          header: args.header,
+          text: args.text,
+          icon: args.icon?.id,
+          durationMs: args.duration,
+          ...(args.color === undefined ? {} : { color: args.color }),
+          ...(args.options === undefined ? {} : { options: args.options }),
         };
         if (isApp) await args.device.putHeaderApp(args.name, input);
         else await args.device.sendHeaderNotification(input);

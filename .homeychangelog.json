@@ -159,5 +159,9 @@
   "2.3.3": {
     "en": "Private NG test build: state Flow triggers for active application, audio and radio changes, and new playback errors. Polling only while the cards are configured.",
     "cs": "Soukromá testovací NG verze: stavové Flow pro změnu aktivní aplikace, audia a rádia a nové chyby přehrávání. Sledování jen při použití příslušných karet."
+  },
+  "2.3.4": {
+    "en": "Private NG test build: improved title-and-text cards with header color, validated JSON options, clearer names and static fitting text. Existing Flow card IDs retained.",
+    "cs": "Soukromá testovací NG verze: upravené karty nadpis a text s barvou nadpisu, ověřenými JSON options, přesnějšími názvy a statickým krátkým textem. ID stávajících Flow zachována."
   }
 }

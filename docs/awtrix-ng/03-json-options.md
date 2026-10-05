@@ -187,6 +187,10 @@ A 32×8 device can use its own layout with regions confined to 32×8. The exampl
 above is rejected on that device before a notification/app write. Layout JSON is
 sent directly; the app never uploads a layout file or shrinks it to fit.
 
+The two title-and-text preset cards for 52×16 have a separate optional header color
+and JSON options for timing and notification/app behavior. Their options reject all
+visual fields, including a supplied `layout`; see [the preset card guide](12-header-cards.md).
+
 ### Text fragments
 
 ```json

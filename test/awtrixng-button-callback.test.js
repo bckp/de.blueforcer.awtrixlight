@@ -131,6 +131,18 @@ test('NG header Flow listeners forward content, optional duration and icon autoc
       },
     },
   ]);
+  await runs.get('awtrixng_notification_header')({
+    device, header: 'Home', text: '21 C', color: '#000000', options: '{"name":"home","hold":true}', duration: 5000,
+  });
+  assert.deepEqual(calls.at(-1), {
+    header: 'Home', text: '21 C', icon: undefined, color: '#000000', options: '{"name":"home","hold":true}', durationMs: 5000,
+  });
+  await runs.get('awtrixng_application_header')({
+    device, name: 'weather', header: 'Outside', text: '15 C', icon, color: '#FF8800', options: '{"lifetimeMs":60000}',
+  });
+  assert.equal(calls.at(-1).name, 'weather');
+  assert.equal(calls.at(-1).input.color, '#FF8800');
+  assert.equal(calls.at(-1).input.options, '{"lifetimeMs":60000}');
   assert.deepEqual(await completions.get('awtrixng_notification_header')('wea', { device }), [icon]);
 });
 

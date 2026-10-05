@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "de.blueforcer.awtrixlight",
-  "version": "2.3.3",
+  "version": "2.3.4",
   "compatibility": ">=12.9.0",
   "sdk": 3,
   "brandColor": "#222222",
@@ -1283,16 +1283,16 @@
       {
         "id": "awtrixng_notification_header",
         "title": {
-          "en": "Show a notification with a header",
-          "cs": "Zobrazit notifikaci s nadpisem"
+          "en": "Send a notification with a title and text",
+          "cs": "Zobrazit notifikaci s nadpisem a textem"
         },
         "titleFormatted": {
-          "en": "Show [[icon]], [[header]], [[text]]",
-          "cs": "Zobrazit [[icon]], [[header]], [[text]]"
+          "en": "Show [[icon]], [[header]] in [[color]] above [[text]], options [[options]]",
+          "cs": "Zobrazit [[icon]], nadpis [[header]] v barvě [[color]], text [[text]], volby [[options]]"
         },
         "hint": {
-          "en": "For a 52×16 display with layout support: a 16×16 icon on the left, header and text on the right. Text rows scroll independently. Use the JSON card for a custom layout. Without Add duration, waits for each scrolling row to finish once. With Add duration, uses that time. Text that fits uses the device default duration.",
-          "cs": "Pro displej 52×16 s podporou layoutu: ikona 16×16 vlevo, nadpis a text vpravo. Textové řádky rolují samostatně. Vlastní rozložení zadejte přes kartu s JSON. Bez zadané doby počká na jedno celé projetí každého rolujícího řádku. S Přidat dobu trvání použije zadaný čas. Text, který se vejde, používá výchozí dobu zařízení."
+          "en": "52×16 display: optional icon on the left, colored title above white text. Fitting text stays still; long rows scroll independently at the device scroll settings. Without timing options, long rows complete once. Add duration or JSON durationMs (milliseconds), not both. JSON must contain only timing and notification options such as name, hold, wakeup and sound. Visual fields and layout are rejected; use RAW for a custom layout.",
+          "cs": "Displej 52×16: volitelná ikona vlevo, barevný nadpis nad bílým textem. Krátký text stojí, dlouhé řádky rolují samostatně dle nastavení hodin. Bez časových voleb projedou jednou. Dobu zadejte přes Přidat dobu trvání nebo JSON durationMs (milisekundy), ne oběma způsoby. JSON dovoluje jen časování a volby notifikace jako name, hold, wakeup a sound. Kreslicí pole a layout odmítne; pro vlastní rozložení použijte RAW."
         },
         "args": [
           {
@@ -1304,8 +1304,8 @@
             "name": "icon",
             "type": "autocomplete",
             "title": {
-              "en": "Icon",
-              "cs": "Ikona"
+              "en": "Icon (optional)",
+              "cs": "Ikona (volitelná)"
             },
             "required": false
           },
@@ -1313,16 +1313,40 @@
             "name": "header",
             "type": "text",
             "title": {
-              "en": "Header",
+              "en": "Title",
               "cs": "Nadpis"
+            }
+          },
+          {
+            "name": "color",
+            "type": "color",
+            "required": false,
+            "value": "#00AAFF",
+            "title": {
+              "en": "Title color",
+              "cs": "Barva nadpisu"
             }
           },
           {
             "name": "text",
             "type": "text",
             "title": {
-              "en": "Text",
-              "cs": "Text"
+              "en": "Text below the title",
+              "cs": "Text pod nadpisem"
+            }
+          },
+          {
+            "name": "options",
+            "type": "text",
+            "required": false,
+            "value": "{}",
+            "title": {
+              "en": "JSON options",
+              "cs": "JSON options"
+            },
+            "placeholder": {
+              "en": "JSON options",
+              "cs": "JSON options"
             }
           }
         ],
@@ -1331,16 +1355,16 @@
       {
         "id": "awtrixng_application_header",
         "title": {
-          "en": "Show an app with a header",
-          "cs": "Zobrazit aplikaci s nadpisem"
+          "en": "Create or update an app with a title and text",
+          "cs": "Vytvořit nebo aktualizovat aplikaci s nadpisem a textem"
         },
         "titleFormatted": {
-          "en": "Show app [[name]]: [[icon]], [[header]], [[text]]",
-          "cs": "Zobrazit aplikaci [[name]]: [[icon]], [[header]], [[text]]"
+          "en": "Update app [[name]]: [[icon]], [[header]] in [[color]] above [[text]], options [[options]]",
+          "cs": "Aktualizovat aplikaci [[name]]: [[icon]], nadpis [[header]] v barvě [[color]], text [[text]], volby [[options]]"
         },
         "hint": {
-          "en": "For a 52×16 display with layout support: a 16×16 icon on the left, header and text on the right. Text rows scroll independently. Use the JSON card for a custom layout. Without Add duration, waits for each scrolling row to finish once. With Add duration, uses that time. Text that fits uses the device default duration.",
-          "cs": "Pro displej 52×16 s podporou layoutu: ikona 16×16 vlevo, nadpis a text vpravo. Textové řádky rolují samostatně. Vlastní rozložení zadejte přes kartu s JSON. Bez zadané doby počká na jedno celé projetí každého rolujícího řádku. S Přidat dobu trvání použije zadaný čas. Text, který se vejde, používá výchozí dobu zařízení."
+          "en": "52×16 display: optional icon on the left, colored title above white text. Fitting text stays still; long rows scroll independently at the device scroll settings. Without timing options, long rows complete once. Add duration or JSON durationMs (milliseconds), not both. JSON must contain only timing and app lifetime options; use the app name without homey-. Visual fields and layout are rejected; use RAW for a custom layout.",
+          "cs": "Displej 52×16: volitelná ikona vlevo, barevný nadpis nad bílým textem. Krátký text stojí, dlouhé řádky rolují samostatně dle nastavení hodin. Bez časových voleb projedou jednou. Dobu zadejte přes Přidat dobu trvání nebo JSON durationMs (milisekundy), ne oběma způsoby. JSON dovoluje jen časování a životnost aplikace; název zadejte bez homey-. Kreslicí pole a layout odmítne; pro vlastní rozložení použijte RAW."
         },
         "args": [
           {
@@ -1360,8 +1384,8 @@
             "name": "icon",
             "type": "autocomplete",
             "title": {
-              "en": "Icon",
-              "cs": "Ikona"
+              "en": "Icon (optional)",
+              "cs": "Ikona (volitelná)"
             },
             "required": false
           },
@@ -1369,16 +1393,40 @@
             "name": "header",
             "type": "text",
             "title": {
-              "en": "Header",
+              "en": "Title",
               "cs": "Nadpis"
+            }
+          },
+          {
+            "name": "color",
+            "type": "color",
+            "required": false,
+            "value": "#00AAFF",
+            "title": {
+              "en": "Title color",
+              "cs": "Barva nadpisu"
             }
           },
           {
             "name": "text",
             "type": "text",
             "title": {
-              "en": "Text",
-              "cs": "Text"
+              "en": "Text below the title",
+              "cs": "Text pod nadpisem"
+            }
+          },
+          {
+            "name": "options",
+            "type": "text",
+            "required": false,
+            "value": "{}",
+            "title": {
+              "en": "JSON options",
+              "cs": "JSON options"
+            },
+            "placeholder": {
+              "en": "JSON options",
+              "cs": "JSON options"
             }
           }
         ],

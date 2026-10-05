@@ -183,6 +183,90 @@ test('header cards require both layout and 16-row capabilities and expose the th
   for (const id of ['awtrixng_notification_header', 'awtrixng_application_header']) {
     const card = manifest.actions.find((entry) => entry.id === id);
     assert.equal(card.$filter, 'capabilities=awtrixng_layout,awtrixng_display_16px');
-    assert.ok(['icon', 'header', 'text'].every((name) => card.args.some((argument) => argument.name === name)));
+    assert.ok(['icon', 'header', 'text', 'color', 'options'].every((name) => card.args.some((argument) => argument.name === name)));
+    assert.equal(card.args.find((arg) => arg.name === 'color').type, 'color');
+    assert.equal(card.args.find((arg) => arg.name === 'color').required, false);
+    assert.equal(card.args.find((arg) => arg.name === 'options').value, '{}');
+    assert.equal(card.duration, true);
   }
+});
+
+test('header colors preserve black and legacy blue while short rows explicitly stay still', () => {
+  const input = { header: 'Počasí', text: '21 °C', icon: '-' };
+  const payload = createAwtrixNgHeaderLayout({ ...input, color: '#000000' });
+  assert.equal(payload.layout.regions[0].color, '#000000');
+  assert.equal(payload.layout.regions[1].color, '#FFFFFF');
+  assert.equal(createAwtrixNgHeaderLayout(input).layout.regions[0].color, '#00AAFF');
+  assert.equal(payload.repeat, 1);
+  for (const region of payload.layout.regions) {
+    assert.deepEqual(region.scroll, { mode: 'loop', whenFits: 'static' });
+    assert.equal(region.valign, 'center');
+    assert.equal(region.font, 'small');
+  }
+  for (const color of ['', '#FFF', 'palette', null, false]) assertField(() => createAwtrixNgHeaderLayout({ ...input, color }), 'color');
+  assert.deepEqual(createAwtrixNgHeaderLayout({ header: '', text: '', icon: 'weather' }).layout.regions.map((region) => region.box),
+    [[0, 0, 16, 16], [17, 0, 35, 8], [17, 8, 35, 8]]);
+});
+
+test('header timing honors explicit zero repeat and JSON duration without silently overriding Homey duration', () => {
+  const input = { header: 'Title', text: 'Long text' };
+  assert.equal(createAwtrixNgHeaderLayout(input).repeat, 1);
+  const zero = createAwtrixNgHeaderLayout({ ...input, options: '{"repeat":0}' });
+  assert.equal(zero.repeat, 0);
+  assert.equal(zero.durationMs, undefined);
+  for (const durationMs of [0, -1, 5000]) {
+    const pageWithDuration = createAwtrixNgHeaderLayout({ ...input, options: JSON.stringify({ durationMs }) });
+    assert.equal(pageWithDuration.durationMs, durationMs);
+    assert.equal(pageWithDuration.repeat, undefined);
+  }
+  const duration = createAwtrixNgHeaderLayout({ ...input, durationMs: 5000 });
+  assert.equal(duration.durationMs, 5000);
+  assert.equal(duration.repeat, undefined);
+  const minimum = createAwtrixNgHeaderLayout({ ...input, durationMs: 5000, options: '{"repeat":2}' });
+  assert.equal(minimum.repeat, 2);
+  assert.equal(minimum.durationMs, 5000);
+  assertField(() => createAwtrixNgHeaderLayout({ ...input, durationMs: 5000, options: '{"durationMs":5000}' }), 'durationMs');
+  for (const repeat of [-1, 1.5, null, '1']) assertField(() => createAwtrixNgHeaderLayout({ ...input, options: JSON.stringify({ repeat }) }), 'repeat');
+});
+
+test('header options reject every visual override and wrong target before HTTP, but preserve notification/app options', async () => {
+  const input = { header: 'Title', text: 'Text', color: '#ff8800' };
+  const { api, calls } = createApi(caps());
+  for (const field of ['layout', 'text', 'icon', 'icons', 'iconGap', 'font', 'color', 'textColor', 'scroll', 'textAlign',
+    'textCase', 'textBlinkMs', 'backgroundColor', 'effect', 'overlay', 'palette', 'draw', 'barChart', 'header', 'typo']) {
+    await assert.rejects(api.sendHeaderNotification({ ...input, options: JSON.stringify({ [field]: null }) }),
+      (error) => error.field === field && error.reason === 'unsupported-field');
+  }
+  for (const options of ['[]', 'null', 'false', 'broken']) await assert.rejects(api.sendHeaderNotification({ ...input, options }));
+  for (const [field, value] of [['name', 42], ['soundRtttl', false], ['hold', 'true'], ['stack', null], ['durationMs', 1.5]]) {
+    await assert.rejects(api.sendHeaderNotification({ ...input, options: JSON.stringify({ [field]: value }) }), (error) => error.field === field);
+  }
+  await assert.rejects(api.putHeaderApp('test', { ...input, options: '{"lifetimeMs":1.5}' }), (error) => error.field === 'lifetimeMs');
+  await assert.rejects(api.sendHeaderNotification({ ...input, options: '{"lifetimeMs":5000}' }), (error) => error.field === 'lifetimeMs');
+  await assert.rejects(api.putHeaderApp('test', { ...input, options: '{"name":"other"}' }), (error) => error.field === 'name');
+  await assert.rejects(api.putHeaderApp('test', { ...input, options: '{"hold":true}' }), (error) => error.field === 'hold');
+  assert.equal(calls.length, 0);
+  const notify = {
+    name: 'window', hold: true, stack: false, wakeup: false, repeat: 0,
+  };
+  await api.sendHeaderNotification({ ...input, options: JSON.stringify(notify) });
+  assert.deepEqual(calls.at(-1).body, createAwtrixNgHeaderLayout({ ...input, options: JSON.stringify(notify) }));
+  const lifetime = { lifetimeMs: 60000, lifetimeExpiry: 'mark' };
+  await api.putHeaderApp('weather', { ...input, options: JSON.stringify(lifetime) });
+  assert.equal(calls.at(-1).path, '/api/v1/apps/pushed/homey-weather');
+  assert.equal(calls.at(-1).body.lifetimeMs, 60000);
+  assert.equal(calls.at(-1).body.lifetimeExpiry, 'mark');
+  assert.equal(calls.at(-1).body.hold, undefined);
+});
+
+test('header notification options pass supported sound objects through the existing audio validation', async () => {
+  const capabilities = { ...caps(), audio: { rtttl: true, song: true, speech: true } };
+  const { api, calls } = createApi(capabilities);
+  await api.sendHeaderNotification({ header: 'Dveře', text: 'Otevřeno', options: '{"name":"door","sound":{"speech":"Door open"}}' });
+  assert.deepEqual(calls.at(-1).body.sound, { speech: 'Door open' });
+  assert.equal(calls.at(-1).body.name, 'door');
+  const unsupportedAudio = createApi({ ...caps(), audio: { rtttl: true, song: true, speech: false } });
+  await assert.rejects(unsupportedAudio.api.sendHeaderNotification({ header: 'Door', text: 'Open', options: '{"sound":{"speech":"Door open"}}' }),
+    (error) => error.field === 'sound.speech');
+  assert.equal(unsupportedAudio.calls.some((call) => call.method === 'POST'), false);
 });

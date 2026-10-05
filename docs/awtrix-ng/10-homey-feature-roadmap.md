@@ -46,7 +46,7 @@ Před vydáním do Store ručně ověřit:
 - [x] **Stavové Flow:** implementované čtyři spouštěče v navazující práci; polling, výchozí stav, odpojování a deduplikace jsou popsané v [11-state-flows.md](11-state-flows.md). Skutečné Homey/hodiny ještě ověřit dle tohoto návodu.
 - [ ] **Layouty a nadpis + text:** kompletní revize současného návrhu. Ověřit 32 × 8 a 52 × 16, fonty/ascent/descent, hranice regionů a rozpočty, clipping ikon, nezávislé scrollery, dobu zobrazení, dlouhé/krátké/prázdné texty a skutečný výstup na zařízení. Současný prototyp nepovažovat za hotový finální návrh.
 
-Upřesnění majitele pro další krok: zachovat RAW podporu, přepracovat existující header notification (a odpovídající app kartu), přidat **color = barva headeru**, přidat **JSON options** a v nich výslovně odmítnout pole patřící do generovaného layoutu. Navrhnout přesné názvy karet a jejich argumentů; před změnou ověřit kompatibilitu existujících Flow. Tato úprava nyní není implementovaná, budeme ji řešit společně po stavových Flow.
+Upřesnění majitele bylo implementované v soukromé **2.3.4**: zachovaná RAW podpora, přejmenované karty nadpis + text se stejnými ID, **color = barva nadpisu**, **JSON options** s explicitním odmítnutím kreslicích polí. Krátké řádky jsou statické, dlouhé rolují nezávisle. Kompatibilita původních argumentů a nové varianty jsou v testech; vlastní vizuální/Homey zkouška v TODO výše stále zbývá. Podrobnosti a příklady jsou v [12-header-cards.md](12-header-cards.md).
 
 ## Záměrně neimplementovat
 
