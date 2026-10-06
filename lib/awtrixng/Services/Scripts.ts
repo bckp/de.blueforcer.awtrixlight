@@ -59,7 +59,8 @@ export const parseAwtrixNgScriptSettingValue = (field: AwtrixNgApiScriptSetting,
   };
   if (typeof source !== 'string') return invalid('Expected a text input.');
   if (field.type === 'text') {
-    if (field.maxlen !== undefined && Array.from(source).length > field.maxlen) return invalid('Text exceeds the declared maximum length.');
+    // TC002 1.2.0 applies maxlen to UTF-8 bytes, including diacritics and emoji.
+    if (field.maxlen !== undefined && Buffer.byteLength(source, 'utf8') > field.maxlen) return invalid('Text exceeds the declared maximum length in UTF-8 bytes.');
     return source;
   }
   if (field.type === 'select') {

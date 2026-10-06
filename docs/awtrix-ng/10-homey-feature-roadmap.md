@@ -23,7 +23,7 @@ Rozhodnutí majitele, 5. října 2026. Každá implementovaná funkce má samost
 
 Token vrací řetězec přímo; čísla, booleany, `null`, pole a objekty mají podobu JSON. Nula, `false` a prázdný text se zachovají. Chybějící klíč způsobí chybu, nevytváří náhradní hodnotu.
 
-Konfigurace používá čerstvé schéma při každém spuštění Flow. Homey odmítá čísla mimo deklarované hranice před zápisem, přestože firmware je podle dokumentace umí oříznout. To je vědomá přísnější validace; žádná hodnota se v aplikaci tiše neupravuje. Maxlen textu vyhodnocujeme v Unicode znacích (code points), dle dokumentovaného limitu znaků; na zařízení ověřit i emoji.
+Konfigurace používá čerstvé schéma při každém spuštění Flow. Homey odmítá čísla mimo deklarované hranice před zápisem, přestože firmware je podle dokumentace umí oříznout. To je vědomá přísnější validace; žádná hodnota se v aplikaci tiše neupravuje. `maxlen` textu vyhodnocujeme v bajtech UTF-8: živý test TC002 1.2.0 dne 6. října 2026 ukázal, že `Žluť🐱` (5 znaků, 10 bajtů) při `maxlen: 8` firmware odmítá, zatímco `Ž🐱` (6 bajtů) přijímá. Původní předpoklad limitu v Unicode znacích byl tímto opraven; veřejná dokumentace jednotku `maxlen` výslovně neurčuje.
 
 Konfigurovat lze také vypnuté, chybující nebo headless skripty; jsou užitečné pro obnovu či nastavení. Karta pro **zobrazení** dál vyžaduje zobrazitelný funkční skript. Moduly/built-in aplikace mají jiný význam a zatím se těmito kartami nespravují. Zdrojáky, OAuth ani instalace skriptů nejsou součástí těchto funkcí; instalace zůstává Hubu/webu hodin.
 

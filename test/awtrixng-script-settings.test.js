@@ -55,7 +55,9 @@ test('script settings validate declared types, bounds and Unicode without losing
   assert.equal(parse('bool', 'false'), false);
   assert.equal(parse('number', '0', { min: 0, max: 10 }), 0);
   assert.equal(parse('slider', '1.5', { min: 1, max: 2 }), 1.5);
-  assert.equal(parse('text', ' 😀 ', { maxlen: 3 }), ' 😀 ');
+  assert.equal(parse('text', ' 😀 ', { maxlen: 6 }), ' 😀 ');
+  assert.equal(parse('text', 'Ž🐱', { maxlen: 6 }), 'Ž🐱');
+  assert.equal(parse('text', '', { maxlen: 0 }), '');
   assert.equal(parse('text', ''), '');
   assert.equal(parse('select', 'now', { options: ['now', 'today'] }), 'now');
   assert.equal(parse('color', '0'), 0);
@@ -63,7 +65,8 @@ test('script settings validate declared types, bounds and Unicode without losing
   for (const [type, source, extra] of [
     ['bool', '0'], ['bool', '"false"'], ['number', 'null'], ['number', '1e999'],
     ['number', '11', { max: 10 }], ['slider', '-1', { min: 0 }],
-    ['text', '😀😀', { maxlen: 1 }], ['select', 'new', { options: ['now'] }],
+    ['text', '😀😀', { maxlen: 1 }], ['text', ' 😀 ', { maxlen: 5 }],
+    ['text', 'Žluť🐱', { maxlen: 8 }], ['select', 'new', { options: ['now'] }],
     ['color', '-1'], ['color', '16777216'], ['color', '#FFF'], ['color', '0.5'],
   ]) assert.throws(() => parse(type, source, extra), (error) => error.field === 'value');
 });
@@ -90,6 +93,24 @@ test('config writes re-read the schema, patch one key and allow broken or headle
   const count = fake.calls.length;
   await assert.rejects(fake.api.writeScriptSetting('../Weather', 'metric', 'true'));
   assert.equal(fake.calls.length, count);
+});
+
+test('script text limits reject oversized UTF-8 before a config write', async () => {
+  const fake = createApi({
+    config: {
+      name: 'Weather',
+      fields: [{
+        key: 'label', type: 'text', value: '', maxlen: 8,
+      }],
+      warnings: [],
+    },
+  });
+  await assert.rejects(fake.api.writeScriptSetting('Weather', 'label', 'Žluť🐱'), (error) => (
+    error.field === 'label' && /UTF-8 bytes/.test(error.message)
+  ));
+  assert.equal(fake.calls.filter((call) => call.method === 'PATCH').length, 0);
+  await fake.api.writeScriptSetting('Weather', 'label', 'Ž🐱');
+  assert.deepEqual(fake.calls.at(-1), { method: 'PATCH', path: '/api/v1/apps/Weather/config', body: { label: 'Ž🐱' } });
 });
 
 test('script save reports restart failures even at HTTP 200 and preserves native API errors', async () => {
