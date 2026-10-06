@@ -44,9 +44,9 @@ Před vydáním do Store ručně ověřit:
 
 - [ ] **Ciferníky TC002:** nabídka podporovaných tváří podle capabilities, barvy, formát času/data a animace. Jde o dlouhodobé nastavení, proto není prioritou pro první test.
 - [x] **Stavové Flow:** implementované čtyři spouštěče, jejich skutečné doručení přes Homey ověřeno 6. října. Polling, výchozí stav, odpojování a deduplikace jsou popsané v [11-state-flows.md](11-state-flows.md); zbývající restartové a síťové zkoušky v [živém QA](13-live-qa-2026-10-06.md).
-- [ ] **Layouty a nadpis + text:** revize implementovaná, základní živé 52 × 16 QA prošlo včetně prázdných řádků, nezávislého scrollu, 8/16px GIFů, doby a životnosti aplikace. Dokončit zbývající šířkové/fontové a migrační případy a živý RAW na 32 × 8 dle [protokolu](13-live-qa-2026-10-06.md).
+- [ ] **Layouty a nadpis + text:** revize implementovaná, základní živé 52 × 16 QA prošlo včetně prázdných řádků, nezávislého scrollu, 8/16px GIFů, doby a životnosti aplikace. Dokončit zbývající šířkové/fontové případy a živý RAW na 32 × 8 dle [protokolu](13-live-qa-2026-10-06.md).
 
-Upřesnění majitele bylo implementované v soukromé **2.3.4**: zachovaná RAW podpora, přejmenované karty nadpis + text se stejnými ID, **color = barva nadpisu**, **JSON options** s explicitním odmítnutím kreslicích polí. Krátké řádky jsou statické, dlouhé rolují nezávisle. Kompatibilita původních argumentů a nové varianty jsou v testech i základním živém QA; migrace dříve uložených Flow ještě zbývá. Podrobnosti a příklady jsou v [12-header-cards.md](12-header-cards.md).
+Upřesnění majitele bylo implementované v soukromé **2.3.4**: zachovaná RAW podpora, přejmenované karty nadpis + text se stejnými ID, **color = barva nadpisu**, **JSON options** s explicitním odmítnutím kreslicích polí. Krátké řádky jsou statické, dlouhé rolují nezávisle. Kompatibilita původních argumentů a nové varianty jsou v testech i základním živém QA; majitel navíc potvrdil bezproblémový provoz existujících Flow a shodné zobrazení na starém i novém zařízení. Žádná migrace Flow není vyžadována. Podrobnosti a příklady jsou v [12-header-cards.md](12-header-cards.md).
 
 ## Záměrně neimplementovat
 
