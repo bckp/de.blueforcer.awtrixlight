@@ -1,6 +1,6 @@
 {
   "type": "boolean",
-  "title": { "en": "16-pixel display", "cs": "Displej s výškou 16 pixelů" },
+  "title": { "en": "16-pixel display", "cs": "Displej s výškou 16 pixelů", "de": "Display mit 16 Pixeln Höhe", "nl": "Display van 16 pixels hoog" },
   "getable": true,
   "setable": false,
   "insights": false,

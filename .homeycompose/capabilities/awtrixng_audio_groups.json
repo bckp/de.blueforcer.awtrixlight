@@ -2,7 +2,9 @@
   "type": "boolean",
   "title": {
     "en": "Audio groups",
-    "cs": "Zvukové skupiny"
+    "cs": "Zvukové skupiny",
+    "de": "Audiogruppen",
+    "nl": "Audiogroepen"
   },
   "getable": true,
   "setable": false,

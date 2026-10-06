@@ -1,6 +1,6 @@
 {
   "type": "boolean",
-  "title": { "en": "Audio synthesizer", "cs": "Zvukový syntetizátor" },
+  "title": { "en": "Audio synthesizer", "cs": "Zvukový syntetizátor", "de": "Audiosynthesizer", "nl": "Audiosynthesizer" },
   "getable": true,
   "setable": false,
   "insights": false,

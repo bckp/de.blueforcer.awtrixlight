@@ -2,7 +2,9 @@
   "type": "number",
   "title": {
     "en": "App volume",
-    "cs": "Hlasitost aplikací"
+    "cs": "Hlasitost aplikací",
+    "de": "App-Lautstärke",
+    "nl": "Appvolume"
   },
   "getable": true,
   "setable": true,

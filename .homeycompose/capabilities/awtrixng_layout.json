@@ -1,6 +1,6 @@
 {
   "type": "boolean",
-  "title": { "en": "Layouts", "cs": "Rozložení do oblastí" },
+  "title": { "en": "Layouts", "cs": "Rozložení do oblastí", "de": "Bereichslayouts", "nl": "Indelingen met gebieden" },
   "getable": true,
   "setable": false,
   "insights": false,

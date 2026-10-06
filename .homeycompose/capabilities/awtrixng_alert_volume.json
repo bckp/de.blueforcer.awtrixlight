@@ -2,7 +2,9 @@
   "type": "number",
   "title": {
     "en": "Alert volume",
-    "cs": "Hlasitost upozornění"
+    "cs": "Hlasitost upozornění",
+    "de": "Lautstärke der Benachrichtigungen",
+    "nl": "Volume van meldingen"
   },
   "getable": true,
   "setable": true,

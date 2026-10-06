@@ -2,7 +2,9 @@
   "type": "boolean",
   "title": {
     "en": "Internet radio",
-    "cs": "Internetové rádio"
+    "cs": "Internetové rádio",
+    "de": "Internetradio",
+    "nl": "Internetradio"
   },
   "getable": true,
   "setable": false,

@@ -106,7 +106,9 @@
         "value": false,
         "hint": {
           "en": "Requires a light sensor. TC002 has no light sensor and does not support this option.",
-          "cs": "Vyžaduje světelný senzor. TC002 ho nemá a tuto volbu nepodporuje."
+          "cs": "Vyžaduje světelný senzor. TC002 ho nemá a tuto volbu nepodporuje.",
+          "de": "Erfordert einen Lichtsensor. TC002 hat keinen Lichtsensor und unterstützt diese Option nicht.",
+          "nl": "Vereist een lichtsensor. TC002 heeft geen lichtsensor en ondersteunt deze optie niet."
         },
         "label": {
           "en": "Auto-brightness",
@@ -371,7 +373,9 @@
     "type": "group",
     "label": {
       "en": "Panel colors",
-      "cs": "Obraz displeje"
+      "cs": "Obraz displeje",
+      "de": "Displayfarben",
+      "nl": "Displaykleuren"
     },
     "children": [
       {
@@ -382,11 +386,15 @@
         "max": 100,
         "label": {
           "en": "Saturation (%)",
-          "cs": "Sytost (%)"
+          "cs": "Sytost (%)",
+          "de": "Sättigung (%)",
+          "nl": "Verzadiging (%)"
         },
         "hint": {
           "en": "0 shows grayscale; 100 keeps the original colors.",
-          "cs": "0 zobrazí odstíny šedi; 100 zachová původní barvy."
+          "cs": "0 zobrazí odstíny šedi; 100 zachová původní barvy.",
+          "de": "0 zeigt Graustufen; 100 behält die ursprünglichen Farben bei.",
+          "nl": "0 toont grijstinten; 100 behoudt de oorspronkelijke kleuren."
         }
       },
       {
@@ -397,11 +405,15 @@
         "min": 0,
         "label": {
           "en": "Gamma",
-          "cs": "Gamma"
+          "cs": "Gamma",
+          "de": "Gamma",
+          "nl": "Gamma"
         },
         "hint": {
           "en": "Must be greater than zero. Default: 1.9.",
-          "cs": "Musí být větší než nula. Výchozí hodnota: 1,9."
+          "cs": "Musí být větší než nula. Výchozí hodnota: 1,9.",
+          "de": "Muss größer als null sein. Standardwert: 1,9.",
+          "nl": "Moet groter zijn dan nul. Standaardwaarde: 1,9."
         }
       },
       {
@@ -410,11 +422,15 @@
         "value": "",
         "label": {
           "en": "Color correction",
-          "cs": "Barevná korekce"
+          "cs": "Barevná korekce",
+          "de": "Farbkorrektur",
+          "nl": "Kleurcorrectie"
         },
         "hint": {
           "en": "Enter #RRGGBB. Leave empty to turn off. Multiplies the color of every pixel; #000000 makes the panel black.",
-          "cs": "Zadejte #RRGGBB. Prázdné pole funkci vypne. Násobí barvu každého pixelu; #000000 vytvoří černý obraz."
+          "cs": "Zadejte #RRGGBB. Prázdné pole funkci vypne. Násobí barvu každého pixelu; #000000 vytvoří černý obraz.",
+          "de": "Geben Sie #RRGGBB ein. Leer lassen zum Deaktivieren. Multipliziert die Farbe jedes Pixels; #000000 macht das Display schwarz.",
+          "nl": "Voer #RRGGBB in. Laat leeg om uit te schakelen. Vermenigvuldigt de kleur van elke pixel; #000000 maakt het display zwart."
         }
       },
       {
@@ -423,11 +439,15 @@
         "value": "",
         "label": {
           "en": "Color tint",
-          "cs": "Barevný nádech"
+          "cs": "Barevný nádech",
+          "de": "Farbtönung",
+          "nl": "Kleurtint"
         },
         "hint": {
           "en": "Enter #RRGGBB. Leave empty to turn off. Multiplies the color of every pixel; #000000 makes the panel black.",
-          "cs": "Zadejte #RRGGBB. Prázdné pole funkci vypne. Násobí barvu každého pixelu; #000000 vytvoří černý obraz."
+          "cs": "Zadejte #RRGGBB. Prázdné pole funkci vypne. Násobí barvu každého pixelu; #000000 vytvoří černý obraz.",
+          "de": "Geben Sie #RRGGBB ein. Leer lassen zum Deaktivieren. Multipliziert die Farbe jedes Pixels; #000000 macht das Display schwarz.",
+          "nl": "Voer #RRGGBB in. Laat leeg om uit te schakelen. Vermenigvuldigt de kleur van elke pixel; #000000 maakt het display zwart."
         }
       }
     ]

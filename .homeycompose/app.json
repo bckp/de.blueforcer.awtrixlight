@@ -8,10 +8,16 @@
     "local"
   ],
   "name": {
-    "en": "AWTRIX"
+    "en": "AWTRIX",
+    "de": "AWTRIX",
+    "nl": "AWTRIX",
+    "cs": "AWTRIX"
   },
   "description": {
-    "en": "Connected Smart Clock for your Smart Home"
+    "en": "Connected Smart Clock for your Smart Home",
+    "de": "Vernetzte Smart Clock für Ihr Smart Home",
+    "nl": "Verbonden slimme klok voor je slimme huis",
+    "cs": "Chytré hodiny propojené s vaší chytrou domácností"
   },
   "category": [
     "appliances"

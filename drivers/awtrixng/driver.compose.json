@@ -1,6 +1,9 @@
 {
   "name": {
-    "en": "Awtrix NG"
+    "en": "Awtrix NG",
+    "de": "Awtrix NG",
+    "nl": "Awtrix NG",
+    "cs": "Awtrix NG"
   },
   "class": "other",
   "capabilities": [
@@ -109,7 +112,9 @@
     "dim": {
       "title": {
         "en": "Brightness",
-        "cs": "Jas"
+        "cs": "Jas",
+        "de": "Helligkeit",
+        "nl": "Helderheid"
       },
       "preventInsights": true
     }

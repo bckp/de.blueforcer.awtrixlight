@@ -2,7 +2,9 @@
   "type": "number",
   "title": {
     "en": "Master volume",
-    "cs": "Celková hlasitost"
+    "cs": "Celková hlasitost",
+    "de": "Gesamtlautstärke",
+    "nl": "Hoofdvolume"
   },
   "getable": true,
   "setable": true,

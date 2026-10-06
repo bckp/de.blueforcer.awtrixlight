@@ -1,6 +1,6 @@
 {
   "type": "boolean",
-  "title": { "en": "Rotary knob", "cs": "Otočný ovladač" },
+  "title": { "en": "Rotary knob", "cs": "Otočný ovladač", "de": "Drehknopf", "nl": "Draaiknop" },
   "getable": true,
   "setable": false,
   "insights": false,

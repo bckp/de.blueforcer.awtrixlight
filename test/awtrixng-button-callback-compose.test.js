@@ -30,7 +30,10 @@ test('AWTRIX NG driver compose declares physical and knob Flow cards', () => {
   assert.deepEqual(flow.triggers.slice(3, 5).map((trigger) => trigger.$filter), [
     'capabilities=awtrixng_knob', 'capabilities=awtrixng_knob',
   ]);
-  assert.deepEqual(flow.triggers[4].tokens, [{ name: 'turn', type: 'number', title: { en: 'Turn', cs: 'Otočení' } }]);
+  assert.deepEqual(flow.triggers[4].tokens.map(({ name, type, title }) => ({ name, type, title: title.en })), [
+    { name: 'turn', type: 'number', title: 'Turn' },
+  ]);
+  assert.equal(flow.triggers[4].tokens[0].title.cs, 'Otočení');
   assert.equal(flow.actions[0].$filter, 'capabilities=awtrixng_audio_synth');
   assert.equal(readJson('drivers/awtrixlight/driver.compose.json').flow, undefined);
 });

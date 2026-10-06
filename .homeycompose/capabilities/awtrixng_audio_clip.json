@@ -2,7 +2,9 @@
   "type": "boolean",
   "title": {
     "en": "Audio clips",
-    "cs": "Zvukové klipy"
+    "cs": "Zvukové klipy",
+    "de": "Audioclips",
+    "nl": "Audiofragmenten"
   },
   "getable": true,
   "setable": false,

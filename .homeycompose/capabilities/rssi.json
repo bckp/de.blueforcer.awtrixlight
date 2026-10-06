@@ -12,6 +12,9 @@
   "insights": false,
   "icon": "/assets/rssi.svg",
   "units": {
-    "en": "dBm"
+    "en": "dBm",
+    "de": "dBm",
+    "nl": "dBm",
+    "cs": "dBm"
   }
 }

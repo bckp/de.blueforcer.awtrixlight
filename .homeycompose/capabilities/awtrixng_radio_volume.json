@@ -2,7 +2,9 @@
   "type": "number",
   "title": {
     "en": "Radio volume",
-    "cs": "Hlasitost rádia"
+    "cs": "Hlasitost rádia",
+    "de": "Radiolautstärke",
+    "nl": "Radiovolume"
   },
   "getable": true,
   "setable": true,
