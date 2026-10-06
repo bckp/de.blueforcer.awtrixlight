@@ -10,8 +10,11 @@ This app also contains an AWTRIX NG driver as a separate implementation. AWTRIX 
 
 - existing AWTRIX 3 devices and flows are not migrated automatically,
 - AWTRIX NG devices must be added as **Awtrix NG** devices,
-- supported AWTRIX NG actions use shared flow cards where behavior is safely equivalent; NG-only actions are `applicationRaw` and `weatherOverlay`,
+- supported AWTRIX NG actions use shared flow cards where behavior is safely equivalent,
+- NG-specific features include RAW layouts, title-and-text cards for TC002, audio/radio controls, script settings/data and state Flow triggers,
 - AWTRIX NG JSON flow cards accept AWTRIX NG-shaped payloads only,
 - AWTRIX 3 JSON options such as `duration`, `noScroll`, `clients`, `barBC`, `pos` and `save` are not silently translated for AWTRIX NG.
 
 For user and maintainer notes, supported features, unsupported features and known `UNKNOWN` areas, see [`docs/awtrix-ng/06-user-maintainer-guide.md`](docs/awtrix-ng/06-user-maintainer-guide.md).
+
+The private TC002 branch's feature status and deferred clockfaces are tracked in the [feature roadmap](docs/awtrix-ng/10-homey-feature-roadmap.md). See the [live TC002/Homey test report](docs/awtrix-ng/13-live-qa-2026-10-06.md) for verified behavior, pixel previews and remaining release checks.

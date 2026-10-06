@@ -45,4 +45,4 @@ Před vydáním ověřit v nainstalované Homey aplikaci:
 5. Odpojit a vrátit hodiny: první nový snapshot žádné události; další změna ano. Totéž po restartu aplikace či přepnutí připojení.
 6. Odstranit Flow a ověřit v diagnostice/HTTP měření, že další rychlé GET zaniknou. Ověřit více zařízení bez přesahu událostí.
 
-Žádný test v této práci nečte živé hodiny ani nepoužívá reálná přihlašovací data. Skutečné chování karet a Homey `getArgumentValues` při ukládání/vypínání Flow je nutné ověřit na Homey.
+Původní implementační testy byly syntetické. Dne 6. října 2026 prošlo skutečné doručení všech čtyř spouštěčů přes nové uložené Homey Flow na TC002 1.2.0: počáteční snapshot, změna aplikace, notifikace bez změny aplikace, audio start/stop, rádio start/stop a deduplikovaná chyba. Restartové, síťové a další zbývající zkoušky uvádí [živý QA protokol](13-live-qa-2026-10-06.md).

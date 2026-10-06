@@ -43,10 +43,10 @@ Před vydáním do Store ručně ověřit:
 ## TODO — společně navrhnout a důkladně otestovat
 
 - [ ] **Ciferníky TC002:** nabídka podporovaných tváří podle capabilities, barvy, formát času/data a animace. Jde o dlouhodobé nastavení, proto není prioritou pro první test.
-- [x] **Stavové Flow:** implementované čtyři spouštěče v navazující práci; polling, výchozí stav, odpojování a deduplikace jsou popsané v [11-state-flows.md](11-state-flows.md). Skutečné Homey/hodiny ještě ověřit dle tohoto návodu.
-- [ ] **Layouty a nadpis + text:** kompletní revize současného návrhu. Ověřit 32 × 8 a 52 × 16, fonty/ascent/descent, hranice regionů a rozpočty, clipping ikon, nezávislé scrollery, dobu zobrazení, dlouhé/krátké/prázdné texty a skutečný výstup na zařízení. Současný prototyp nepovažovat za hotový finální návrh.
+- [x] **Stavové Flow:** implementované čtyři spouštěče, jejich skutečné doručení přes Homey ověřeno 6. října. Polling, výchozí stav, odpojování a deduplikace jsou popsané v [11-state-flows.md](11-state-flows.md); zbývající restartové a síťové zkoušky v [živém QA](13-live-qa-2026-10-06.md).
+- [ ] **Layouty a nadpis + text:** revize implementovaná, základní živé 52 × 16 QA prošlo včetně prázdných řádků, nezávislého scrollu, 8/16px GIFů, doby a životnosti aplikace. Dokončit zbývající šířkové/fontové a migrační případy a živý RAW na 32 × 8 dle [protokolu](13-live-qa-2026-10-06.md).
 
-Upřesnění majitele bylo implementované v soukromé **2.3.4**: zachovaná RAW podpora, přejmenované karty nadpis + text se stejnými ID, **color = barva nadpisu**, **JSON options** s explicitním odmítnutím kreslicích polí. Krátké řádky jsou statické, dlouhé rolují nezávisle. Kompatibilita původních argumentů a nové varianty jsou v testech; vlastní vizuální/Homey zkouška v TODO výše stále zbývá. Podrobnosti a příklady jsou v [12-header-cards.md](12-header-cards.md).
+Upřesnění majitele bylo implementované v soukromé **2.3.4**: zachovaná RAW podpora, přejmenované karty nadpis + text se stejnými ID, **color = barva nadpisu**, **JSON options** s explicitním odmítnutím kreslicích polí. Krátké řádky jsou statické, dlouhé rolují nezávisle. Kompatibilita původních argumentů a nové varianty jsou v testech i základním živém QA; migrace dříve uložených Flow ještě zbývá. Podrobnosti a příklady jsou v [12-header-cards.md](12-header-cards.md).
 
 ## Záměrně neimplementovat
 
@@ -57,4 +57,4 @@ Upřesnění majitele bylo implementované v soukromé **2.3.4**: zachovaná RAW
 - [TC002 settings](https://ang.blueforcer.de/tc002/reference/settings/) a [ESP32 settings](https://ang.blueforcer.de/esp32/reference/settings/): rozsahy obrazu a chování ručního jasu při automatickém řízení.
 - [TC002 HTTP API](https://ang.blueforcer.de/tc002/reference/http/): nastavení/data scriptů, sdílené hodnoty a pojmenované notifikace.
 
-Automatické ověření nenahrazuje test na fyzickém zařízení a v nainstalované Homey aplikaci. Nové funkce v této práci nejsou na živé hodiny zapisovány.
+Původní implementační ověření bylo syntetické. Následné živé testy 6. října 2026, jejich úklid, oprava UTF-8 maxlen a aktuálních **532/532** testů jsou popsány v [QA protokolu](13-live-qa-2026-10-06.md). Framebuffer nenahrazuje kontrolu fyzických LED a zvuku.
