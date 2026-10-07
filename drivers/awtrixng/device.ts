@@ -533,6 +533,10 @@ class AwtrixNgDevice extends Device {
     await this.getApi().saveRadioStation(name, url);
   }
 
+  async speakText(text: string): Promise<void> {
+    await this.getApi().speakText(text);
+  }
+
   async playAudioClipUrl(url: string): Promise<void> {
     await this.getApi().playAudioClipUrl(url);
   }

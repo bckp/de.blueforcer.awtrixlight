@@ -1,8 +1,15 @@
-# AWTRIX 3
+# AWTRIX
 
-Create a unique atmosphere in your home and access essential information at a glance with ease!
+Connect your AWTRIX pixel clock to Homey and see notifications, sensor readings and custom apps from your smart home at a glance.
 
-Integration with Awtrix 3 allows you and your entire family to receive notifications from your smart home devices on the screen of Ulanzi smart clock or any self build ESP32 matrix device. This can be done from a distance and with just a glance, eliminating the need to pick up your phone whenever something happens at home.
+## Supported clocks
+
+- **AWTRIX 3:** Ulanzi TC001 with its 32 × 8 pixel display, compatible AWTRIX 2 mainboards and self-built ESP32 matrix clocks running AWTRIX 3.
+- **AWTRIX NG:** TC002 with its 52 × 16 pixel display and compatible ESP32 matrix clocks running AWTRIX NG.
+
+Use Homey Flow to show messages, icons and custom apps, adjust brightness and control the display. TC002 also supports title-and-text layouts, audio and radio controls, script settings/data, state Flow triggers, and physical button and knob events. Available features depend on the clock and firmware.
+
+The clock must already run the matching AWTRIX firmware. Add AWTRIX 3 clocks using **Awtrix3** and TC002/AWTRIX NG clocks using **Awtrix NG**.
 
 ## AWTRIX NG support
 
@@ -17,4 +24,4 @@ This app also contains an AWTRIX NG driver as a separate implementation. AWTRIX 
 
 For user and maintainer notes, supported features, unsupported features and known `UNKNOWN` areas, see [`docs/awtrix-ng/06-user-maintainer-guide.md`](docs/awtrix-ng/06-user-maintainer-guide.md).
 
-The private TC002 branch's feature status and deferred clockfaces are tracked in the [feature roadmap](docs/awtrix-ng/10-homey-feature-roadmap.md). See the [live TC002/Homey test report](docs/awtrix-ng/13-live-qa-2026-10-06.md) for verified behavior, pixel previews and remaining release checks.
+Feature status and deferred clockfaces are tracked in the [feature roadmap](docs/awtrix-ng/10-homey-feature-roadmap.md). See the [live TC002/Homey test report](docs/awtrix-ng/13-live-qa-2026-10-06.md) for verified behavior, pixel previews and remaining release checks.

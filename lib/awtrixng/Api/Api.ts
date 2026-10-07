@@ -221,6 +221,7 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
       features.push(AwtrixNgFeatureCapabilityIds.audioGroups, AwtrixNgFeatureCapabilityIds.audioMixer,
         AwtrixNgFeatureCapabilityIds.volume, AwtrixNgFeatureCapabilityIds.alertVolume, AwtrixNgFeatureCapabilityIds.appVolume);
       if (capabilities.audio?.radio === true) features.push(AwtrixNgFeatureCapabilityIds.audioRadio, AwtrixNgFeatureCapabilityIds.radioVolume);
+      if (capabilities.audio?.speech === true) features.push(AwtrixNgFeatureCapabilityIds.audioSpeech);
       if (capabilities.audio?.clip === true) features.push(AwtrixNgFeatureCapabilityIds.audioClip);
     }
     return features;
@@ -722,6 +723,15 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     });
     this.#stationWrites = write.then(() => undefined, () => undefined);
     await write;
+  }
+
+  async speakText(text: string): Promise<void> {
+    if (typeof text !== 'string' || text.trim().length === 0 || Buffer.byteLength(text) > 512) {
+      throw new RangeError('Speech must contain non-empty text of at most 512 UTF-8 bytes.');
+    }
+    const caps = await this.requireGroupAudio();
+    if (caps.audio?.speech !== true) throw new Error('This AWTRIX NG device does not support speech.');
+    await this.#client.playSound({ speech: text });
   }
 
   async playAudioClipUrl(value: string): Promise<void> {

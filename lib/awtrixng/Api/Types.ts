@@ -508,6 +508,7 @@ export interface AwtrixNgApiIndicatorPayload {
 }
 
 export interface AwtrixNgApiSoundPlayPayload {
+  speech?: string;
   station?: string | number;
   name?: string;
   rtttl?: string;

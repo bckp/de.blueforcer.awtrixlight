@@ -163,5 +163,11 @@
   "2.3.4": {
     "en": "Private NG test build: improved title-and-text cards with header color, validated JSON options, clearer names and static fitting text. Existing Flow card IDs retained.",
     "cs": "Soukromá testovací NG verze: upravené karty nadpis a text s barvou nadpisu, ověřenými JSON options, přesnějšími názvy a statickým krátkým textem. ID stávajících Flow zachována."
+  },
+  "2.3.5": {
+    "en": "Fixed UTF8 in scripts"
+  },
+  "2.3.6": {
+    "en": "Add speech flowcard (TCO02)"
   }
 }

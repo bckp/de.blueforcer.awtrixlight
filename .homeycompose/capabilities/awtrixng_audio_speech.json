@@ -1,0 +1,13 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Speech",
+    "cs": "Řeč",
+    "de": "Sprachausgabe",
+    "nl": "Spraak"
+  },
+  "getable": true,
+  "setable": false,
+  "insights": false,
+  "uiComponent": null
+}

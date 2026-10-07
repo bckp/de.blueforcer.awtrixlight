@@ -379,3 +379,16 @@ Nikdy nechytat a neignorovat AWTRIX NG API chyby.
 - `docs/awtrix-ng/02-api-compatibility-matrix.md` — detailní API srovnání AWTRIX 3 vs. AWTRIX NG.
 - `docs/awtrix-ng/03-json-options.md` — user-facing reference podporovaných AWTRIX NG JSON options pro messages a pushed apps.
 - `docs/awtrix-ng/06-user-maintainer-guide.md` — aktuální stav podpory AWTRIX NG a maintainer zásady.
+
+### Přečti text
+
+Flow karta `awtrixng_audio_speech` přečte zadaný text přes `POST /api/v1/audio/play`
+s tělem `{ "speech": "Hello" }`, bez vytváření notifikace. Je dostupná jen pro
+zařízení s markerem `awtrixng_audio_speech`, který se přidává podle skutečně
+hlášeného `audio.speech === true` při párování nebo inicializaci zařízení.
+Při každém spuštění se podpora znovu ověřuje. AWTRIX 3 kartu nemá.
+
+Text musí být neprázdný a mít nejvýše 512 bajtů v UTF-8 (nikoliv 512 znaků).
+Hodiny potřebují nainstalovaný hlas. Akce končí přijetím požadavku na přehrání,
+nečeká na dokončení řeči. Chyby firmware se předávají beze ztráty detailů.
+Podklady: [HTTP API](https://ang.blueforcer.de/tc002/reference/http/).

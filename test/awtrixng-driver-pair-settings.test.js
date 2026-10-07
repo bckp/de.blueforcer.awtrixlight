@@ -80,3 +80,38 @@ test('AWTRIX NG authenticated pairing keeps credentials next to connection setti
     authPass: 'secret',
   });
 });
+
+test('speech Flow forwards text to its device and propagates playback errors', async () => {
+  const Driver = loadAwtrixNgDriver();
+  const driver = new Driver();
+  const listeners = new Map();
+  driver.homey = {
+    flow: {
+      getActionCard: (id) => ({
+        registerRunListener: (listener) => listeners.set(id, listener),
+        registerArgumentAutocompleteListener: () => {},
+      }),
+    },
+  };
+  driver.registerAudioCards();
+  const run = listeners.get('awtrixng_audio_speech');
+  let spoken;
+  await run({
+    text: 'Hello 🐱',
+    device: {
+      speakText: async (text) => {
+        spoken = text;
+      },
+    },
+  });
+  assert.equal(spoken, 'Hello 🐱');
+  const error = new Error('Speech unavailable');
+  await assert.rejects(run({
+    text: 'Hello',
+    device: {
+      speakText: async () => {
+        throw error;
+      },
+    },
+  }), (result) => result === error);
+});

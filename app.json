@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "de.blueforcer.awtrixlight",
-  "version": "2.3.4",
+  "version": "2.3.6",
   "compatibility": ">=12.9.0",
   "sdk": 3,
   "brandColor": "#222222",
@@ -15,10 +15,10 @@
     "cs": "AWTRIX"
   },
   "description": {
-    "en": "Connected Smart Clock for your Smart Home",
-    "de": "Vernetzte Smart Clock für Ihr Smart Home",
-    "nl": "Verbonden slimme klok voor je slimme huis",
-    "cs": "Chytré hodiny propojené s vaší chytrou domácností"
+    "en": "AWTRIX 3 and AWTRIX NG pixel clocks, including TC002",
+    "de": "AWTRIX 3- und AWTRIX NG-Pixeluhren, einschließlich TC002",
+    "nl": "AWTRIX 3- en AWTRIX NG-pixelklokken, inclusief TC002",
+    "cs": "Pixelové hodiny AWTRIX 3 a AWTRIX NG, včetně TC002"
   },
   "category": [
     "appliances"
@@ -2248,6 +2248,44 @@
             }
           }
         ]
+      },
+      {
+        "id": "awtrixng_audio_speech",
+        "title": {
+          "en": "Read text aloud",
+          "cs": "Přečti text",
+          "de": "Text vorlesen",
+          "nl": "Tekst voorlezen"
+        },
+        "titleFormatted": {
+          "en": "Read [[text]] aloud",
+          "cs": "Přečti [[text]]",
+          "de": "[[text]] vorlesen",
+          "nl": "Lees [[text]] voor"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_speech"
+          },
+          {
+            "name": "text",
+            "type": "text",
+            "title": {
+              "en": "Text",
+              "cs": "Text",
+              "de": "Text",
+              "nl": "Tekst"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Requires an installed voice on the clock. Maximum 512 UTF-8 bytes. This action finishes when the playback request is accepted.",
+          "cs": "Vyžaduje nainstalovaný hlas v hodinách. Nejvýše 512 bajtů v UTF-8. Akce skončí přijetím požadavku na přehrání.",
+          "de": "Erfordert eine installierte Stimme auf der Uhr. Maximal 512 UTF-8-Bytes. Die Aktion endet, sobald die Wiedergabeanfrage angenommen wurde.",
+          "nl": "Vereist een geïnstalleerde stem op de klok. Maximaal 512 UTF-8-bytes. De actie eindigt zodra het afspeelverzoek is geaccepteerd."
+        }
       }
     ],
     "triggers": [
@@ -3835,6 +3873,19 @@
         "cs": "Internetové rádio",
         "de": "Internetradio",
         "nl": "Internetradio"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
+    "awtrixng_audio_speech": {
+      "type": "boolean",
+      "title": {
+        "en": "Speech",
+        "cs": "Řeč",
+        "de": "Sprachausgabe",
+        "nl": "Spraak"
       },
       "getable": true,
       "setable": false,

@@ -229,6 +229,7 @@ test('new JSON radio source requires radio hardware and rejects fallback/loop op
 test('new Flow cards have capability filters; the old stop card keeps its ID and arguments', () => {
   const flows = JSON.parse(fs.readFileSync('drivers/awtrixng/driver.flow.compose.json', 'utf8'));
   const filters = {
+    awtrixng_audio_speech: 'audio_speech',
     awtrixng_audio_volume: 'audio_mixer',
     awtrixng_audio_stop_group: 'audio_groups',
     awtrixng_radio_station: 'audio_radio',
@@ -246,4 +247,48 @@ test('new Flow cards have capability filters; the old stop card keeps its ID and
   const old = flows.actions.find((entry) => entry.id === 'awtrixng_audio_stop');
   assert.equal(old.args, undefined);
   assert.equal(old.$filter, 'capabilities=awtrixng_audio_url');
+});
+
+test('speech sends exact text, validates UTF-8 bytes and checks device support before playback', async () => {
+  const { api, calls } = createApi();
+  for (const text of ['Window open.', 'Ž'.repeat(256), '🐱'.repeat(128)]) {
+    await api.speakText(text);
+    assert.deepEqual(calls.at(-1).body, { speech: text });
+    assert.equal(calls.at(-1).path, '/api/v1/audio/play');
+  }
+  const before = calls.length;
+  for (const text of ['', '   ', 'Ž'.repeat(257), '🐱'.repeat(129), null, 42]) {
+    await assert.rejects(api.speakText(text), /512 UTF-8 bytes/);
+  }
+  assert.equal(calls.length, before);
+  for (const speech of [false, undefined]) {
+    const unsupported = createApi({ 'GET /api/v1/capabilities': { ...caps, audio: { ...caps.audio, speech } } });
+    await assert.rejects(unsupported.api.speakText('Hello'), /does not support speech/);
+    assert.equal(unsupported.calls.some((call) => call.method === 'POST'), false);
+  }
+});
+
+test('speech preserves firmware error details', async () => {
+  const error = new AwtrixNgHttpError({
+    method: 'POST',
+    url: 'http://192.0.2.10/api/v1/audio/play',
+    status: 422,
+    message: 'Rejected',
+    rawBody: { error: { code: 'voiceMissing', message: 'Install a voice', field: 'speech' } },
+  });
+  const { api } = createApi({
+    'POST /api/v1/audio/play': () => {
+      throw error;
+    },
+  });
+  await assert.rejects(api.speakText('Hello'), (result) => result.httpStatus === 422
+    && result.code === 'voiceMissing' && result.message === 'Install a voice' && result.field === 'speech');
+});
+
+test('speech capability marker follows reported support, independently of panel size', async () => {
+  for (const speech of [true, false, undefined]) {
+    const { api } = createApi({ 'GET /api/v1/capabilities': { ...caps, audio: { ...caps.audio, speech } } });
+    const features = await api.readFeatures({ boardType: 'awtrixng', version: '1.2.0' });
+    assert.equal(features.includes('awtrixng_audio_speech'), speech === true);
+  }
 });
