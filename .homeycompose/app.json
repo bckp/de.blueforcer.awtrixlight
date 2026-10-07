@@ -1,6 +1,6 @@
 {
   "id": "de.blueforcer.awtrixlight",
-  "version": "2.2.13",
+  "version": "2.3.6",
   "compatibility": ">=12.9.0",
   "sdk": 3,
   "brandColor": "#222222",
@@ -8,15 +8,23 @@
     "local"
   ],
   "name": {
-    "en": "AWTRIX"
+    "en": "AWTRIX",
+    "de": "AWTRIX",
+    "nl": "AWTRIX",
+    "cs": "AWTRIX"
   },
   "description": {
-    "en": "Connected Smart Clock for your Smart Home"
+    "en": "AWTRIX 3 and AWTRIX NG pixel clocks, including TC002",
+    "de": "AWTRIX 3- und AWTRIX NG-Pixeluhren, einschließlich TC002",
+    "nl": "AWTRIX 3- en AWTRIX NG-pixelklokken, inclusief TC002",
+    "cs": "Pixelové hodiny AWTRIX 3 a AWTRIX NG, včetně TC002"
   },
   "category": [
     "appliances"
   ],
-  "permissions": [],
+  "permissions": [
+    "homey:app:com.athom.soundboard"
+  ],
   "api": {
     "awtrixNgButtonCallback": {
       "method": "POST",

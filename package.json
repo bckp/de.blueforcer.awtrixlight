@@ -1,6 +1,6 @@
 {
   "name": "de.blueforcer.awtrixlight",
-  "version": "2.2.13",
+  "version": "2.3.6",
   "main": "app.ts",
   "scripts": {
     "build": "tsc && node scripts/copy-driver-assets.js",

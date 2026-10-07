@@ -3,6 +3,7 @@ import { parseAwtrixNgApiError } from './ErrorParser';
 import {
   AwtrixNgApiAppsOrderPayload,
   AwtrixNgApiAppsResponse,
+  AwtrixNgApiAudioResponse,
   AwtrixNgApiCapabilitiesResponse,
   AwtrixNgApiDeviceStateResponse,
   AwtrixNgApiDisplayPatch,
@@ -18,7 +19,11 @@ import {
   AwtrixNgApiSystemResponse,
   AwtrixNgApiSoundPlayPayload,
   AwtrixNgApiVersionResponse,
+  AwtrixNgApiScriptConfig,
+  AwtrixNgApiScriptWriteResult,
+  AwtrixNgApiSharedScriptValue,
 } from './Types';
+import { AwtrixNgAudioGroup, AwtrixNgRadioStation } from '../Services/Audio';
 
 export type AwtrixNgIndicatorId = 1 | 2 | 3;
 
@@ -118,6 +123,13 @@ export default class AwtrixNgClient {
     });
   }
 
+  dismissNamedNotification(name: string): Promise<AwtrixNgApiOkResponse> {
+    return this.#request<AwtrixNgApiOkResponse>({
+      method: 'DELETE',
+      path: `/api/v1/notifications/${this.#pathSegment(name)}`,
+    });
+  }
+
   putIndicator(id: AwtrixNgIndicatorId, payload: AwtrixNgApiIndicatorPayload): Promise<AwtrixNgApiOkResponse> {
     return this.#request<AwtrixNgApiOkResponse, AwtrixNgApiIndicatorPayload>({
       method: 'PUT',
@@ -141,11 +153,69 @@ export default class AwtrixNgClient {
     });
   }
 
+  playSynthFx(fx: string): Promise<AwtrixNgApiOkResponse> {
+    return this.#request<AwtrixNgApiOkResponse, AwtrixNgApiSoundPlayPayload>({
+      method: 'POST',
+      path: '/api/v1/audio/play',
+      body: { fx },
+    });
+  }
+
+  playSound(payload: AwtrixNgApiSoundPlayPayload): Promise<AwtrixNgApiOkResponse> {
+    return this.#request<AwtrixNgApiOkResponse>({ method: 'POST', path: '/api/v1/audio/play', body: payload });
+  }
+
+  getAudio(): Promise<AwtrixNgApiAudioResponse> {
+    return this.#request<AwtrixNgApiAudioResponse>({ method: 'GET', path: '/api/v1/audio' });
+  }
+
+  stopAlert(): Promise<AwtrixNgApiOkResponse> {
+    return this.stopAudio('alert');
+  }
+
+  stopAudio(group: AwtrixNgAudioGroup): Promise<AwtrixNgApiOkResponse> {
+    return this.#request({ method: 'POST', path: '/api/v1/audio/stop', body: group === 'all' ? {} : { group } });
+  }
+
+  playClip(body: Uint8Array): Promise<AwtrixNgApiOkResponse> {
+    return this.#request({
+      method: 'POST', path: '/api/v1/audio/clip', body, headers: { 'Content-Type': 'application/octet-stream' }, timeoutMs: 30000,
+    });
+  }
+
+  putRadioStations(stations: AwtrixNgRadioStation[]): Promise<AwtrixNgApiOkResponse> {
+    return this.#request({ method: 'PUT', path: '/api/v1/audio/stations', body: { stations } });
+  }
+
   getApps(): Promise<AwtrixNgApiAppsResponse> {
     return this.#request<AwtrixNgApiAppsResponse>({
       method: 'GET',
       path: '/api/v1/apps',
     });
+  }
+
+  showApp(name: string, fast: boolean): Promise<AwtrixNgApiOkResponse> {
+    return this.#request({ method: 'PUT', path: '/api/v1/apps/active', body: { name, fast } });
+  }
+
+  getScriptConfig(name: string): Promise<AwtrixNgApiScriptConfig> {
+    return this.#request({ method: 'GET', path: `/api/v1/apps/${this.#pathSegment(name)}/config` });
+  }
+
+  patchScriptConfig(name: string, body: Record<string, unknown>): Promise<AwtrixNgApiScriptWriteResult> {
+    return this.#request({ method: 'PATCH', path: `/api/v1/apps/${this.#pathSegment(name)}/config`, body });
+  }
+
+  getScriptData(name: string): Promise<Record<string, unknown>> {
+    return this.#request({ method: 'GET', path: `/api/v1/apps/${this.#pathSegment(name)}/data` });
+  }
+
+  patchScriptData(name: string, body: Record<string, unknown>): Promise<AwtrixNgApiScriptWriteResult> {
+    return this.#request({ method: 'PATCH', path: `/api/v1/apps/${this.#pathSegment(name)}/data`, body });
+  }
+
+  getSharedScriptValues(): Promise<AwtrixNgApiSharedScriptValue[]> {
+    return this.#request({ method: 'GET', path: '/api/v1/scripts/shared' });
   }
 
   putAppsOrder(payload: AwtrixNgApiAppsOrderPayload): Promise<AwtrixNgApiOkResponse> {

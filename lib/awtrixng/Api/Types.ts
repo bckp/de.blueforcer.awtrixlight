@@ -105,8 +105,21 @@ export interface AwtrixNgApiCapabilitiesResponse {
   transitions: string[];
   overlays: string[];
   palettes: string[];
-  radio: boolean;
-  gpio: AwtrixNgApiGpioCapabilities;
+  radio?: boolean;
+  gpio: AwtrixNgApiGpioCapabilities | null;
+  platform?: { id: string };
+  sensors?: { light?: boolean };
+  display?: { width: number; height: number };
+  fonts?: { name: string; ascent: number; descent: number; lineHeight: number }[];
+  layouts?: {
+    version: number;
+    limits: { regions: number; scrollers: number; assets: number; chartPoints: number; textBytes: number };
+  };
+  audio?: {
+    synth?: boolean; mp3?: boolean; radio?: boolean; mixer?: boolean;
+    song?: boolean; rtttl?: boolean; speech?: boolean; track?: boolean;
+    url?: boolean; effect?: boolean; clip?: boolean;
+  };
 }
 
 export type AwtrixNgApiTimeSeparatorMode = 'steady' | 'blink' | 'pulse';
@@ -190,6 +203,9 @@ export interface AwtrixNgApiSettingsResponse {
   batteryColor: AwtrixNgApiColor | null;
   scroll: AwtrixNgApiScrollSettings;
   volume: number;
+  alertVolume?: number;
+  appVolume?: number;
+  bootSound?: boolean;
   radioVolume: number;
   radioMeta: boolean;
   saturation: number;
@@ -252,6 +268,7 @@ export interface AwtrixNgApiScriptAppMeta {
   desc: string;
   author: string;
   version: string;
+  display?: { width: number; height: number; fits: boolean } | null;
 }
 
 export interface AwtrixNgApiAppInventoryItem {
@@ -265,6 +282,7 @@ export interface AwtrixNgApiAppInventoryItem {
   icon?: string;
   skipped?: boolean;
   headless?: boolean;
+  ondemand?: boolean;
   config?: boolean;
   error?: AwtrixNgApiScriptAppError | null;
   meta?: AwtrixNgApiScriptAppMeta;
@@ -272,12 +290,47 @@ export interface AwtrixNgApiAppInventoryItem {
 
 export type AwtrixNgApiAppsResponse = AwtrixNgApiAppInventoryItem[];
 
+export interface AwtrixNgApiScriptSetting {
+  key: string;
+  type: 'bool' | 'text' | 'number' | 'slider' | 'select' | 'color';
+  label?: string;
+  value: unknown;
+  min?: number;
+  max?: number;
+  maxlen?: number;
+  options?: string[];
+}
+
+export interface AwtrixNgApiScriptConfig {
+  name: string;
+  fields: AwtrixNgApiScriptSetting[];
+  warnings: unknown[];
+}
+
+export interface AwtrixNgApiScriptWriteResult {
+  ok: true;
+  name: string;
+  error: AwtrixNgApiScriptAppError | null;
+}
+
+export interface AwtrixNgApiSharedScriptValue {
+  owner: string;
+  key: string;
+  type: 'int' | 'real' | 'bool' | 'string';
+  value: number | boolean | string | null;
+  ageMs: number;
+}
+
 export interface AwtrixNgApiAppsOrderPayload {
   order?: string[];
   disabled: string[];
 }
 
 export const AwtrixNgApiTextCases = ['inherit', 'upper', 'asTyped'] as const;
+
+export const AwtrixNgApiTextAlignments = ['start', 'center', 'end'] as const;
+
+export type AwtrixNgApiTextAlignment = typeof AwtrixNgApiTextAlignments[number];
 
 export type AwtrixNgApiTextCase = typeof AwtrixNgApiTextCases[number];
 
@@ -340,14 +393,56 @@ export type AwtrixNgApiDrawCommand =
   | AwtrixNgApiDrawTextCommand
   | AwtrixNgApiDrawBitmapCommand;
 
+export type AwtrixNgApiLayoutAlignment = 'start' | 'center' | 'end';
+
+export interface AwtrixNgApiLayoutRegion {
+  id: string;
+  box: [number, number, number, number];
+  text?: string | AwtrixNgApiTextFragment[];
+  icon?: string;
+  chart?: { values: number[]; type?: 'line' | 'bar'; min?: number; max?: number };
+  progress?: number;
+  draw?: AwtrixNgApiDrawCommand[];
+  font?: string;
+  color?: AwtrixNgApiColorInput | 'palette';
+  textColor?: AwtrixNgApiColorInput | 'palette';
+  trackColor?: AwtrixNgApiColorInput;
+  align?: AwtrixNgApiLayoutAlignment;
+  valign?: AwtrixNgApiLayoutAlignment;
+  scroll?: AwtrixNgApiScrollPayload | AwtrixNgApiScrollMode;
+  repeat?: number;
+  textCase?: AwtrixNgApiTextCase;
+  textBlinkMs?: number;
+  textFadeMs?: number;
+  palette?: AwtrixNgApiPalette;
+  paletteBlend?: boolean;
+  paletteSpan?: number;
+  paletteSpeed?: number;
+}
+
+export interface AwtrixNgApiLayout {
+  version: 1;
+  regions: AwtrixNgApiLayoutRegion[];
+  backgroundColor?: AwtrixNgApiColorInput;
+  effect?: string;
+  effectSpeed?: number;
+  overlay?: string;
+  palette?: AwtrixNgApiPalette;
+  paletteBlend?: boolean;
+  paletteSpan?: number;
+  paletteSpeed?: number;
+}
+
 export interface AwtrixNgApiPagePayload {
+  layout?: AwtrixNgApiLayout;
   text?: string | AwtrixNgApiTextFragment[];
   textCase?: AwtrixNgApiTextCase;
-  font?: AwtrixNgApiFont;
+  font?: string;
   textColor?: AwtrixNgApiColorInput | 'palette';
   textBlinkMs?: number;
   textFadeMs?: number;
   textCenter?: boolean;
+  textAlign?: AwtrixNgApiTextAlignment;
   textOffsetX?: number;
   textInFront?: boolean;
   scroll?: AwtrixNgApiScrollPayload | AwtrixNgApiScrollMode;
@@ -376,12 +471,23 @@ export interface AwtrixNgApiPagePayload {
   draw?: AwtrixNgApiDrawCommand[];
 }
 
+export type AwtrixNgApiSoundObject = (
+  | { file: string }
+  | { rtttl: string }
+  | { song: string }
+  | { speech: string }
+  | { track: number }
+  | { station: string | number }
+) & { loop?: boolean; nextBar?: boolean };
+
+export type AwtrixNgApiSound = string | AwtrixNgApiSoundObject | (string | AwtrixNgApiSoundObject)[];
+
 export interface AwtrixNgApiNotificationPayload extends AwtrixNgApiPagePayload {
   name?: string;
   hold?: boolean;
   stack?: boolean;
   wakeup?: boolean;
-  sound?: string | number;
+  sound?: AwtrixNgApiSound | number;
   soundRtttl?: string;
   soundLoop?: boolean;
 }
@@ -402,9 +508,27 @@ export interface AwtrixNgApiIndicatorPayload {
 }
 
 export interface AwtrixNgApiSoundPlayPayload {
+  speech?: string;
+  station?: string | number;
   name?: string;
   rtttl?: string;
   builtin?: string;
+  fx?: string;
+  file?: string;
+  song?: string;
+  loop?: boolean;
+}
+
+export interface AwtrixNgApiAudioGroup {
+  playing: boolean;
+  name: string;
+  error: string;
+}
+
+export interface AwtrixNgApiAudioResponse {
+  alert: AwtrixNgApiAudioGroup;
+  app: AwtrixNgApiAudioGroup;
+  radio: { playing: boolean; error: string };
 }
 
 export interface AwtrixNgApiFileEntry {

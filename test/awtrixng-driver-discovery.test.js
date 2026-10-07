@@ -116,7 +116,7 @@ test('AWTRIX NG driver probes all three pairing paths through the facade', async
   // Both pairing session paths share one response mapper (owner-approved consolidation);
   // probeDiscoveryResult stays separate because it filters instead of reporting statuses.
   assert.equal(driverSource.match(/this\.#toPairingProbeResponse\(/g)?.length, 2);
-  assert.deepEqual(clientOptions.map(({ baseUrl, auth }) => ({ baseUrl, auth })), [{
+  const expectedConnections = [{
     baseUrl: 'http://192.0.2.60:8080',
     auth: undefined,
   }, {
@@ -128,10 +128,105 @@ test('AWTRIX NG driver probes all three pairing paths through the facade', async
   }, {
     baseUrl: 'http://192.0.2.62:8082',
     auth: undefined,
-  }]);
+  }];
+  assert.deepEqual(clientOptions.map(({ baseUrl, auth }) => ({ baseUrl, auth })), expectedConnections.flatMap((connection) => [connection, connection]));
   assert.equal(manualResult.device.name, 'awtrixng');
   assert.equal(credentialsResult.device.name, 'Credentials device');
   assert.equal(discoveryResult.name, 'Discovery device');
+});
+
+test('TC002 pairing assigns feature capabilities from its probed platform and audio support', async () => {
+  const paths = [];
+  const AwtrixNgDriver = loadAwtrixNgDriver({
+    async request(options, httpRequest) {
+      paths.push(httpRequest.path);
+      return {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        data: httpRequest.path === '/api/v1/device'
+          ? createDeviceState({ boardType: 'tc002', version: '1.1.5' })
+          : { platform: { id: 'tc002' }, display: { width: 52, height: 16 }, audio: { synth: true } },
+      };
+    },
+  });
+  const driver = new AwtrixNgDriver();
+  driver.log = () => {};
+  const result = await driver.probeManualPairingInput({ address: '192.0.2.60', port: 8080 });
+  assert.equal(result.status, 'detected');
+  assert.deepEqual(result.device.capabilities.slice(-3), [
+    'awtrixng_knob', 'awtrixng_display_16px', 'awtrixng_audio_synth',
+  ]);
+  assert.deepEqual(paths, ['/api/v1/device', '/api/v1/capabilities']);
+});
+
+test('TC002 1.1.6 pairing advertises native URL and song support explicitly', async () => {
+  const AwtrixNgDriver = loadAwtrixNgDriver({
+    async request(options, httpRequest) {
+      return {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        data: httpRequest.path === '/api/v1/device'
+          ? createDeviceState({ boardType: 'tc002', version: '1.1.6' })
+          : {
+            platform: { id: 'tc002' },
+            display: { width: 52, height: 16 },
+            audio: {
+              song: true, rtttl: true, mp3: true, url: true,
+            },
+          },
+      };
+    },
+  });
+  const driver = new AwtrixNgDriver();
+  driver.log = () => {};
+  const result = await driver.probeManualPairingInput({ address: '192.0.2.60', port: 8080 });
+  assert.equal(result.status, 'detected');
+  assert.deepEqual(result.device.capabilities.slice(-9), [
+    'awtrixng_knob', 'awtrixng_display_16px', 'awtrixng_audio_synth', 'awtrixng_audio_url',
+    'awtrixng_audio_groups', 'awtrixng_audio_mixer', 'awtrixng_volume', 'awtrixng_alert_volume', 'awtrixng_app_volume',
+  ]);
+});
+
+test('TC002 pairing does not advertise synth audio without an explicit synth capability', async () => {
+  const AwtrixNgDriver = loadAwtrixNgDriver({
+    async request(options, httpRequest) {
+      return {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        data: httpRequest.path === '/api/v1/device'
+          ? createDeviceState({ boardType: 'tc002', version: '1.1.5' })
+          : { platform: { id: 'tc002' }, display: { width: 52, height: 16 }, audio: { synth: false } },
+      };
+    },
+  });
+  const driver = new AwtrixNgDriver();
+  driver.log = () => {};
+  const result = await driver.probeManualPairingInput({ address: '192.0.2.60', port: 8080 });
+  assert.equal(result.status, 'detected');
+  assert.equal(result.device.capabilities.includes('awtrixng_audio_synth'), false);
+});
+
+test('32x8 NG pairing advertises layouts independently of TC002 features', async () => {
+  const paths = [];
+  const Driver = loadAwtrixNgDriver({
+    async request(options, httpRequest) {
+      paths.push(httpRequest.path);
+      return {
+        status: 200,
+        headers: {},
+        data: httpRequest.path === '/api/v1/device' ? createDeviceState()
+          : { display: { width: 32, height: 8 }, layouts: { version: 1 } },
+      };
+    },
+  });
+  const driver = new Driver();
+  driver.log = () => {};
+  const result = await driver.probeManualPairingInput({ address: '192.0.2.60', port: 8080 });
+  assert.equal(result.status, 'detected');
+  assert.ok(result.device.capabilities.includes('awtrixng_layout'));
+  assert.equal(result.device.capabilities.includes('awtrixng_display_16px'), false);
+  assert.equal(result.device.capabilities.includes('awtrixng_knob'), false);
+  assert.deepEqual(paths, ['/api/v1/device', '/api/v1/capabilities']);
 });
 
 test('AWTRIX NG probe workflows preserve their distinct status and error mappings', async () => {
@@ -269,7 +364,7 @@ test('AWTRIX NG discovery filters synchronously, probes at most four candidates 
 
   const devices = await driver.findDiscoveredDevices();
 
-  assert.equal(clientOptions.length, candidateNames.length);
+  assert.equal(clientOptions.length, candidateNames.length * 2, 'each device has an identity probe and a capabilities probe');
   assert.equal(maximumActiveProbes, 4);
   assert.deepEqual(devices.map(({ name }) => name), [...candidateNames].sort((left, right) => left.localeCompare(right)));
 });

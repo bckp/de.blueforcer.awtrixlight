@@ -1,0 +1,20 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Radio volume",
+    "cs": "Hlasitost rádia",
+    "de": "Radiolautstärke",
+    "nl": "Radiovolume"
+  },
+  "getable": true,
+  "setable": true,
+  "insights": false,
+  "uiComponent": "slider",
+  "min": 0,
+  "max": 100,
+  "step": 1,
+  "decimals": 0,
+  "units": "%",
+  "preventTag": true,
+  "preventInsights": true
+}

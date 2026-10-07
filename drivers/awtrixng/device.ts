@@ -5,8 +5,18 @@ import path from 'path';
 import AwtrixNgApi, {
   AwtrixNgBasicAuthOptions,
   AwtrixNgDeviceProbeResult,
+  AwtrixNgFeatureCapabilityIds,
+  AwtrixNgHeaderLayoutInput,
+  AwtrixNgAudioGroup,
+  AwtrixNgMixerField,
+  AwtrixNgMixerFields,
+  AwtrixNgMixerLevels,
   AwtrixNgWeatherOverlayCapabilityId,
   formatAwtrixNgErrorDetails,
+  AwtrixNgStateFlowCardIds,
+  AwtrixNgStateFlowSnapshot,
+  AwtrixNgStateFlowSubscriptions,
+  createAwtrixNgStateFlowEvents,
 } from '../../lib/awtrixng/Api/Api';
 import Poll from '../../lib/shared/Poll';
 import { toAwtrixNgBaseUrl } from '../../lib/awtrixng/Discovery/Detection';
@@ -19,7 +29,11 @@ import { toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
 import { AwtrixDeviceType } from '../awtrix-device-type';
 
 const PollIntervalMs = 60000;
+const StateFlowPollIntervalMs = 5000;
 const BundledIconsDirectory = path.join(__dirname, 'assets/images/icons');
+const BundledIcons16Directory = path.join(__dirname, 'assets/images/icons-16');
+const Tc002BundledIconsRevision = 1;
+const Tc002BundledIconsRevisionStoreKey = 'tc002BundledIconsRevision';
 const MaxConcurrentIconUploads = 3;
 const RedactedSettingValue = '<redacted>';
 const BuiltinAppsInitializedStoreKey = 'builtinAppsInitialized';
@@ -94,6 +108,16 @@ class AwtrixNgDevice extends Device {
 
   poll?: Poll;
 
+  private stateFlowPoll?: Poll;
+
+  private stateFlowSnapshot?: AwtrixNgStateFlowSnapshot;
+
+  private stateFlowSubscriptionKey?: string;
+
+  private stateFlowEpoch = 0;
+
+  private deleted = false;
+
   /** Resolves once the deferred Homey settings sync scheduled by onSettings() has finished. */
   pendingSettingsSync?: Promise<void>;
 
@@ -140,10 +164,15 @@ class AwtrixNgDevice extends Device {
       const deviceStateResult = await this.refreshDeviceState({ allowAddCapabilities: true });
 
       if (deviceStateResult?.status === 'detected') {
+        await this.synchronizeAudioFeatures(deviceStateResult.device);
         await this.refreshSettingsFromDevice();
         await this.refreshDisplayFromDevice();
         await this.synchronizeBuiltinAppsForFirmware(deviceStateResult.device.version, true, true);
         await this.reconcileButtonCallbackOnStartup();
+        if (deviceStateResult.device.boardType === 'tc002'
+          && this.getStoreValue(Tc002BundledIconsRevisionStoreKey) !== Tc002BundledIconsRevision) {
+          await this.uploadBundledIconsSafely();
+        }
       }
     } catch (error: unknown) {
       this.error(error);
@@ -152,16 +181,20 @@ class AwtrixNgDevice extends Device {
       );
     } finally {
       poll.start();
+      this.startStateFlowPoll();
     }
   }
 
   async onAdded(): Promise<void> {
     this.log('AwtrixNgDevice has been added');
-    await this.uploadBundledIcons();
+    await this.uploadBundledIconsSafely();
   }
 
   async onDeleted(): Promise<void> {
     this.log('AwtrixNgDevice has been deleted');
+    this.deleted = true;
+    this.stateFlowEpoch += 1;
+    this.stateFlowPoll?.stop();
     await this.clearOwnedButtonCallbackOnDelete();
     this.poll?.stop();
     this.icons?.invalidate();
@@ -262,6 +295,7 @@ class AwtrixNgDevice extends Device {
   }
 
   private initCapabilityListeners(): void {
+    this.registerCapabilityListener('dim', async (value: number): Promise<void> => this.setBrightness(value));
     this.registerCapabilityListener('awtrix_matrix', async (value: unknown): Promise<void> => {
       await this.getApi().setMatrixPower(value);
     });
@@ -328,6 +362,7 @@ class AwtrixNgDevice extends Device {
 
       if (result?.status === 'detected') {
         await this.synchronizeBuiltinAppsForFirmware(result.device.version, false, true);
+        if (this.hasCapability(AwtrixNgFeatureCapabilityIds.audioMixer)) await this.refreshMixer();
       }
     }, this.homey, {
       intervalMs: PollIntervalMs,
@@ -345,6 +380,200 @@ class AwtrixNgDevice extends Device {
     }
 
     return this.api;
+  }
+
+  private startStateFlowPoll(): void {
+    if (this.deleted || this.stateFlowPoll?.isActive()) return;
+    this.stateFlowPoll = new Poll(() => this.refreshStateFlows(), this.homey, {
+      intervalMs: StateFlowPollIntervalMs,
+      onError: (error: unknown) => this.error(error),
+    });
+    this.stateFlowPoll.start();
+  }
+
+  private async refreshStateFlows(): Promise<void> {
+    const epoch = this.stateFlowEpoch;
+    let next: AwtrixNgStateFlowSnapshot;
+    const subscriptions = {} as AwtrixNgStateFlowSubscriptions;
+    try {
+      for (const [key, id] of Object.entries(AwtrixNgStateFlowCardIds)) {
+        subscriptions[key as keyof AwtrixNgStateFlowSubscriptions] = (await this.homey.flow.getDeviceTriggerCard(id).getArgumentValues(this)).length > 0;
+      }
+      const subscriptionKey = JSON.stringify(subscriptions);
+      if (subscriptionKey !== this.stateFlowSubscriptionKey) this.stateFlowSnapshot = undefined;
+      this.stateFlowSubscriptionKey = subscriptionKey;
+      if (!Object.values(subscriptions).some(Boolean)) return;
+      next = await this.getApi().readStateFlowSnapshot(this.getData().id as string, subscriptions);
+    } catch (error: unknown) {
+      if (epoch === this.stateFlowEpoch) this.stateFlowSnapshot = undefined;
+      throw error;
+    }
+    // Ignore observations from a deleted device or a connection replaced while awaiting HTTP.
+    if (this.deleted || epoch !== this.stateFlowEpoch) return;
+    const events = createAwtrixNgStateFlowEvents(this.stateFlowSnapshot, next, subscriptions);
+    this.stateFlowSnapshot = next;
+    for (const event of events) {
+      if (this.deleted || epoch !== this.stateFlowEpoch) return;
+      await this.homey.flow.getDeviceTriggerCard(AwtrixNgStateFlowCardIds[event.card]).trigger(this, event.tokens).catch(this.error);
+    }
+  }
+
+  async playSynthEffect(fx: string): Promise<void> {
+    if (!this.hasCapability(AwtrixNgFeatureCapabilityIds.audioSynth)) {
+      throw new Error('This AWTRIX NG device does not support synthesized audio.');
+    }
+    await this.getApi().playSynthFx(fx);
+  }
+
+  async setBrightness(value: number): Promise<void> {
+    const actual = await this.getApi().setBrightness(value);
+    await this.setCapabilityValue('dim', actual.brightness).catch(this.error);
+    await this.setSettings({ autoBrightness: actual.autoBrightness });
+  }
+
+  async sendHeaderNotification(input: AwtrixNgHeaderLayoutInput): Promise<void> {
+    this.requireHeaderLayoutCapabilities();
+    await this.getApi().sendHeaderNotification(input);
+  }
+
+  async putHeaderApp(name: string, input: AwtrixNgHeaderLayoutInput): Promise<void> {
+    this.requireHeaderLayoutCapabilities();
+    await this.getApi().putHeaderApp(name, input);
+  }
+
+  private requireHeaderLayoutCapabilities(): void {
+    if (!this.hasCapability(AwtrixNgFeatureCapabilityIds.layout)
+      || !this.hasCapability(AwtrixNgFeatureCapabilityIds.display16)) {
+      throw new Error('This AWTRIX NG device does not support the 16-row header layout.');
+    }
+  }
+
+  async playMp3Url(url: string): Promise<void> {
+    this.requireUrlAudioCapability();
+    await this.getApi().playMp3Url(url);
+  }
+
+  async stopUrlSound(): Promise<void> {
+    this.requireUrlAudioCapability();
+    await this.getApi().stopUrlSound();
+  }
+
+  async setAudioVolume(field: AwtrixNgMixerField, value: number): Promise<void> {
+    const levels = await this.getApi().setMixerLevel(field, value);
+    await this.updateMixerCapabilities(levels);
+  }
+
+  async stopAudioGroup(group: AwtrixNgAudioGroup): Promise<void> {
+    await this.getApi().stopAudioGroup(group);
+  }
+
+  async playRadio(station: string | number): Promise<void> {
+    await this.getApi().playRadio(station);
+  }
+
+  async getSelectableScripts(): Promise<{ id: string; name: string }[]> {
+    return (await this.getApi().readSelectableScripts()).map((script) => ({
+      id: script.name, name: script.meta?.name || script.name,
+    }));
+  }
+
+  async showScript(name: string): Promise<void> {
+    await this.getApi().showScript(name);
+  }
+
+  async getManageableScripts(): Promise<{ id: string; name: string }[]> {
+    return (await this.getApi().readManageableScripts()).map((script) => ({ id: script.name, name: script.meta?.name || script.name }));
+  }
+
+  async dismissNamedNotification(name: string): Promise<void> {
+    await this.getApi().dismissNamedNotification(name);
+  }
+
+  async getScriptSettingChoices(name: string) {
+    return this.getApi().readScriptSettingChoices(name);
+  }
+
+  async setScriptSetting(name: string, key: string, value: string): Promise<void> {
+    await this.getApi().writeScriptSetting(name, key, value);
+  }
+
+  async getScriptSetting(name: string, key: string) {
+    return this.getApi().readScriptSettingValue(name, key);
+  }
+
+  async getScriptDataChoices(name: string) {
+    return this.getApi().readScriptDataChoices(name);
+  }
+
+  async getScriptData(name: string, key: string) {
+    return this.getApi().readScriptDataValue(name, key);
+  }
+
+  async setScriptData(name: string, value: string): Promise<void> {
+    await this.getApi().writeScriptData(name, value);
+  }
+
+  async getSharedScriptChoices() {
+    return this.getApi().readSharedScriptChoices();
+  }
+
+  async getSharedScriptValue(id: string) {
+    return this.getApi().readSharedScriptValue(id);
+  }
+
+  async playRadioUrl(url: string): Promise<void> {
+    await this.getApi().playRadioUrl(url);
+  }
+
+  async getRadioStations(): Promise<{ name: string; url: string }[]> {
+    return this.getApi().readRadioStations();
+  }
+
+  async saveRadioStation(name: string, url: string): Promise<void> {
+    await this.getApi().saveRadioStation(name, url);
+  }
+
+  async speakText(text: string): Promise<void> {
+    await this.getApi().speakText(text);
+  }
+
+  async playAudioClipUrl(url: string): Promise<void> {
+    await this.getApi().playAudioClipUrl(url);
+  }
+
+  private async synchronizeAudioFeatures(device: Extract<AwtrixNgDeviceProbeResult, { status: 'detected' }>['device']): Promise<void> {
+    // 1.1.6 is the first supported group-audio contract. Existing devices gain markers on restart.
+    if (!AwtrixNgApi.supportsGroupAudioFirmware(device.version)) return;
+    const features = await this.getApi().readFeatures(device);
+    for (const capability of features) {
+      if (!this.hasCapability(capability)) await this.addCapability(capability);
+    }
+    if (this.hasCapability(AwtrixNgFeatureCapabilityIds.audioMixer)) {
+      for (const field of AwtrixNgMixerFields) {
+        const capability = AwtrixNgFeatureCapabilityIds[field];
+        if (this.hasCapability(capability)) {
+          this.registerCapabilityListener(capability, async (value: number) => this.setAudioVolume(field, value));
+        }
+      }
+      await this.refreshMixer();
+    }
+  }
+
+  private async refreshMixer(): Promise<void> {
+    await this.updateMixerCapabilities(await this.getApi().readMixer());
+  }
+
+  private async updateMixerCapabilities(levels: AwtrixNgMixerLevels): Promise<void> {
+    for (const field of AwtrixNgMixerFields) {
+      const capability = AwtrixNgFeatureCapabilityIds[field];
+      if (this.hasCapability(capability)) await this.setCapabilityValue(capability, levels[field]);
+    }
+  }
+
+  private requireUrlAudioCapability(): void {
+    if (!this.hasCapability(AwtrixNgFeatureCapabilityIds.audioUrl)) {
+      throw new Error('This AWTRIX NG device does not support native MP3 URL playback.');
+    }
   }
 
   async refreshDeviceState(options: { allowAddCapabilities: boolean }): Promise<AwtrixNgDeviceProbeResult | undefined> {
@@ -663,6 +892,9 @@ class AwtrixNgDevice extends Device {
   }
 
   private activateApi(api: AwtrixNgApi): void {
+    this.stateFlowEpoch += 1;
+    this.stateFlowSnapshot = undefined;
+    this.stateFlowSubscriptionKey = undefined;
     this.api = api;
   }
 
@@ -848,6 +1080,7 @@ class AwtrixNgDevice extends Device {
     if (!poll.isActive()) {
       poll.start();
     }
+    this.startStateFlowPoll();
   }
 
   /**
@@ -858,20 +1091,39 @@ class AwtrixNgDevice extends Device {
    * instead of thrown and reported once. They are logged in file order so the diagnostics
    * stay stable regardless of which worker hit them.
    */
-  private async uploadBundledIcons(): Promise<void> {
+  private async uploadBundledIconsSafely(): Promise<void> {
+    try {
+      const iconSize = await this.getApi().getBundledIconSize(this.getData().id as string);
+
+      if (iconSize === 16 && this.getStoreValue(Tc002BundledIconsRevisionStoreKey) === Tc002BundledIconsRevision) {
+        return;
+      }
+
+      const success = await this.uploadBundledIcons(iconSize);
+
+      if (iconSize === 16 && success) {
+        await this.setStoreValue(Tc002BundledIconsRevisionStoreKey, Tc002BundledIconsRevision);
+      }
+    } catch (error: unknown) {
+      this.error(error);
+    }
+  }
+
+  private async uploadBundledIcons(iconSize: 8 | 16): Promise<boolean> {
     const { icons } = this;
 
     if (icons === undefined) {
       throw new Error(this.getConnectionNotConfiguredMessage());
     }
 
-    const dirEntries = await fs.promises.readdir(BundledIconsDirectory, { withFileTypes: true });
+    const directory = iconSize === 16 ? BundledIcons16Directory : BundledIconsDirectory;
+    const dirEntries = await fs.promises.readdir(directory, { withFileTypes: true });
     const iconFiles = dirEntries.filter((entry) => entry.isFile()).map((entry) => entry.name);
     const failures: Array<{ fileName: string; error: unknown; index: number }> = [];
 
     await runWithConcurrencyLimit(iconFiles, MaxConcurrentIconUploads, async (fileName, index) => {
       try {
-        const body = await fs.promises.readFile(path.join(BundledIconsDirectory, fileName));
+        const body = await fs.promises.readFile(path.join(directory, fileName));
         await icons.upload({
           fileName,
           body,
@@ -885,6 +1137,8 @@ class AwtrixNgDevice extends Device {
       failures.sort((left, right) => left.index - right.index);
       this.error(failures.map(({ fileName, error }) => ({ fileName, error })));
     }
+
+    return failures.length === 0;
   }
 
   private getBaseUrlFromStore(): string | undefined {

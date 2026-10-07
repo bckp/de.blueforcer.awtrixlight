@@ -7,6 +7,7 @@ export type AwtrixNgHomeyBaseCapabilityId = 'button_prev'
   | 'alarm_generic.indicator2'
   | 'alarm_generic.indicator3'
   | 'awtrix_matrix'
+  | 'dim'
   | typeof AwtrixNgWeatherOverlayCapabilityId
   | 'rssi'
   | 'ip'
@@ -14,9 +15,30 @@ export type AwtrixNgHomeyBaseCapabilityId = 'button_prev'
 
 export type AwtrixNgHomeyOptionalCapabilityId = 'measure_battery' | 'measure_temperature' | 'measure_humidity';
 
+export const AwtrixNgFeatureCapabilityIds = {
+  knob: 'awtrixng_knob',
+  display16: 'awtrixng_display_16px',
+  audioSynth: 'awtrixng_audio_synth',
+  audioUrl: 'awtrixng_audio_url',
+  audioGroups: 'awtrixng_audio_groups',
+  audioMixer: 'awtrixng_audio_mixer',
+  audioRadio: 'awtrixng_audio_radio',
+  audioClip: 'awtrixng_audio_clip',
+  audioSpeech: 'awtrixng_audio_speech',
+  volume: 'awtrixng_volume',
+  alertVolume: 'awtrixng_alert_volume',
+  appVolume: 'awtrixng_app_volume',
+  radioVolume: 'awtrixng_radio_volume',
+  layout: 'awtrixng_layout',
+} as const;
+
+export type AwtrixNgHomeyFeatureCapabilityId = typeof AwtrixNgFeatureCapabilityIds[keyof typeof AwtrixNgFeatureCapabilityIds];
+
 export type AwtrixNgHomeyDeprecatedCapabilityId = 'alarm_battery';
 
-export type AwtrixNgHomeyCapabilityId = AwtrixNgHomeyBaseCapabilityId | AwtrixNgHomeyOptionalCapabilityId;
+export type AwtrixNgHomeyCapabilityId = AwtrixNgHomeyBaseCapabilityId
+  | AwtrixNgHomeyOptionalCapabilityId
+  | AwtrixNgHomeyFeatureCapabilityId;
 
 export type AwtrixNgHomeyCapabilityValue = boolean | number | string;
 
@@ -42,6 +64,7 @@ export const AwtrixNgBaseCapabilityIds: readonly AwtrixNgHomeyBaseCapabilityId[]
   'alarm_generic.indicator2',
   'alarm_generic.indicator3',
   'awtrix_matrix',
+  'dim',
   AwtrixNgWeatherOverlayCapabilityId,
   'rssi',
   'ip',
@@ -83,9 +106,13 @@ const getAwtrixNgOptionalCapabilityIds = (deviceState: AwtrixNgApiDeviceStateRes
   }, [])
 );
 
-export const getAwtrixNgInitialCapabilityIds = (deviceState: AwtrixNgApiDeviceStateResponse): AwtrixNgHomeyCapabilityId[] => [
+export const getAwtrixNgInitialCapabilityIds = (
+  deviceState: AwtrixNgApiDeviceStateResponse,
+  features: readonly AwtrixNgHomeyFeatureCapabilityId[] = [],
+): AwtrixNgHomeyCapabilityId[] => [
   ...AwtrixNgBaseCapabilityIds,
   ...getAwtrixNgOptionalCapabilityIds(deviceState),
+  ...features,
 ];
 
 export const createAwtrixNgCapabilityUpdatePlan = (
@@ -141,6 +168,10 @@ export const createAwtrixNgCapabilityUpdatePlan = (
     if (value !== undefined) {
       addValue(capabilityId, value);
     }
+  }
+
+  if (Number.isInteger(deviceState.brightness) && deviceState.brightness >= 0 && deviceState.brightness <= 255) {
+    addValue('dim', deviceState.brightness / 255);
   }
 
   for (const mapping of optionalCapabilityFields) {

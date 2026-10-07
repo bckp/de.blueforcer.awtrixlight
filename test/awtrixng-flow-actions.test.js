@@ -115,7 +115,7 @@ test('public firmware 1.1.2 receives icons and iconGap through notification, raw
   await runAwtrixNgCustomAppAction({
     device, name: 'weather', msg: 'Weather', options,
   });
-  assert.deepEqual(calls.slice(1).map(({ method, path, body }) => ({ method, path, body })), [
+  assert.deepEqual(calls.filter(({ method }) => method !== 'GET').map(({ method, path, body }) => ({ method, path, body })), [
     { method: 'POST', path: '/api/v1/notifications', body: payload },
     { method: 'PUT', path: '/api/v1/apps/pushed/homey-weather', body: payload },
     { method: 'PUT', path: '/api/v1/apps/pushed/homey-weather', body: payload },
@@ -140,6 +140,7 @@ test('icon validation errors from firmware retain HTTP status, code, message and
           },
         };
       }
+      if (request.path === '/api/v1/capabilities') return { status: 200, headers: {}, data: {} };
       throw new AwtrixNgHttpError({
         method: request.method,
         url: `http://192.0.2.1${request.path}`,

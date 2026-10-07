@@ -1,6 +1,9 @@
 {
   "name": {
-    "en": "Awtrix NG"
+    "en": "Awtrix NG",
+    "de": "Awtrix NG",
+    "nl": "Awtrix NG",
+    "cs": "Awtrix NG"
   },
   "class": "other",
   "capabilities": [
@@ -10,6 +13,7 @@
     "alarm_generic.indicator2",
     "alarm_generic.indicator3",
     "awtrix_matrix",
+    "dim",
     "awtrixng_weather_overlay",
     "rssi",
     "ip",
@@ -104,6 +108,15 @@
         "de": "Suchvorgang nach neuer IP-Adresse des Geräts starten.",
         "cs": "Spustit vyhledávání nové IP adresy zařízení."
       }
+    },
+    "dim": {
+      "title": {
+        "en": "Brightness",
+        "cs": "Jas",
+        "de": "Helligkeit",
+        "nl": "Helderheid"
+      },
+      "preventInsights": true
     }
   },
   "discovery": "awtrixng-mdns",

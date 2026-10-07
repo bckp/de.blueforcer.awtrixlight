@@ -77,6 +77,8 @@ test('positioned icons and iconGap reach both public endpoints on firmware 1.1.2
   for (const version of ['1.1.2', '1.2.0']) {
     const { api, transport } = createApi({
       'GET /api/v1/device': { ...deviceStateResponse, version },
+      'GET /api/v1/capabilities': {},
+      'GET /api/v1/version': { version },
       'POST /api/v1/notifications': { ok: true },
       'PUT /api/v1/apps/pushed/homey-weather': { ok: true },
     });
@@ -84,30 +86,34 @@ test('positioned icons and iconGap reach both public endpoints on firmware 1.1.2
     const payload = { icon: 'homey', iconGap: 0, icons: [{ icon: '2422', x: 24, y: -1 }] };
     assert.deepEqual(await api.sendNotification(payload), { ok: true });
     assert.deepEqual(await api.putPushedApp('homey-weather', payload), { ok: true });
-    assert.deepEqual(transport.calls.slice(1).map(({ method, path, body }) => ({ method, path, body })), [
+    assert.deepEqual(transport.calls.filter(({ method }) => method !== 'GET').map(({ method, path, body }) => ({ method, path, body })), [
       { method: 'POST', path: '/api/v1/notifications', body: payload },
       { method: 'PUT', path: '/api/v1/apps/pushed/homey-weather', body: payload },
     ]);
   }
 });
 
-test('positioned icons and even zero iconGap are rejected on older or unknown firmware before HTTP', async () => {
+test('positioned icons and even zero iconGap are rejected on older or unknown firmware before writing', async () => {
   for (const version of ['1.0.14', '1.1.1', undefined]) {
     const { api, transport } = createApi({
       'GET /api/v1/device': { ...deviceStateResponse, version },
+      'GET /api/v1/capabilities': {},
+      'GET /api/v1/version': { version },
     });
     if (version !== undefined) await api.probe();
     for (const payload of [{ icons: [] }, { iconGap: 0 }]) {
       for (const send of [() => api.sendNotification(payload), () => api.putPushedApp('homey-weather', payload)]) {
         await assert.rejects(send, (error) => {
-          assert.ok(error instanceof AwtrixNgUnsupportedVersionError);
-          assert.equal(error.currentVersion, version);
-          assert.equal(error.minimumVersion, '1.1.2');
+          if (version === undefined) {
+            assert.ok(error instanceof AwtrixNgInvalidResponseError);
+          } else {
+            assert.equal(error.field, payload.icons !== undefined ? 'icons' : 'iconGap');
+          }
           return true;
         });
       }
     }
-    assert.deepEqual(transport.calls.map(({ method }) => method), version === undefined ? [] : ['GET']);
+    assert.equal(transport.calls.some(({ method }) => method !== 'GET'), false);
   }
 });
 
@@ -131,6 +137,34 @@ test('fromConnection constructs a facade with baseUrl and icons', () => {
 
   assert.equal(api.baseUrl, BaseUrl);
   assert.ok(api.icons);
+});
+
+test('bundled icon size follows the verified TC002 display capabilities', async () => {
+  const { api, transport } = createApi({
+    'GET /api/v1/device': { ...deviceStateResponse, boardType: 'tc002' },
+    'GET /api/v1/capabilities': { platform: { id: 'tc002' }, display: { width: 52, height: 16 } },
+  });
+
+  assert.equal(await api.getBundledIconSize(deviceStateResponse.uid), 16);
+  assert.deepEqual(transport.calls.map((call) => call.path), ['/api/v1/device', '/api/v1/capabilities']);
+});
+
+test('bundled icon size keeps 8x8 for existing NG devices without a new capabilities request', async () => {
+  const { api, transport } = createApi({ 'GET /api/v1/device': deviceStateResponse });
+
+  assert.equal(await api.getBundledIconSize(deviceStateResponse.uid), 8);
+  assert.deepEqual(transport.calls.map((call) => call.path), ['/api/v1/device']);
+});
+
+test('bundled icon size rejects a TC002 panel shape that does not match its artwork', async () => {
+  const { api } = createApi({
+    'GET /api/v1/device': { ...deviceStateResponse, boardType: 'tc002' },
+    'GET /api/v1/capabilities': { platform: { id: 'tc002' }, display: { width: 32, height: 8 } },
+  });
+
+  await assert.rejects(api.getBundledIconSize(deviceStateResponse.uid), (error) => (
+    error instanceof AwtrixNgInvalidResponseError && error.endpoint === '/api/v1/capabilities'
+  ));
 });
 
 test('facade delegates flow client and control methods to the client endpoints', async () => {
@@ -214,6 +248,20 @@ test('button callback support accepts cached firmware 1.1.1 and newer without an
   }
 });
 
+test('button callback support accepts TC002 firmware 1.1.5', async () => {
+  const { api, transport } = createApi({
+    'GET /api/v1/device': { ...deviceStateResponse, version: '1.1.5', boardType: 'tc002' },
+    'PUT /api/v1/system': (request) => ({ buttonCallback: request.body.buttonCallback }),
+  });
+  await api.probe();
+
+  assert.doesNotThrow(() => api.requireButtonCallbackSupport());
+  await api.writeButtonCallback('http://homey.local/callback');
+  assert.deepEqual(transport.calls.map((call) => `${call.method} ${call.path}`), [
+    'GET /api/v1/device', 'PUT /api/v1/system',
+  ]);
+});
+
 test('button callback support rejects firmware 1.1.0 and unknown versions without touching system', async () => {
   for (const version of ['1.1.0', undefined]) {
     const { api, transport } = createApi({
@@ -252,6 +300,20 @@ test('playRtttl uses the cached device version and the audio endpoint on firmwar
     ['GET /api/v1/device', 'POST /api/v1/audio/play'],
   );
   assert.deepEqual(transport.calls[1].body, { rtttl: 'beep:d=4,o=5,b=120:c' });
+});
+
+test('synth fx rejects an empty effect and preserves the audio endpoint response', async () => {
+  const fx = 'bpm 120; inst lead wave=pulse volume=40; lead: c4 e g c5';
+  const { api, transport } = createApi({
+    'GET /api/v1/capabilities': { audio: { synth: true } },
+    'POST /api/v1/audio/play': { ok: true },
+  });
+  assert.throws(() => api.playSynthFx('  '), /non-empty string/);
+  assert.deepEqual(await api.playSynthFx(fx), { ok: true });
+  assert.deepEqual(transport.calls, [
+    { method: 'GET', path: '/api/v1/capabilities' },
+    { method: 'POST', path: '/api/v1/audio/play', body: { fx } },
+  ]);
 });
 
 test('playRtttl rejects cached firmware below 1.1.0 without calling the audio endpoint', async () => {

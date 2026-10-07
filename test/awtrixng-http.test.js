@@ -314,6 +314,27 @@ test('fetch AWTRIX NG transport logs request and response in debug mode with red
   }
 });
 
+test('audio and notification debug logs hide Soundboard file URLs without changing the request', async () => {
+  const originalFetch = global.fetch;
+  const logs = [];
+  const locator = 'http://192.0.2.40/app/com.athom.soundboard/userdata/0123456789abcdef01234567.mp3';
+  const recordingFetch = createRecordingFetch((config) => ({
+    status: 200,
+    data: JSON.parse(config.body).file ? { alert: { name: locator } } : { ok: true },
+  }));
+  global.fetch = recordingFetch;
+  try {
+    const transport = new FetchAwtrixNgHttpTransport({ baseUrl: 'http://192.0.2.41', debug: true, log: (entry) => logs.push(entry) });
+    await transport.request({ method: 'POST', path: '/api/v1/audio/play', body: { file: locator } });
+    await transport.request({ method: 'POST', path: '/api/v1/notifications', body: { text: 'Door', sound: { file: locator } } });
+    assert.equal(JSON.parse(recordingFetch.calls[0].config.body).file, locator);
+    assert.equal(JSON.parse(recordingFetch.calls[1].config.body).sound.file, locator);
+    assert.equal(JSON.stringify(logs).includes(locator), false);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test('fetch AWTRIX NG transport logs error response body in debug mode', async () => {
   const originalFetch = global.fetch;
   const logs = [];

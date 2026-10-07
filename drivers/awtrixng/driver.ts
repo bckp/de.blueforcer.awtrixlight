@@ -7,7 +7,12 @@ import AwtrixNgApi, {
 } from '../../lib/awtrixng/Api/Api';
 import { AwtrixNgApiError, AwtrixNgApiErrorCode } from '../../lib/awtrixng/Api/ErrorParser';
 import { AwtrixNgApiDeviceStateResponse } from '../../lib/awtrixng/Api/Types';
-import { AwtrixNgHomeyCapabilityId, getAwtrixNgInitialCapabilityIds } from '../../lib/awtrixng/Device/State';
+import {
+  AwtrixNgFeatureCapabilityIds,
+  AwtrixNgHomeyCapabilityId,
+  AwtrixNgHomeyFeatureCapabilityId,
+  getAwtrixNgInitialCapabilityIds,
+} from '../../lib/awtrixng/Device/State';
 import {
   isAwtrixNgMdnsCandidate,
   toAwtrixNgBaseUrl,
@@ -15,6 +20,9 @@ import {
 import runWithConcurrencyLimit from '../../lib/shared/Concurrency';
 import { isRecord, toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
 import { AwtrixNgButton, parseAwtrixNgButtonCallback } from './button-callback';
+import {
+  getSoundboardMp3s, getSoundboardAudioFiles, resolveSoundboardMp3Url, resolveSoundboardClipUrl, SoundboardAppId,
+} from './soundboard';
 
 const AwtrixNgManualPairingOptionId = '__awtrixng_manual_pairing__' as const;
 const AwtrixNgAuthRequiredPairingOptionPrefix = '__awtrixng_auth_required__:' as const;
@@ -148,6 +156,10 @@ class AwtrixNgDriver extends Driver {
 
   #buttonTriggers?: Record<AwtrixNgButton, FlowCardTriggerDevice>;
 
+  #knobPressedTrigger?: FlowCardTriggerDevice;
+
+  #knobTurnedTrigger?: FlowCardTriggerDevice;
+
   async onInit(): Promise<void> {
     this.log('AwtrixNgDriver has been initialized');
     this.#buttonTriggers = {
@@ -155,6 +167,155 @@ class AwtrixNgDriver extends Driver {
       middle: this.homey.flow.getDeviceTriggerCard('awtrixng_button_middle_pressed'),
       right: this.homey.flow.getDeviceTriggerCard('awtrixng_button_right_pressed'),
     };
+    this.#knobPressedTrigger = this.homey.flow.getDeviceTriggerCard('awtrixng_knob_pressed');
+    this.#knobTurnedTrigger = this.homey.flow.getDeviceTriggerCard('awtrixng_knob_turned');
+    this.registerHeaderLayoutCards();
+    this.registerAudioCards();
+    this.registerScriptSettingsCards();
+    this.homey.flow.getActionCard('awtrixng_notification_dismiss_named').registerRunListener(
+      async (args: { device: import('./device').default; name: string }) => args.device.dismissNamedNotification(args.name),
+    );
+    this.homey.flow.getActionCard('awtrixng_brightness').registerRunListener(async (args: {
+      device: import('./device').default; brightness: number;
+    }): Promise<void> => {
+      if (typeof args.brightness !== 'number' || !Number.isFinite(args.brightness) || args.brightness < 0 || args.brightness > 100) {
+        throw new TypeError('Brightness must be between 0 and 100%.');
+      }
+      await args.device.setBrightness(args.brightness / 100);
+    });
+    const scriptCard = this.homey.flow.getActionCard('awtrixng_script_show');
+    scriptCard.registerRunListener(async (args: {
+      device: import('./device').default; script: { id: string };
+    }): Promise<void> => args.device.showScript(args.script.id));
+    scriptCard.registerArgumentAutocompleteListener('script', async (query: string, args: {
+      device: import('./device').default;
+    }) => (await args.device.getSelectableScripts()).filter((script) => (
+      script.name.toLowerCase().includes(query.toLowerCase()) || script.id.toLowerCase().includes(query.toLowerCase())
+    )));
+    this.homey.flow.getActionCard('awtrixng_audio_fx').registerRunListener(async (args: {
+      device: import('./device').default;
+      fx: string;
+    }): Promise<void> => {
+      await args.device.playSynthEffect(args.fx);
+    });
+    this.homey.flow.getActionCard('awtrixng_audio_url').registerRunListener(async (args: {
+      device: import('./device').default; url: string;
+    }): Promise<void> => args.device.playMp3Url(args.url));
+    this.homey.flow.getActionCard('awtrixng_audio_stop').registerRunListener(async (args: {
+      device: import('./device').default;
+    }): Promise<void> => args.device.stopUrlSound());
+    const soundboardCard = this.homey.flow.getActionCard('awtrixng_audio_soundboard');
+    soundboardCard.registerRunListener(async (args: {
+      device: import('./device').default; sound: { id: string };
+    }): Promise<void> => {
+      const url = await resolveSoundboardMp3Url(
+        this.homey.api.getApiApp(SoundboardAppId),
+        await this.homey.cloud.getLocalAddress(),
+        args.sound.id,
+      );
+      await args.device.playMp3Url(url);
+    });
+    soundboardCard.registerArgumentAutocompleteListener('sound', async (query: string) => (
+      (await getSoundboardMp3s(this.homey.api.getApiApp(SoundboardAppId)))
+        .filter((sound) => sound.name.toLowerCase().includes(query.toLowerCase()))
+        .map((sound) => ({ id: sound.id, name: sound.name }))
+    ));
+  }
+
+  private registerAudioCards(): void {
+    type DeviceArgs = { device: import('./device').default };
+    this.homey.flow.getActionCard('awtrixng_audio_volume').registerRunListener(async (
+      args: DeviceArgs & { group: import('../../lib/awtrixng/Api/Api').AwtrixNgMixerField; volume: number },
+    ) => args.device.setAudioVolume(args.group, args.volume));
+    this.homey.flow.getActionCard('awtrixng_audio_stop_group').registerRunListener(async (
+      args: DeviceArgs & { group: import('../../lib/awtrixng/Api/Api').AwtrixNgAudioGroup },
+    ) => args.device.stopAudioGroup(args.group));
+    const radio = this.homey.flow.getActionCard('awtrixng_radio_station');
+    radio.registerRunListener(async (args: DeviceArgs & { station: { id: string } }) => args.device.playRadio(args.station.id));
+    radio.registerArgumentAutocompleteListener('station', async (query: string, args: DeviceArgs) => (
+      (await args.device.getRadioStations()).filter((station) => station.name.toLowerCase().includes(query.toLowerCase()))
+        .map((station) => ({ id: station.name, name: station.name }))
+    ));
+    this.homey.flow.getActionCard('awtrixng_radio_url').registerRunListener(async (
+      args: DeviceArgs & { url: string },
+    ) => args.device.playRadioUrl(args.url));
+    this.homey.flow.getActionCard('awtrixng_radio_save').registerRunListener(async (
+      args: DeviceArgs & { name: string; url: string },
+    ) => args.device.saveRadioStation(args.name, args.url));
+    this.homey.flow.getActionCard('awtrixng_audio_speech').registerRunListener(async (
+      args: DeviceArgs & { text: string },
+    ) => args.device.speakText(args.text));
+    this.homey.flow.getActionCard('awtrixng_audio_clip_url').registerRunListener(async (
+      args: DeviceArgs & { url: string },
+    ) => args.device.playAudioClipUrl(args.url));
+    const clip = this.homey.flow.getActionCard('awtrixng_audio_clip_soundboard');
+    clip.registerRunListener(async (args: DeviceArgs & { sound: { id: string } }) => {
+      const url = await resolveSoundboardClipUrl(this.homey.api.getApiApp(SoundboardAppId), await this.homey.cloud.getLocalAddress(), args.sound.id);
+      await args.device.playAudioClipUrl(url);
+    });
+    clip.registerArgumentAutocompleteListener('sound', async (query: string) => (
+      (await getSoundboardAudioFiles(this.homey.api.getApiApp(SoundboardAppId)))
+        .filter((sound) => sound.name.toLowerCase().includes(query.toLowerCase()))
+        .map((sound) => ({ id: sound.id, name: sound.name }))
+    ));
+  }
+
+  private registerScriptSettingsCards(): void {
+    type ScriptArgs = { device: import('./device').default; script: { id: string }; key: { id: string }; value: string };
+    const set = this.homey.flow.getActionCard('awtrixng_script_setting_set');
+    const read = this.homey.flow.getActionCard('awtrixng_script_setting_get');
+    set.registerRunListener(async (args: ScriptArgs) => args.device.setScriptSetting(args.script.id, args.key.id, args.value));
+    read.registerRunListener(async (args: ScriptArgs) => args.device.getScriptSetting(args.script.id, args.key.id));
+    const dataSet = this.homey.flow.getActionCard('awtrixng_script_data_set');
+    const dataRead = this.homey.flow.getActionCard('awtrixng_script_data_get');
+    dataSet.registerRunListener(async (args: ScriptArgs) => args.device.setScriptData(args.script.id, args.value));
+    dataRead.registerRunListener(async (args: ScriptArgs) => args.device.getScriptData(args.script.id, args.key.id));
+    const search = <T extends { id: string; name: string }>(choices: T[], query: string): T[] => choices.filter((item) => (
+      item.name.toLowerCase().includes(query.toLowerCase()) || item.id.toLowerCase().includes(query.toLowerCase())
+    ));
+    for (const card of [set, read, dataSet, dataRead]) {
+      card.registerArgumentAutocompleteListener('script', async (query: string, args: ScriptArgs) => search(await args.device.getManageableScripts(), query));
+    }
+    for (const card of [set, read]) {
+      card.registerArgumentAutocompleteListener('key', async (query: string, args: ScriptArgs) => (
+        args.script?.id ? search(await args.device.getScriptSettingChoices(args.script.id), query) : []
+      ));
+    }
+    dataRead.registerArgumentAutocompleteListener('key', async (query: string, args: ScriptArgs) => (
+      args.script?.id ? search(await args.device.getScriptDataChoices(args.script.id), query) : []
+    ));
+    const shared = this.homey.flow.getActionCard('awtrixng_script_shared_get');
+    shared.registerRunListener(async (args: ScriptArgs) => args.device.getSharedScriptValue(args.key.id));
+    shared.registerArgumentAutocompleteListener('key', async (query: string, args: ScriptArgs) => search(await args.device.getSharedScriptChoices(), query));
+  }
+
+  private registerHeaderLayoutCards(): void {
+    type LayoutArgs = {
+      device: import('./device').default;
+      header: string; text: string; icon?: { id: string }; duration?: number; name: string; color?: string; options?: string;
+    };
+    const cards = [
+      { card: this.homey.flow.getActionCard('awtrixng_notification_header'), isApp: false },
+      { card: this.homey.flow.getActionCard('awtrixng_application_header'), isApp: true },
+    ];
+    for (const { card, isApp } of cards) {
+      card.registerRunListener(async (args: LayoutArgs): Promise<void> => {
+        const input = {
+          header: args.header,
+          text: args.text,
+          icon: args.icon?.id,
+          durationMs: args.duration,
+          ...(args.color === undefined ? {} : { color: args.color }),
+          ...(args.options === undefined ? {} : { options: args.options }),
+        };
+        if (isApp) await args.device.putHeaderApp(args.name, input);
+        else await args.device.sendHeaderNotification(input);
+      });
+      card.registerArgumentAutocompleteListener('icon', async (query: string, args: { device: import('./device').default }) => {
+        if (args.device.icons === undefined) throw new Error('Device icon list is not initialized.');
+        return args.device.icons.find(query);
+      });
+    }
   }
 
   /** Public adapter entrypoint used solely by the public App API route. */
@@ -168,7 +329,10 @@ class AwtrixNgDriver extends Driver {
       return false;
     }
 
-    let device: { acceptsButtonCallback(input: { routeUid: string; bodyUid: string; token: string }): Promise<boolean> };
+    let device: {
+      acceptsButtonCallback(input: { routeUid: string; bodyUid: string; token: string }): Promise<boolean>;
+      hasCapability(capabilityId: string): boolean;
+    };
     try {
       device = this.getDevice({ id: input.uid }) as unknown as typeof device;
     } catch {
@@ -183,18 +347,33 @@ class AwtrixNgDriver extends Driver {
       return false;
     }
 
-    if (!event.pressed) {
+    let trigger: FlowCardTriggerDevice | undefined;
+    let tokens: { turn: number } | undefined;
+    if (event.button === 'knob') {
+      if (!device.hasCapability(AwtrixNgFeatureCapabilityIds.knob)) {
+        return false;
+      }
+      if (typeof event.turn === 'number') {
+        trigger = this.#knobTurnedTrigger;
+        tokens = { turn: event.turn };
+      } else if (event.pressed) {
+        trigger = this.#knobPressedTrigger;
+      } else {
+        return true;
+      }
+    } else if (event.pressed) {
+      trigger = this.#buttonTriggers?.[event.button];
+    } else {
       return true;
     }
 
-    const trigger = this.#buttonTriggers?.[event.button];
     if (trigger === undefined) {
       return false;
     }
 
     // The firmware's HTTP deadline is 300 ms. Do not await Flow execution; report a failed
     // trigger through Homey's logger so the rejected promise is neither unhandled nor hidden.
-    trigger.trigger(device as unknown as import('homey').Device).catch(this.error.bind(this));
+    trigger.trigger(device as unknown as import('homey').Device, tokens).catch(this.error.bind(this));
     return true;
   }
 
@@ -345,7 +524,7 @@ class AwtrixNgDriver extends Driver {
   }
 
   /** Shared mapping of a probe result onto the pairing session response shape. */
-  #toPairingProbeResponse(
+  async #toPairingProbeResponse(
     result: AwtrixNgDeviceProbeResult,
     target: {
       name?: string;
@@ -355,8 +534,17 @@ class AwtrixNgDriver extends Driver {
       hostname?: string;
       settings?: AwtrixNgPairDeviceCredentials;
     },
-  ): AwtrixNgManualPairingProbeResponse {
+  ): Promise<AwtrixNgManualPairingProbeResponse> {
     if (result.status === 'detected') {
+      const features = await AwtrixNgApi.getPairingFeatures(this.#createProbeConnection({
+        baseUrl: target.baseUrl,
+        ...(target.settings === undefined ? {} : {
+          auth: {
+            username: target.settings.authUser,
+            password: target.settings.authPass,
+          },
+        }),
+      }), result.device);
       return {
         status: 'detected',
         device: this.toPairDevice({
@@ -366,6 +554,7 @@ class AwtrixNgDriver extends Driver {
           baseUrl: target.baseUrl,
           hostname: target.hostname,
           device: result.device,
+          features,
           settings: target.settings,
         }),
       };
@@ -545,6 +734,9 @@ class AwtrixNgDriver extends Driver {
     }));
 
     if (result.status === 'detected') {
+      const features = await AwtrixNgApi.getPairingFeatures(this.#createProbeConnection({
+        baseUrl,
+      }), result.device);
       return this.toPairDevice({
         name: discoveryResult.name || discoveryResult.host || result.device.uid,
         address: discoveryResult.address,
@@ -552,6 +744,7 @@ class AwtrixNgDriver extends Driver {
         baseUrl,
         hostname: discoveryResult.host || undefined,
         device: result.device,
+        features,
       });
     }
 
@@ -594,6 +787,7 @@ class AwtrixNgDriver extends Driver {
     baseUrl: string;
     hostname?: string;
     device: AwtrixNgApiDeviceStateResponse;
+    features?: readonly AwtrixNgHomeyFeatureCapabilityId[];
     settings?: AwtrixNgPairDeviceCredentials;
   }): AwtrixNgPairDevice {
     return {
@@ -617,7 +811,7 @@ class AwtrixNgDriver extends Driver {
         authUser: input.settings?.authUser || '',
         authPass: input.settings?.authPass || '',
       },
-      capabilities: getAwtrixNgInitialCapabilityIds(input.device),
+      capabilities: getAwtrixNgInitialCapabilityIds(input.device, input.features),
     };
   }
 

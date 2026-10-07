@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "de.blueforcer.awtrixlight",
-  "version": "2.2.13",
+  "version": "2.3.6",
   "compatibility": ">=12.9.0",
   "sdk": 3,
   "brandColor": "#222222",
@@ -9,15 +9,23 @@
     "local"
   ],
   "name": {
-    "en": "AWTRIX"
+    "en": "AWTRIX",
+    "de": "AWTRIX",
+    "nl": "AWTRIX",
+    "cs": "AWTRIX"
   },
   "description": {
-    "en": "Connected Smart Clock for your Smart Home"
+    "en": "AWTRIX 3 and AWTRIX NG pixel clocks, including TC002",
+    "de": "AWTRIX 3- und AWTRIX NG-Pixeluhren, einschließlich TC002",
+    "nl": "AWTRIX 3- en AWTRIX NG-pixelklokken, inclusief TC002",
+    "cs": "Pixelové hodiny AWTRIX 3 a AWTRIX NG, včetně TC002"
   },
   "category": [
     "appliances"
   ],
-  "permissions": [],
+  "permissions": [
+    "homey:app:com.athom.soundboard"
+  ],
   "api": {
     "awtrixNgButtonCallback": {
       "method": "POST",
@@ -1169,16 +1177,1131 @@
           }
         ],
         "id": "weatherOverlay"
+      },
+      {
+        "id": "awtrixng_audio_fx",
+        "title": {
+          "en": "Play a synthesized sound",
+          "cs": "Přehrát syntetizovaný zvuk",
+          "de": "Einen synthetisierten Klang abspielen",
+          "nl": "Een gesynthetiseerd geluid afspelen"
+        },
+        "titleFormatted": {
+          "en": "Play synthesized sound [[fx]]",
+          "cs": "Přehrát syntetizovaný zvuk [[fx]]",
+          "de": "Synthetisierten Klang [[fx]] abspielen",
+          "nl": "Speel gesynthetiseerd geluid [[fx]] af"
+        },
+        "hint": {
+          "en": "Play a synthesized sound once. On the new audio API it replaces the current alert; older firmware plays an fx effect.",
+          "cs": "Přehraje syntetizovaný zvuk jednou. Nové audio API nahrazuje právě přehrávané upozornění; starší firmware přehraje efekt fx.",
+          "de": "Spielt einen synthetisierten Klang einmal ab. Bei der neuen Audio-API ersetzt er die aktuelle Benachrichtigung; ältere Firmware spielt einen fx-Effekt ab.",
+          "nl": "Speelt een gesynthetiseerd geluid één keer af. Bij de nieuwe audio-API vervangt het de huidige melding; oudere firmware speelt een fx-effect af."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_synth"
+          },
+          {
+            "name": "fx",
+            "type": "text",
+            "placeholder": {
+              "en": "bpm 120; inst lead wave=pulse volume=40; lead: c4 e g c5",
+              "cs": "bpm 120; inst lead wave=pulse volume=40; lead: c4 e g c5",
+              "de": "bpm 120; inst lead wave=pulse volume=40; lead: c4 e g c5",
+              "nl": "bpm 120; inst lead wave=pulse volume=40; lead: c4 e g c5"
+            }
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_audio_url",
+        "title": {
+          "en": "Play an MP3 from a URL",
+          "cs": "Přehrát MP3 z URL",
+          "de": "Eine MP3 von einer URL abspielen",
+          "nl": "Een MP3 vanaf een URL afspelen"
+        },
+        "titleFormatted": {
+          "en": "Play MP3 [[url]]",
+          "cs": "Přehrát MP3 [[url]]",
+          "de": "MP3 [[url]] abspielen",
+          "nl": "Speel MP3 [[url]] af"
+        },
+        "hint": {
+          "en": "Download and play an MP3 once, without storing it. Maximum 4 MB and 120 seconds. This action finishes when playback ends and reports download errors. Replaces the current alert.",
+          "cs": "Stáhne a jednou přehraje MP3 bez uložení. Nejvýše 4 MB a 120 sekund. Akce skončí s přehráváním a hlásí chyby stahování. Nahrazuje právě přehrávané upozornění.",
+          "de": "Lädt eine MP3 herunter und spielt sie einmal ab, ohne sie zu speichern. Maximal 4 MB und 120 Sekunden. Diese Aktion endet mit der Wiedergabe und meldet Downloadfehler. Ersetzt die aktuelle Benachrichtigung.",
+          "nl": "Downloadt een MP3 en speelt deze één keer af zonder op te slaan. Maximaal 4 MB en 120 seconden. Deze actie eindigt wanneer het afspelen stopt en meldt downloadfouten. Vervangt de huidige melding."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_url"
+          },
+          {
+            "name": "url",
+            "type": "text",
+            "title": {
+              "en": "MP3 URL",
+              "cs": "URL souboru MP3",
+              "de": "MP3-URL",
+              "nl": "MP3-URL"
+            }
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_audio_soundboard",
+        "title": {
+          "en": "Play an MP3 from Soundboard",
+          "cs": "Přehrát MP3 ze Soundboardu",
+          "de": "Eine MP3 aus Soundboard abspielen",
+          "nl": "Een MP3 uit Soundboard afspelen"
+        },
+        "titleFormatted": {
+          "en": "Play Soundboard MP3 [[sound]]",
+          "cs": "Přehrát MP3 [[sound]] ze Soundboardu",
+          "de": "Soundboard-MP3 [[sound]] abspielen",
+          "nl": "Speel Soundboard-MP3 [[sound]] af"
+        },
+        "hint": {
+          "en": "Requires Soundboard and a local Homey address reachable from the clock. Plays once without copying to storage. MP3 only, maximum 120 seconds. Select the sound again if it was deleted and replaced.",
+          "cs": "Vyžaduje Soundboard a lokální adresu Homey dostupnou ze zařízení. Přehraje jednou bez kopie v úložišti. Pouze MP3, nejvýše 120 sekund. Po smazání a nahrazení zvuku ho vyberte znovu.",
+          "de": "Erfordert Soundboard und eine lokale Homey-Adresse, die von der Uhr erreichbar ist. Spielt einmal ab, ohne eine Kopie zu speichern. Nur MP3, maximal 120 Sekunden. Wählen Sie den Klang erneut aus, wenn er gelöscht und ersetzt wurde.",
+          "nl": "Vereist Soundboard en een lokaal Homey-adres dat bereikbaar is vanaf de klok. Speelt één keer af zonder een kopie op te slaan. Alleen MP3, maximaal 120 seconden. Selecteer het geluid opnieuw als het is verwijderd en vervangen."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_url"
+          },
+          {
+            "name": "sound",
+            "type": "autocomplete",
+            "title": {
+              "en": "Sound",
+              "cs": "Zvuk",
+              "de": "Klang",
+              "nl": "Geluid"
+            }
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_audio_stop",
+        "title": {
+          "en": "Stop the current alert sound",
+          "cs": "Zastavit zvuk právě přehrávaného upozornění",
+          "de": "Den Klang der aktuellen Benachrichtigung stoppen",
+          "nl": "Het geluid van de huidige melding stoppen"
+        },
+        "hint": {
+          "en": "Stops the alert group, including a URL or Soundboard sound. Script sounds and radio are controlled separately.",
+          "cs": "Zastaví skupinu upozornění včetně zvuku z URL či Soundboardu. Zvuky skriptů a rádia mají samostatné ovládání.",
+          "de": "Stoppt die Benachrichtigungsgruppe einschließlich Klängen von einer URL oder aus Soundboard. Skriptklänge und Radio werden separat gesteuert.",
+          "nl": "Stopt de meldingengroep, inclusief geluid vanaf een URL of uit Soundboard. Scriptgeluiden en radio worden apart bediend."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_url"
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_notification_header",
+        "title": {
+          "en": "Send a notification with a title and text",
+          "cs": "Zobrazit notifikaci s nadpisem a textem",
+          "de": "Eine Benachrichtigung mit Überschrift und Text senden",
+          "nl": "Een notificatie met een kop en tekst verzenden"
+        },
+        "titleFormatted": {
+          "en": "Show [[icon]], [[header]] in [[color]] above [[text]], options [[options]]",
+          "cs": "Zobrazit [[icon]], nadpis [[header]] v barvě [[color]], text [[text]], volby [[options]]",
+          "de": "[[icon]], Überschrift [[header]] in [[color]] über [[text]] anzeigen, Optionen [[options]]",
+          "nl": "Toon [[icon]], kop [[header]] in [[color]] boven [[text]], opties [[options]]"
+        },
+        "hint": {
+          "en": "52×16 display: optional icon on the left, colored title above white text. Fitting text stays still; long rows scroll independently at the device scroll settings. Without timing options, long rows complete once. Add duration or JSON durationMs (milliseconds), not both. JSON must contain only timing and notification options such as name, hold, wakeup and sound. Visual fields and layout are rejected; use RAW for a custom layout.",
+          "cs": "Displej 52×16: volitelná ikona vlevo, barevný nadpis nad bílým textem. Krátký text stojí, dlouhé řádky rolují samostatně dle nastavení hodin. Bez časových voleb projedou jednou. Dobu zadejte přes Přidat dobu trvání nebo JSON durationMs (milisekundy), ne oběma způsoby. JSON dovoluje jen časování a volby notifikace jako name, hold, wakeup a sound. Kreslicí pole a layout odmítne; pro vlastní rozložení použijte RAW.",
+          "de": "52×16-Display: optionales Symbol links, farbige Überschrift über weißem Text. Passender Text bleibt stehen; lange Zeilen scrollen unabhängig mit den Scroll-Einstellungen des Geräts. Ohne Zeitangaben laufen lange Zeilen einmal durch. Verwenden Sie Dauer hinzufügen oder JSON durationMs (Millisekunden), nicht beides. JSON darf nur Zeit- und Benachrichtigungsoptionen wie name, hold, wakeup und sound enthalten. Darstellungsfelder und layout werden abgelehnt; verwenden Sie RAW für ein eigenes Layout.",
+          "nl": "Display van 52×16: optioneel pictogram links, gekleurde kop boven witte tekst. Tekst die past blijft staan; lange regels scrollen onafhankelijk volgens de scrollinstellingen van het apparaat. Zonder tijdopties lopen lange regels één keer door. Gebruik Duur toevoegen of JSON durationMs (milliseconden), niet beide. JSON mag alleen tijd- en notificatieopties bevatten, zoals name, hold, wakeup en sound. Visuele velden en layout worden geweigerd; gebruik RAW voor een eigen indeling."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_layout,awtrixng_display_16px"
+          },
+          {
+            "name": "icon",
+            "type": "autocomplete",
+            "title": {
+              "en": "Icon (optional)",
+              "cs": "Ikona (volitelná)",
+              "de": "Symbol (optional)",
+              "nl": "Pictogram (optioneel)"
+            },
+            "required": false
+          },
+          {
+            "name": "header",
+            "type": "text",
+            "title": {
+              "en": "Title",
+              "cs": "Nadpis",
+              "de": "Überschrift",
+              "nl": "Kop"
+            }
+          },
+          {
+            "name": "color",
+            "type": "color",
+            "required": false,
+            "value": "#00AAFF",
+            "title": {
+              "en": "Title color",
+              "cs": "Barva nadpisu",
+              "de": "Farbe der Überschrift",
+              "nl": "Kleur van de kop"
+            }
+          },
+          {
+            "name": "text",
+            "type": "text",
+            "title": {
+              "en": "Text below the title",
+              "cs": "Text pod nadpisem",
+              "de": "Text unter der Überschrift",
+              "nl": "Tekst onder de kop"
+            }
+          },
+          {
+            "name": "options",
+            "type": "text",
+            "required": false,
+            "value": "{}",
+            "title": {
+              "en": "JSON options",
+              "cs": "JSON options",
+              "de": "JSON-Optionen",
+              "nl": "JSON-opties"
+            },
+            "placeholder": {
+              "en": "JSON options",
+              "cs": "JSON options",
+              "de": "JSON-Optionen",
+              "nl": "JSON-opties"
+            }
+          }
+        ],
+        "duration": true
+      },
+      {
+        "id": "awtrixng_application_header",
+        "title": {
+          "en": "Create or update an app with a title and text",
+          "cs": "Vytvořit nebo aktualizovat aplikaci s nadpisem a textem",
+          "de": "Eine App mit Überschrift und Text erstellen oder aktualisieren",
+          "nl": "Een app met een kop en tekst maken of bijwerken"
+        },
+        "titleFormatted": {
+          "en": "Update app [[name]]: [[icon]], [[header]] in [[color]] above [[text]], options [[options]]",
+          "cs": "Aktualizovat aplikaci [[name]]: [[icon]], nadpis [[header]] v barvě [[color]], text [[text]], volby [[options]]",
+          "de": "App [[name]] aktualisieren: [[icon]], Überschrift [[header]] in [[color]] über [[text]], Optionen [[options]]",
+          "nl": "Werk app [[name]] bij: [[icon]], kop [[header]] in [[color]] boven [[text]], opties [[options]]"
+        },
+        "hint": {
+          "en": "52×16 display: optional icon on the left, colored title above white text. Fitting text stays still; long rows scroll independently at the device scroll settings. Without timing options, long rows complete once. Add duration or JSON durationMs (milliseconds), not both. JSON must contain only timing and app lifetime options; use the app name without homey-. Visual fields and layout are rejected; use RAW for a custom layout.",
+          "cs": "Displej 52×16: volitelná ikona vlevo, barevný nadpis nad bílým textem. Krátký text stojí, dlouhé řádky rolují samostatně dle nastavení hodin. Bez časových voleb projedou jednou. Dobu zadejte přes Přidat dobu trvání nebo JSON durationMs (milisekundy), ne oběma způsoby. JSON dovoluje jen časování a životnost aplikace; název zadejte bez homey-. Kreslicí pole a layout odmítne; pro vlastní rozložení použijte RAW.",
+          "de": "52×16-Display: optionales Symbol links, farbige Überschrift über weißem Text. Passender Text bleibt stehen; lange Zeilen scrollen unabhängig mit den Scroll-Einstellungen des Geräts. Ohne Zeitangaben laufen lange Zeilen einmal durch. Verwenden Sie Dauer hinzufügen oder JSON durationMs (Millisekunden), nicht beides. JSON darf nur Optionen für Zeitsteuerung und App-Lebensdauer enthalten; verwenden Sie den App-Namen ohne homey-. Darstellungsfelder und layout werden abgelehnt; verwenden Sie RAW für ein eigenes Layout.",
+          "nl": "Display van 52×16: optioneel pictogram links, gekleurde kop boven witte tekst. Tekst die past blijft staan; lange regels scrollen onafhankelijk volgens de scrollinstellingen van het apparaat. Zonder tijdopties lopen lange regels één keer door. Gebruik Duur toevoegen of JSON durationMs (milliseconden), niet beide. JSON mag alleen opties voor tijd en de levensduur van de app bevatten; gebruik de appnaam zonder homey-. Visuele velden en layout worden geweigerd; gebruik RAW voor een eigen indeling."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_layout,awtrixng_display_16px"
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "title": {
+              "en": "App name",
+              "cs": "Název aplikace",
+              "de": "App-Name",
+              "nl": "Appnaam"
+            }
+          },
+          {
+            "name": "icon",
+            "type": "autocomplete",
+            "title": {
+              "en": "Icon (optional)",
+              "cs": "Ikona (volitelná)",
+              "de": "Symbol (optional)",
+              "nl": "Pictogram (optioneel)"
+            },
+            "required": false
+          },
+          {
+            "name": "header",
+            "type": "text",
+            "title": {
+              "en": "Title",
+              "cs": "Nadpis",
+              "de": "Überschrift",
+              "nl": "Kop"
+            }
+          },
+          {
+            "name": "color",
+            "type": "color",
+            "required": false,
+            "value": "#00AAFF",
+            "title": {
+              "en": "Title color",
+              "cs": "Barva nadpisu",
+              "de": "Farbe der Überschrift",
+              "nl": "Kleur van de kop"
+            }
+          },
+          {
+            "name": "text",
+            "type": "text",
+            "title": {
+              "en": "Text below the title",
+              "cs": "Text pod nadpisem",
+              "de": "Text unter der Überschrift",
+              "nl": "Tekst onder de kop"
+            }
+          },
+          {
+            "name": "options",
+            "type": "text",
+            "required": false,
+            "value": "{}",
+            "title": {
+              "en": "JSON options",
+              "cs": "JSON options",
+              "de": "JSON-Optionen",
+              "nl": "JSON-opties"
+            },
+            "placeholder": {
+              "en": "JSON options",
+              "cs": "JSON options",
+              "de": "JSON-Optionen",
+              "nl": "JSON-opties"
+            }
+          }
+        ],
+        "duration": true
+      },
+      {
+        "id": "awtrixng_audio_volume",
+        "title": {
+          "en": "Set an audio mixer level",
+          "cs": "Nastavit hlasitost mixeru",
+          "de": "Eine Audiomixer-Lautstärke einstellen",
+          "nl": "Een audiomixervolume instellen"
+        },
+        "titleFormatted": {
+          "en": "Set [[group]] volume to [[volume]]%",
+          "cs": "Nastavit hlasitost [[group]] na [[volume]] %",
+          "de": "Lautstärke von [[group]] auf [[volume]] % einstellen",
+          "nl": "Stel het volume van [[group]] in op [[volume]]%"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_mixer"
+          },
+          {
+            "name": "group",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "volume",
+                "title": {
+                  "en": "Master",
+                  "cs": "Celková",
+                  "de": "Gesamt",
+                  "nl": "Hoofdvolume"
+                }
+              },
+              {
+                "id": "alertVolume",
+                "title": {
+                  "en": "Alerts",
+                  "cs": "Upozornění",
+                  "de": "Benachrichtigungen",
+                  "nl": "Meldingen"
+                }
+              },
+              {
+                "id": "appVolume",
+                "title": {
+                  "en": "Apps",
+                  "cs": "Aplikace",
+                  "de": "Apps",
+                  "nl": "Apps"
+                }
+              },
+              {
+                "id": "radioVolume",
+                "title": {
+                  "en": "Radio",
+                  "cs": "Rádio",
+                  "de": "Radio",
+                  "nl": "Radio"
+                }
+              }
+            ]
+          },
+          {
+            "name": "volume",
+            "type": "number",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "title": {
+              "en": "Volume (%)",
+              "cs": "Hlasitost (%)",
+              "de": "Lautstärke (%)",
+              "nl": "Volume (%)"
+            }
+          }
+        ],
+        "hint": {
+          "en": "The master and group levels multiply. Zero silences that group. Radio requires radio support.",
+          "cs": "Celková hlasitost se násobí hlasitostí skupiny. Nula skupinu ztiší. Rádio vyžaduje podporu rádia.",
+          "de": "Gesamt- und Gruppenlautstärke werden miteinander multipliziert. Null schaltet die Gruppe stumm. Radio erfordert Radiounterstützung.",
+          "nl": "Het hoofdvolume en het groepsvolume worden met elkaar vermenigvuldigd. Nul dempt de groep. Radio vereist radio-ondersteuning."
+        }
+      },
+      {
+        "id": "awtrixng_audio_stop_group",
+        "title": {
+          "en": "Stop an audio group",
+          "cs": "Zastavit zvukovou skupinu",
+          "de": "Eine Audiogruppe stoppen",
+          "nl": "Een audiogroep stoppen"
+        },
+        "titleFormatted": {
+          "en": "Stop [[group]] audio",
+          "cs": "Zastavit zvuky [[group]]",
+          "de": "Audio von [[group]] stoppen",
+          "nl": "Stop audio van [[group]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_groups"
+          },
+          {
+            "name": "group",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "alert",
+                "title": {
+                  "en": "Alerts",
+                  "cs": "Upozornění",
+                  "de": "Benachrichtigungen",
+                  "nl": "Meldingen"
+                }
+              },
+              {
+                "id": "app",
+                "title": {
+                  "en": "Apps",
+                  "cs": "Aplikace",
+                  "de": "Apps",
+                  "nl": "Apps"
+                }
+              },
+              {
+                "id": "radio",
+                "title": {
+                  "en": "Radio",
+                  "cs": "Rádio",
+                  "de": "Radio",
+                  "nl": "Radio"
+                }
+              },
+              {
+                "id": "all",
+                "title": {
+                  "en": "Everything",
+                  "cs": "Všechny skupiny",
+                  "de": "Alle Gruppen",
+                  "nl": "Alle groepen"
+                }
+              }
+            ]
+          }
+        ],
+        "hint": {
+          "en": "Stops alerts, script sounds, radio or everything. An alert stop also cancels a URL sound being prepared.",
+          "cs": "Zastaví upozornění, zvuky skriptů, rádio nebo všechny skupiny. Zastavení upozornění zruší i právě připravovaný zvuk z URL.",
+          "de": "Stoppt Benachrichtigungen, Skriptklänge, Radio oder alle Gruppen. Das Stoppen der Benachrichtigungen bricht auch einen gerade vorbereiteten URL-Klang ab.",
+          "nl": "Stopt meldingen, scriptgeluiden, radio of alle groepen. Het stoppen van meldingen annuleert ook een URL-geluid dat wordt voorbereid."
+        }
+      },
+      {
+        "id": "awtrixng_radio_station",
+        "title": {
+          "en": "Play a saved radio station",
+          "cs": "Přehrát uloženou rozhlasovou stanici",
+          "de": "Einen gespeicherten Radiosender abspielen",
+          "nl": "Een opgeslagen radiozender afspelen"
+        },
+        "titleFormatted": {
+          "en": "Play radio station [[station]]",
+          "cs": "Přehrát stanici [[station]]",
+          "de": "Radiosender [[station]] abspielen",
+          "nl": "Speel radiozender [[station]] af"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_radio"
+          },
+          {
+            "name": "station",
+            "type": "autocomplete",
+            "title": {
+              "en": "Station",
+              "cs": "Stanice",
+              "de": "Sender",
+              "nl": "Zender"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Select a station saved on the clock. Radio continues until stopped. Alerts pause radio and it resumes afterwards.",
+          "cs": "Vyberte stanici uloženou na hodinách. Rádio hraje do zastavení. Upozornění ho pozastaví a poté rádio pokračuje.",
+          "de": "Wählen Sie einen auf der Uhr gespeicherten Sender aus. Das Radio läuft, bis es gestoppt wird. Benachrichtigungen unterbrechen das Radio; danach läuft es weiter.",
+          "nl": "Selecteer een zender die op de klok is opgeslagen. De radio speelt totdat deze wordt gestopt. Meldingen pauzeren de radio, die daarna verder speelt."
+        }
+      },
+      {
+        "id": "awtrixng_radio_url",
+        "title": {
+          "en": "Play internet radio from a URL",
+          "cs": "Přehrát internetové rádio z URL",
+          "de": "Internetradio von einer URL abspielen",
+          "nl": "Internetradio vanaf een URL afspelen"
+        },
+        "titleFormatted": {
+          "en": "Play radio [[url]]",
+          "cs": "Přehrát rádio [[url]]",
+          "de": "Radio [[url]] abspielen",
+          "nl": "Speel radio [[url]] af"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_radio"
+          },
+          {
+            "name": "url",
+            "type": "text",
+            "title": {
+              "en": "Stream URL",
+              "cs": "URL streamu",
+              "de": "Stream-URL",
+              "nl": "Stream-URL"
+            }
+          }
+        ],
+        "hint": {
+          "en": "MP3 streams only; M3U and PLS playlists are supported. Does not save a station. Radio continues until stopped.",
+          "cs": "Pouze streamy MP3; podporuje playlisty M3U a PLS. Stanici neukládá. Rádio hraje do zastavení.",
+          "de": "Nur MP3-Streams; M3U- und PLS-Wiedergabelisten werden unterstützt. Speichert keinen Sender. Das Radio läuft, bis es gestoppt wird.",
+          "nl": "Alleen MP3-streams; M3U- en PLS-afspeellijsten worden ondersteund. Slaat geen zender op. De radio speelt totdat deze wordt gestopt."
+        }
+      },
+      {
+        "id": "awtrixng_radio_save",
+        "title": {
+          "en": "Save a radio station",
+          "cs": "Uložit rozhlasovou stanici",
+          "de": "Einen Radiosender speichern",
+          "nl": "Een radiozender opslaan"
+        },
+        "titleFormatted": {
+          "en": "Save station [[name]] with URL [[url]]",
+          "cs": "Uložit stanici [[name]] s URL [[url]]",
+          "de": "Sender [[name]] mit URL [[url]] speichern",
+          "nl": "Sla zender [[name]] op met URL [[url]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_radio"
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "title": {
+              "en": "Station name",
+              "cs": "Název stanice",
+              "de": "Sendername",
+              "nl": "Zendernaam"
+            }
+          },
+          {
+            "name": "url",
+            "type": "text",
+            "title": {
+              "en": "Stream URL",
+              "cs": "URL streamu",
+              "de": "Stream-URL",
+              "nl": "Stream-URL"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Adds a station or replaces the URL of the station with this exact name. Keeps the other stations. Up to 32 stations.",
+          "cs": "Přidá stanici nebo přepíše URL stanice s tímto přesným názvem. Ostatní stanice zachová. Nejvýše 32 stanic.",
+          "de": "Fügt einen Sender hinzu oder ersetzt die URL des Senders mit genau diesem Namen. Andere Sender bleiben erhalten. Bis zu 32 Sender.",
+          "nl": "Voegt een zender toe of vervangt de URL van de zender met precies deze naam. Andere zenders blijven behouden. Maximaal 32 zenders."
+        }
+      },
+      {
+        "id": "awtrixng_audio_clip_url",
+        "title": {
+          "en": "Send an audio file from a URL",
+          "cs": "Odeslat zvukový soubor z URL",
+          "de": "Eine Audiodatei von einer URL senden",
+          "nl": "Een audiobestand vanaf een URL verzenden"
+        },
+        "titleFormatted": {
+          "en": "Send and play audio [[url]]",
+          "cs": "Odeslat a přehrát zvuk [[url]]",
+          "de": "Audio [[url]] senden und abspielen",
+          "nl": "Verzend en speel audio [[url]] af"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_clip"
+          },
+          {
+            "name": "url",
+            "type": "text",
+            "title": {
+              "en": "Audio file URL",
+              "cs": "URL zvukového souboru",
+              "de": "URL der Audiodatei",
+              "nl": "URL van het audiobestand"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Homey downloads and sends the file directly. MP3 or 16-bit PCM WAV, maximum 2 MiB. Plays once without storing. This action finishes when playback starts.",
+          "cs": "Homey stáhne soubor a přímo ho odešle. MP3 nebo WAV s 16bitovým PCM, nejvýše 2 MiB. Přehraje jednou bez uložení. Akce skončí při zahájení přehrávání.",
+          "de": "Homey lädt die Datei herunter und sendet sie direkt. MP3 oder WAV mit 16-Bit-PCM, maximal 2 MiB. Spielt einmal ab, ohne zu speichern. Diese Aktion endet beim Start der Wiedergabe.",
+          "nl": "Homey downloadt het bestand en verzendt het rechtstreeks. MP3 of WAV met 16-bits PCM, maximaal 2 MiB. Speelt één keer af zonder op te slaan. Deze actie eindigt wanneer het afspelen begint."
+        }
+      },
+      {
+        "id": "awtrixng_audio_clip_soundboard",
+        "title": {
+          "en": "Send an audio file from Soundboard",
+          "cs": "Odeslat zvukový soubor ze Soundboardu",
+          "de": "Eine Audiodatei aus Soundboard senden",
+          "nl": "Een audiobestand uit Soundboard verzenden"
+        },
+        "titleFormatted": {
+          "en": "Send and play Soundboard file [[sound]]",
+          "cs": "Odeslat a přehrát soubor [[sound]] ze Soundboardu",
+          "de": "Soundboard-Datei [[sound]] senden und abspielen",
+          "nl": "Verzend en speel Soundboard-bestand [[sound]] af"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_clip"
+          },
+          {
+            "name": "sound",
+            "type": "autocomplete",
+            "title": {
+              "en": "Sound",
+              "cs": "Zvuk",
+              "de": "Klang",
+              "nl": "Geluid"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Requires Soundboard. Homey resolves the current file and sends it directly. MP3 or 16-bit PCM WAV, maximum 2 MiB; no stored copy. Finishes when playback starts.",
+          "cs": "Vyžaduje Soundboard. Homey načte aktuální soubor a přímo ho odešle. MP3 nebo WAV s 16bitovým PCM, nejvýše 2 MiB; bez uložené kopie. Končí při zahájení přehrávání.",
+          "de": "Erfordert Soundboard. Homey ermittelt die aktuelle Datei und sendet sie direkt. MP3 oder WAV mit 16-Bit-PCM, maximal 2 MiB; keine gespeicherte Kopie. Endet beim Start der Wiedergabe.",
+          "nl": "Vereist Soundboard. Homey haalt het huidige bestand op en verzendt het rechtstreeks. MP3 of WAV met 16-bits PCM, maximaal 2 MiB; geen opgeslagen kopie. Eindigt wanneer het afspelen begint."
+        }
+      },
+      {
+        "id": "awtrixng_script_show",
+        "title": {
+          "en": "Show an installed script",
+          "cs": "Zobrazit nainstalovaný skript",
+          "de": "Ein installiertes Skript anzeigen",
+          "nl": "Een geïnstalleerd script tonen"
+        },
+        "titleFormatted": {
+          "en": "Show script [[script]]",
+          "cs": "Zobrazit skript [[script]]",
+          "de": "Skript [[script]] anzeigen",
+          "nl": "Toon script [[script]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "script",
+            "type": "autocomplete",
+            "title": {
+              "en": "Script",
+              "cs": "Skript",
+              "de": "Skript",
+              "nl": "Script"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Select a working, enabled script installed on the clock. Starts on-demand scripts. Next or previous app ends an on-demand script. Background scripts and modules are not shown.",
+          "cs": "Vyberte funkční a zapnutý skript nainstalovaný na hodinách. Spustí i skripty na vyžádání. Další nebo předchozí aplikace takový skript ukončí. Skripty na pozadí a moduly se nenabízejí.",
+          "de": "Wählen Sie ein funktionsfähiges, aktiviertes Skript aus, das auf der Uhr installiert ist. Startet auch Skripte auf Abruf. Die nächste oder vorherige App beendet ein Skript auf Abruf. Hintergrundskripte und Module werden nicht angeboten.",
+          "nl": "Selecteer een werkend, ingeschakeld script dat op de klok is geïnstalleerd. Start ook scripts op aanvraag. De volgende of vorige app beëindigt een script op aanvraag. Achtergrondscripts en modules worden niet aangeboden."
+        }
+      },
+      {
+        "id": "awtrixng_brightness",
+        "title": {
+          "en": "Set panel brightness",
+          "cs": "Nastavit jas displeje",
+          "de": "Die Displayhelligkeit einstellen",
+          "nl": "De helderheid van het display instellen"
+        },
+        "titleFormatted": {
+          "en": "Set panel brightness to [[brightness]]%",
+          "cs": "Nastavit jas displeje na [[brightness]] %",
+          "de": "Displayhelligkeit auf [[brightness]] % einstellen",
+          "nl": "Stel de helderheid van het display in op [[brightness]]%"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "brightness",
+            "type": "number",
+            "min": 0,
+            "max": 100,
+            "title": {
+              "en": "Brightness (%)",
+              "cs": "Jas (%)",
+              "de": "Helligkeit (%)",
+              "nl": "Helderheid (%)"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Sets manual brightness. Disables automatic brightness on devices with a light sensor. Does not switch display power.",
+          "cs": "Nastaví ruční jas. U zařízení se světelným senzorem vypne automatický jas. Nemění zapnutí displeje.",
+          "de": "Stellt die manuelle Helligkeit ein. Deaktiviert die automatische Helligkeit auf Geräten mit Lichtsensor. Ändert den Ein-/Aus-Zustand des Displays nicht.",
+          "nl": "Stelt de handmatige helderheid in. Schakelt automatische helderheid uit op apparaten met een lichtsensor. Zet het display niet aan of uit."
+        }
+      },
+      {
+        "id": "awtrixng_script_setting_set",
+        "title": {
+          "en": "Set a script setting",
+          "cs": "Nastavit volbu skriptu",
+          "de": "Eine Skripteinstellung festlegen",
+          "nl": "Een scriptinstelling instellen"
+        },
+        "titleFormatted": {
+          "en": "Set [[script]] setting [[key]] to [[value]]",
+          "cs": "Nastavit volbu [[key]] skriptu [[script]] na [[value]]",
+          "de": "Einstellung [[key]] von Skript [[script]] auf [[value]] setzen",
+          "nl": "Stel instelling [[key]] van script [[script]] in op [[value]]"
+        },
+        "hint": {
+          "en": "Uses declared settings. Text and select values are plain text; booleans true/false, numbers as numbers, colors #RRGGBB or integers. Out-of-range values fail. Saving restarts the script.",
+          "cs": "Používá deklarované volby. Text a výběr zadejte přímo, logickou hodnotu jako true/false, číslo jako číslo, barvu jako #RRGGBB nebo celé číslo. Hodnota mimo rozsah selže. Uložení restartuje skript.",
+          "de": "Verwendet deklarierte Einstellungen. Text- und Auswahlwerte als Klartext eingeben; boolesche Werte als true/false, Zahlen als Zahlen, Farben als #RRGGBB oder Ganzzahlen. Werte außerhalb des Bereichs führen zu einem Fehler. Das Speichern startet das Skript neu.",
+          "nl": "Gebruikt gedeclareerde instellingen. Voer tekst- en keuzewaarden in als gewone tekst; booleans als true/false, getallen als getallen, kleuren als #RRGGBB of gehele getallen. Waarden buiten het bereik geven een fout. Opslaan herstart het script."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "script",
+            "type": "autocomplete",
+            "title": {
+              "en": "Script",
+              "cs": "Skript",
+              "de": "Skript",
+              "nl": "Script"
+            }
+          },
+          {
+            "name": "key",
+            "type": "autocomplete",
+            "title": {
+              "en": "Setting / key",
+              "cs": "Volba / klíč",
+              "de": "Einstellung / Schlüssel",
+              "nl": "Instelling / sleutel"
+            }
+          },
+          {
+            "name": "value",
+            "type": "text",
+            "title": {
+              "en": "Value",
+              "cs": "Hodnota",
+              "de": "Wert",
+              "nl": "Waarde"
+            }
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_script_setting_get",
+        "title": {
+          "en": "Read a script setting",
+          "cs": "Načíst volbu skriptu",
+          "de": "Eine Skripteinstellung lesen",
+          "nl": "Een scriptinstelling uitlezen"
+        },
+        "titleFormatted": {
+          "en": "Read [[script]] setting [[key]]",
+          "cs": "Načíst volbu [[key]] skriptu [[script]]",
+          "de": "Einstellung [[key]] von Skript [[script]] lesen",
+          "nl": "Lees instelling [[key]] van script [[script]] uit"
+        },
+        "hint": {
+          "en": "Returns a text Value token in Advanced Flow. Numbers and booleans are represented as JSON. A missing setting fails.",
+          "cs": "Vrací textový token Hodnota v Advanced Flow. Čísla a logické hodnoty mají podobu JSON. Chybějící volba způsobí chybu.",
+          "de": "Gibt in Advanced Flow das Text-Token Wert zurück. Zahlen und boolesche Werte werden als JSON dargestellt. Eine fehlende Einstellung führt zu einem Fehler.",
+          "nl": "Geeft in Advanced Flow een teksttoken Waarde terug. Getallen en booleans worden weergegeven als JSON. Een ontbrekende instelling geeft een fout."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "script",
+            "type": "autocomplete",
+            "title": {
+              "en": "Script",
+              "cs": "Skript",
+              "de": "Skript",
+              "nl": "Script"
+            }
+          },
+          {
+            "name": "key",
+            "type": "autocomplete",
+            "title": {
+              "en": "Setting / key",
+              "cs": "Volba / klíč",
+              "de": "Einstellung / Schlüssel",
+              "nl": "Instelling / sleutel"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "value",
+            "type": "string",
+            "title": {
+              "en": "Value",
+              "cs": "Hodnota",
+              "de": "Wert",
+              "nl": "Waarde"
+            }
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_script_data_set",
+        "title": {
+          "en": "Change stored script data",
+          "cs": "Změnit uložená data skriptu",
+          "de": "Gespeicherte Skriptdaten ändern",
+          "nl": "Opgeslagen scriptgegevens wijzigen"
+        },
+        "titleFormatted": {
+          "en": "Change [[script]] stored data to [[value]]",
+          "cs": "Změnit uložená data skriptu [[script]] na [[value]]",
+          "de": "Gespeicherte Daten von Skript [[script]] in [[value]] ändern",
+          "nl": "Wijzig de opgeslagen gegevens van script [[script]] in [[value]]"
+        },
+        "hint": {
+          "en": "Supply a non-empty JSON object. Only these keys change; null removes a key. Declared settings use a separate card. Saving restarts the script.",
+          "cs": "Zadejte neprázdný JSON objekt. Mění se jen uvedené klíče; null klíč odstraní. Deklarované volby mají samostatnou kartu. Uložení restartuje skript.",
+          "de": "Geben Sie ein nicht leeres JSON-Objekt an. Nur diese Schlüssel werden geändert; null entfernt einen Schlüssel. Deklarierte Einstellungen haben eine eigene Karte. Das Speichern startet das Skript neu.",
+          "nl": "Geef een niet-leeg JSON-object op. Alleen deze sleutels worden gewijzigd; null verwijdert een sleutel. Gedeclareerde instellingen hebben een aparte kaart. Opslaan herstart het script."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "script",
+            "type": "autocomplete",
+            "title": {
+              "en": "Script",
+              "cs": "Skript",
+              "de": "Skript",
+              "nl": "Script"
+            }
+          },
+          {
+            "name": "value",
+            "type": "text",
+            "title": {
+              "en": "JSON changes",
+              "cs": "Změny v JSON",
+              "de": "JSON-Änderungen",
+              "nl": "JSON-wijzigingen"
+            }
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_script_data_get",
+        "title": {
+          "en": "Read a stored script value",
+          "cs": "Načíst uloženou hodnotu skriptu",
+          "de": "Einen gespeicherten Skriptwert lesen",
+          "nl": "Een opgeslagen scriptwaarde uitlezen"
+        },
+        "titleFormatted": {
+          "en": "Read [[script]] stored value [[key]]",
+          "cs": "Načíst uloženou hodnotu [[key]] skriptu [[script]]",
+          "de": "Gespeicherten Wert [[key]] von Skript [[script]] lesen",
+          "nl": "Lees opgeslagen waarde [[key]] van script [[script]] uit"
+        },
+        "hint": {
+          "en": "Returns a text Value token in Advanced Flow. Structured data is JSON. A missing key fails.",
+          "cs": "Vrací textový token Hodnota v Advanced Flow. Strukturovaná data mají podobu JSON. Chybějící klíč způsobí chybu.",
+          "de": "Gibt in Advanced Flow das Text-Token Wert zurück. Strukturierte Daten werden als JSON dargestellt. Ein fehlender Schlüssel führt zu einem Fehler.",
+          "nl": "Geeft in Advanced Flow een teksttoken Waarde terug. Gestructureerde gegevens worden weergegeven als JSON. Een ontbrekende sleutel geeft een fout."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "script",
+            "type": "autocomplete",
+            "title": {
+              "en": "Script",
+              "cs": "Skript",
+              "de": "Skript",
+              "nl": "Script"
+            }
+          },
+          {
+            "name": "key",
+            "type": "autocomplete",
+            "title": {
+              "en": "Setting / key",
+              "cs": "Volba / klíč",
+              "de": "Einstellung / Schlüssel",
+              "nl": "Instelling / sleutel"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "value",
+            "type": "string",
+            "title": {
+              "en": "Value",
+              "cs": "Hodnota",
+              "de": "Wert",
+              "nl": "Waarde"
+            }
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_script_shared_get",
+        "title": {
+          "en": "Read a shared script value",
+          "cs": "Načíst sdílenou hodnotu skriptu",
+          "de": "Einen geteilten Skriptwert lesen",
+          "nl": "Een gedeelde scriptwaarde uitlezen"
+        },
+        "titleFormatted": {
+          "en": "Read shared script value [[key]]",
+          "cs": "Načíst sdílenou hodnotu skriptu [[key]]",
+          "de": "Geteilten Skriptwert [[key]] lesen",
+          "nl": "Lees gedeelde scriptwaarde [[key]] uit"
+        },
+        "hint": {
+          "en": "Read-only. Returns a text Value token in Advanced Flow. Values disappear after script restart; a missing value fails.",
+          "cs": "Pouze čtení. Vrací textový token Hodnota v Advanced Flow. Hodnoty po restartu skriptu zmizí; chybějící hodnota způsobí chybu.",
+          "de": "Nur lesbar. Gibt in Advanced Flow das Text-Token Wert zurück. Werte verschwinden nach einem Skriptneustart; ein fehlender Wert führt zu einem Fehler.",
+          "nl": "Alleen lezen. Geeft in Advanced Flow een teksttoken Waarde terug. Waarden verdwijnen na het herstarten van het script; een ontbrekende waarde geeft een fout."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "key",
+            "type": "autocomplete",
+            "title": {
+              "en": "Shared value",
+              "cs": "Sdílená hodnota",
+              "de": "Geteilter Wert",
+              "nl": "Gedeelde waarde"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "value",
+            "type": "string",
+            "title": {
+              "en": "Value",
+              "cs": "Hodnota",
+              "de": "Wert",
+              "nl": "Waarde"
+            }
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_notification_dismiss_named",
+        "title": {
+          "en": "Dismiss a named notification",
+          "cs": "Zrušit pojmenovanou notifikaci",
+          "de": "Eine benannte Benachrichtigung entfernen",
+          "nl": "Een benoemde notificatie verwijderen"
+        },
+        "titleFormatted": {
+          "en": "Dismiss notification [[name]]",
+          "cs": "Zrušit notifikaci [[name]]",
+          "de": "Benachrichtigung [[name]] entfernen",
+          "nl": "Verwijder notificatie [[name]]"
+        },
+        "hint": {
+          "en": "Removes the named notification even while waiting in the queue. Use the same name as in notification JSON. The reserved name active uses the existing active notification card. A missing name reports an error.",
+          "cs": "Odstraní pojmenovanou notifikaci i při čekání ve frontě. Použijte stejný název jako v JSON notifikace. Rezervovaný název active používá stávající kartu pro aktivní notifikaci. Nenalezená notifikace ohlásí chybu.",
+          "de": "Entfernt die benannte Benachrichtigung auch aus der Warteschlange. Verwenden Sie denselben Namen wie im Benachrichtigungs-JSON. Für den reservierten Namen active verwenden Sie die bestehende Karte für die aktive Benachrichtigung. Eine nicht gefundene Benachrichtigung führt zu einem Fehler.",
+          "nl": "Verwijdert de benoemde notificatie ook uit de wachtrij. Gebruik dezelfde naam als in de notificatie-JSON. Gebruik voor de gereserveerde naam active de bestaande kaart voor de actieve notificatie. Een niet gevonden notificatie geeft een fout."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "title": {
+              "en": "Notification name",
+              "cs": "Název notifikace",
+              "de": "Name der Benachrichtigung",
+              "nl": "Naam van de notificatie"
+            }
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_audio_speech",
+        "title": {
+          "en": "Read text aloud",
+          "cs": "Přečti text",
+          "de": "Text vorlesen",
+          "nl": "Tekst voorlezen"
+        },
+        "titleFormatted": {
+          "en": "Read [[text]] aloud",
+          "cs": "Přečti [[text]]",
+          "de": "[[text]] vorlesen",
+          "nl": "Lees [[text]] voor"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_speech"
+          },
+          {
+            "name": "text",
+            "type": "text",
+            "title": {
+              "en": "Text",
+              "cs": "Text",
+              "de": "Text",
+              "nl": "Tekst"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Requires an installed voice on the clock. Maximum 512 UTF-8 bytes. This action finishes when the playback request is accepted.",
+          "cs": "Vyžaduje nainstalovaný hlas v hodinách. Nejvýše 512 bajtů v UTF-8. Akce skončí přijetím požadavku na přehrání.",
+          "de": "Erfordert eine installierte Stimme auf der Uhr. Maximal 512 UTF-8-Bytes. Die Aktion endet, sobald die Wiedergabeanfrage angenommen wurde.",
+          "nl": "Vereist een geïnstalleerde stem op de klok. Maximaal 512 UTF-8-bytes. De actie eindigt zodra het afspeelverzoek is geaccepteerd."
+        }
       }
     ],
     "triggers": [
       {
         "id": "awtrixng_button_left_pressed",
         "title": {
-          "en": "Left button was pressed"
+          "en": "Left button was pressed",
+          "de": "Linke Taste wurde gedrückt",
+          "nl": "Linkerknop is ingedrukt",
+          "cs": "Levé tlačítko bylo stisknuto"
         },
         "hint": {
-          "en": "Enable button callbacks in the AWTRIX NG device settings before using this trigger."
+          "en": "Enable button callbacks in the AWTRIX NG device settings before using this trigger.",
+          "de": "Aktivieren Sie Tasten-Callbacks in den Geräteeinstellungen von AWTRIX NG, bevor Sie diesen Auslöser verwenden.",
+          "nl": "Schakel knopcallbacks in de apparaatinstellingen van AWTRIX NG in voordat je deze trigger gebruikt.",
+          "cs": "Pro tento spouštěč zapněte callback tlačítek v nastavení zařízení AWTRIX NG."
         },
         "args": [
           {
@@ -1191,10 +2314,16 @@
       {
         "id": "awtrixng_button_middle_pressed",
         "title": {
-          "en": "Middle button was pressed"
+          "en": "Middle button was pressed",
+          "de": "Mittlere Taste wurde gedrückt",
+          "nl": "Middelste knop is ingedrukt",
+          "cs": "Prostřední tlačítko bylo stisknuto"
         },
         "hint": {
-          "en": "Enable button callbacks in the AWTRIX NG device settings before using this trigger."
+          "en": "Enable button callbacks in the AWTRIX NG device settings before using this trigger.",
+          "de": "Aktivieren Sie Tasten-Callbacks in den Geräteeinstellungen von AWTRIX NG, bevor Sie diesen Auslöser verwenden.",
+          "nl": "Schakel knopcallbacks in de apparaatinstellingen van AWTRIX NG in voordat je deze trigger gebruikt.",
+          "cs": "Pro tento spouštěč zapněte callback tlačítek v nastavení zařízení AWTRIX NG."
         },
         "args": [
           {
@@ -1207,10 +2336,16 @@
       {
         "id": "awtrixng_button_right_pressed",
         "title": {
-          "en": "Right button was pressed"
+          "en": "Right button was pressed",
+          "de": "Rechte Taste wurde gedrückt",
+          "nl": "Rechterknop is ingedrukt",
+          "cs": "Pravé tlačítko bylo stisknuto"
         },
         "hint": {
-          "en": "Enable button callbacks in the AWTRIX NG device settings before using this trigger."
+          "en": "Enable button callbacks in the AWTRIX NG device settings before using this trigger.",
+          "de": "Aktivieren Sie Tasten-Callbacks in den Geräteeinstellungen von AWTRIX NG, bevor Sie diesen Auslöser verwenden.",
+          "nl": "Schakel knopcallbacks in de apparaatinstellingen van AWTRIX NG in voordat je deze trigger gebruikt.",
+          "cs": "Pro tento spouštěč zapněte callback tlačítek v nastavení zařízení AWTRIX NG."
         },
         "args": [
           {
@@ -1219,13 +2354,308 @@
             "filter": "driver_id=awtrixng"
           }
         ]
+      },
+      {
+        "id": "awtrixng_knob_pressed",
+        "title": {
+          "en": "Knob was pressed",
+          "cs": "Otočný ovladač byl stisknut",
+          "de": "Drehknopf wurde gedrückt",
+          "nl": "Draaiknop is ingedrukt"
+        },
+        "hint": {
+          "en": "Enable button callbacks in the AWTRIX NG device settings before using this trigger.",
+          "cs": "Pro tento spouštěč zapněte callback tlačítek v nastavení zařízení AWTRIX NG.",
+          "de": "Aktivieren Sie Tasten-Callbacks in den Geräteeinstellungen von AWTRIX NG, bevor Sie diesen Auslöser verwenden.",
+          "nl": "Schakel knopcallbacks in de apparaatinstellingen van AWTRIX NG in voordat je deze trigger gebruikt."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_knob"
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_knob_turned",
+        "title": {
+          "en": "Knob was turned",
+          "cs": "Otočným ovladačem bylo otočeno",
+          "de": "Drehknopf wurde gedreht",
+          "nl": "Draaiknop is gedraaid"
+        },
+        "hint": {
+          "en": "Enable button callbacks in the AWTRIX NG device settings before using this trigger. The turn token is negative to the left and positive to the right.",
+          "cs": "Zapněte callback tlačítek. Hodnota otočení je záporná doleva a kladná doprava.",
+          "de": "Aktivieren Sie Tasten-Callbacks in den Geräteeinstellungen von AWTRIX NG, bevor Sie diesen Auslöser verwenden. Der Drehwert ist nach links negativ und nach rechts positiv.",
+          "nl": "Schakel knopcallbacks in de apparaatinstellingen van AWTRIX NG in voordat je deze trigger gebruikt. De draaiwaarde is negatief naar links en positief naar rechts."
+        },
+        "tokens": [
+          {
+            "name": "turn",
+            "type": "number",
+            "title": {
+              "en": "Turn",
+              "cs": "Otočení",
+              "de": "Drehung",
+              "nl": "Draaiing"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_knob"
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_app_changed",
+        "title": {
+          "en": "The active application changed",
+          "cs": "Aktivní aplikace se změnila",
+          "de": "Die aktive App hat sich geändert",
+          "nl": "De actieve app is gewijzigd"
+        },
+        "hint": {
+          "en": "Observed via HTTP every 5 seconds while this card is used. Initial load and reconnection do not trigger. Brief changes between observations may be missed. Uses rotation names, including homey-. Notifications do not change the active app.",
+          "cs": "Sleduje stav přes HTTP každých 5 sekund při použití karty. První načtení ani návrat po výpadku nespouští Flow. Krátké změny mezi kontrolami se nemusí zachytit. Používá názvy z rotace včetně homey-. Notifikace aktivní aplikaci nemění.",
+          "de": "Wird bei Verwendung dieser Karte alle 5 Sekunden über HTTP geprüft. Das erste Laden und die Wiederverbindung lösen keinen Flow aus. Kurze Änderungen zwischen den Prüfungen werden möglicherweise nicht erkannt. Verwendet Namen aus der Rotation einschließlich homey-. Benachrichtigungen ändern die aktive App nicht.",
+          "nl": "Wordt bij gebruik van deze kaart elke 5 seconden via HTTP gecontroleerd. De eerste keer laden en opnieuw verbinden starten geen Flow. Korte wijzigingen tussen controles kunnen worden gemist. Gebruikt namen uit de appcyclus, inclusief homey-. Notificaties veranderen de actieve app niet."
+        },
+        "tokens": [
+          {
+            "name": "application",
+            "type": "string",
+            "title": {
+              "en": "Application",
+              "cs": "Aplikace",
+              "de": "App",
+              "nl": "App"
+            }
+          },
+          {
+            "name": "previous",
+            "type": "string",
+            "title": {
+              "en": "Previous application",
+              "cs": "Předchozí aplikace",
+              "de": "Vorherige App",
+              "nl": "Vorige app"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_audio_changed",
+        "title": {
+          "en": "Audio playback changed",
+          "cs": "Přehrávání zvuku se změnilo",
+          "de": "Die Audiowiedergabe hat sich geändert",
+          "nl": "Het afspelen van audio is gewijzigd"
+        },
+        "hint": {
+          "en": "Observed via HTTP every 5 seconds while this card is used. Initial load and reconnection do not trigger. Brief changes between observations may be missed.",
+          "cs": "Sleduje stav přes HTTP každých 5 sekund při použití karty. První načtení ani návrat po výpadku nespouští Flow. Krátké změny mezi kontrolami se nemusí zachytit.",
+          "de": "Wird bei Verwendung dieser Karte alle 5 Sekunden über HTTP geprüft. Das erste Laden und die Wiederverbindung lösen keinen Flow aus. Kurze Änderungen zwischen den Prüfungen werden möglicherweise nicht erkannt.",
+          "nl": "Wordt bij gebruik van deze kaart elke 5 seconden via HTTP gecontroleerd. De eerste keer laden en opnieuw verbinden starten geen Flow. Korte wijzigingen tussen controles kunnen worden gemist."
+        },
+        "tokens": [
+          {
+            "name": "group",
+            "type": "string",
+            "title": {
+              "en": "Group (alert/app)",
+              "cs": "Skupina (alert/app)",
+              "de": "Gruppe (alert/app)",
+              "nl": "Groep (alert/app)"
+            }
+          },
+          {
+            "name": "playing",
+            "type": "boolean",
+            "title": {
+              "en": "Playing",
+              "cs": "Přehrává se",
+              "de": "Wiedergabe läuft",
+              "nl": "Wordt afgespeeld"
+            }
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "title": {
+              "en": "Sound name",
+              "cs": "Název zvuku",
+              "de": "Klangname",
+              "nl": "Naam van het geluid"
+            }
+          },
+          {
+            "name": "previous_playing",
+            "type": "boolean",
+            "title": {
+              "en": "Previously playing",
+              "cs": "Předtím se přehrávalo",
+              "de": "Wiedergabe lief zuvor",
+              "nl": "Werd eerder afgespeeld"
+            }
+          },
+          {
+            "name": "previous_name",
+            "type": "string",
+            "title": {
+              "en": "Previous sound name",
+              "cs": "Předchozí název zvuku",
+              "de": "Vorheriger Klangname",
+              "nl": "Vorige naam van het geluid"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_groups"
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_radio_changed",
+        "title": {
+          "en": "Radio playback changed",
+          "cs": "Přehrávání rádia se změnilo",
+          "de": "Die Radiowiedergabe hat sich geändert",
+          "nl": "Het afspelen van radio is gewijzigd"
+        },
+        "hint": {
+          "en": "Observed via HTTP every 5 seconds while this card is used. Initial load and reconnection do not trigger. Brief changes between observations may be missed.",
+          "cs": "Sleduje stav přes HTTP každých 5 sekund při použití karty. První načtení ani návrat po výpadku nespouští Flow. Krátké změny mezi kontrolami se nemusí zachytit.",
+          "de": "Wird bei Verwendung dieser Karte alle 5 Sekunden über HTTP geprüft. Das erste Laden und die Wiederverbindung lösen keinen Flow aus. Kurze Änderungen zwischen den Prüfungen werden möglicherweise nicht erkannt.",
+          "nl": "Wordt bij gebruik van deze kaart elke 5 seconden via HTTP gecontroleerd. De eerste keer laden en opnieuw verbinden starten geen Flow. Korte wijzigingen tussen controles kunnen worden gemist."
+        },
+        "tokens": [
+          {
+            "name": "playing",
+            "type": "boolean",
+            "title": {
+              "en": "Playing",
+              "cs": "Přehrává se",
+              "de": "Wiedergabe läuft",
+              "nl": "Wordt afgespeeld"
+            }
+          },
+          {
+            "name": "station",
+            "type": "string",
+            "title": {
+              "en": "Station",
+              "cs": "Stanice",
+              "de": "Sender",
+              "nl": "Zender"
+            }
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "title": {
+              "en": "Track title",
+              "cs": "Název skladby",
+              "de": "Titel des Musikstücks",
+              "nl": "Titel van het nummer"
+            }
+          },
+          {
+            "name": "previous_playing",
+            "type": "boolean",
+            "title": {
+              "en": "Previously playing",
+              "cs": "Předtím se přehrávalo",
+              "de": "Wiedergabe lief zuvor",
+              "nl": "Werd eerder afgespeeld"
+            }
+          },
+          {
+            "name": "previous_station",
+            "type": "string",
+            "title": {
+              "en": "Previous station",
+              "cs": "Předchozí stanice",
+              "de": "Vorheriger Sender",
+              "nl": "Vorige zender"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_radio"
+          }
+        ]
+      },
+      {
+        "id": "awtrixng_audio_error",
+        "title": {
+          "en": "A new playback error was observed",
+          "cs": "Byla zjištěna nová chyba přehrávání",
+          "de": "Ein neuer Wiedergabefehler wurde erkannt",
+          "nl": "Er is een nieuwe afspeelfout gedetecteerd"
+        },
+        "hint": {
+          "en": "Observed via HTTP every 5 seconds while this card is used. Initial load and reconnection do not trigger. Brief changes between observations may be missed. The same persistent error is reported once. HTTP connectivity failures are logged separately.",
+          "cs": "Sleduje stav přes HTTP každých 5 sekund při použití karty. První načtení ani návrat po výpadku nespouští Flow. Krátké změny mezi kontrolami se nemusí zachytit. Stejná trvající chyba se hlásí jednou. Chyby HTTP připojení se zaznamenávají zvlášť.",
+          "de": "Wird bei Verwendung dieser Karte alle 5 Sekunden über HTTP geprüft. Das erste Laden und die Wiederverbindung lösen keinen Flow aus. Kurze Änderungen zwischen den Prüfungen werden möglicherweise nicht erkannt. Derselbe anhaltende Fehler wird einmal gemeldet. HTTP-Verbindungsfehler werden separat protokolliert.",
+          "nl": "Wordt bij gebruik van deze kaart elke 5 seconden via HTTP gecontroleerd. De eerste keer laden en opnieuw verbinden starten geen Flow. Korte wijzigingen tussen controles kunnen worden gemist. Dezelfde aanhoudende fout wordt één keer gemeld. HTTP-verbindingsfouten worden apart gelogd."
+        },
+        "tokens": [
+          {
+            "name": "group",
+            "type": "string",
+            "title": {
+              "en": "Group (alert/app/radio)",
+              "cs": "Skupina (alert/app/radio)",
+              "de": "Gruppe (alert/app/radio)",
+              "nl": "Groep (alert/app/radio)"
+            }
+          },
+          {
+            "name": "error",
+            "type": "string",
+            "title": {
+              "en": "Error",
+              "cs": "Chyba",
+              "de": "Fehler",
+              "nl": "Fout"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_groups"
+          }
+        ]
       }
     ]
   },
   "drivers": [
     {
       "name": {
-        "en": "Awtrix3"
+        "en": "Awtrix3",
+        "de": "Awtrix3",
+        "nl": "Awtrix3",
+        "cs": "Awtrix3"
       },
       "class": "other",
       "capabilities": [
@@ -1640,7 +3070,10 @@
     },
     {
       "name": {
-        "en": "Awtrix NG"
+        "en": "Awtrix NG",
+        "de": "Awtrix NG",
+        "nl": "Awtrix NG",
+        "cs": "Awtrix NG"
       },
       "class": "other",
       "capabilities": [
@@ -1650,6 +3083,7 @@
         "alarm_generic.indicator2",
         "alarm_generic.indicator3",
         "awtrix_matrix",
+        "dim",
         "awtrixng_weather_overlay",
         "rssi",
         "ip",
@@ -1744,6 +3178,15 @@
             "de": "Suchvorgang nach neuer IP-Adresse des Geräts starten.",
             "cs": "Spustit vyhledávání nové IP adresy zařízení."
           }
+        },
+        "dim": {
+          "title": {
+            "en": "Brightness",
+            "cs": "Jas",
+            "de": "Helligkeit",
+            "nl": "Helderheid"
+          },
+          "preventInsights": true
         }
       },
       "discovery": "awtrixng-mdns",
@@ -1884,6 +3327,12 @@
               "id": "autoBrightness",
               "type": "checkbox",
               "value": false,
+              "hint": {
+                "en": "Requires a light sensor. TC002 has no light sensor and does not support this option.",
+                "cs": "Vyžaduje světelný senzor. TC002 ho nemá a tuto volbu nepodporuje.",
+                "de": "Erfordert einen Lichtsensor. TC002 hat keinen Lichtsensor und unterstützt diese Option nicht.",
+                "nl": "Vereist een lichtsensor. TC002 heeft geen lichtsensor en ondersteunt deze optie niet."
+              },
               "label": {
                 "en": "Auto-brightness",
                 "nl": "Automatische helderheid",
@@ -2146,6 +3595,89 @@
         {
           "type": "group",
           "label": {
+            "en": "Panel colors",
+            "cs": "Obraz displeje",
+            "de": "Displayfarben",
+            "nl": "Displaykleuren"
+          },
+          "children": [
+            {
+              "id": "saturation",
+              "type": "number",
+              "value": 100,
+              "min": 0,
+              "max": 100,
+              "label": {
+                "en": "Saturation (%)",
+                "cs": "Sytost (%)",
+                "de": "Sättigung (%)",
+                "nl": "Verzadiging (%)"
+              },
+              "hint": {
+                "en": "0 shows grayscale; 100 keeps the original colors.",
+                "cs": "0 zobrazí odstíny šedi; 100 zachová původní barvy.",
+                "de": "0 zeigt Graustufen; 100 behält die ursprünglichen Farben bei.",
+                "nl": "0 toont grijstinten; 100 behoudt de oorspronkelijke kleuren."
+              }
+            },
+            {
+              "id": "gamma",
+              "type": "number",
+              "value": 1.9,
+              "decimals": 2,
+              "min": 0,
+              "label": {
+                "en": "Gamma",
+                "cs": "Gamma",
+                "de": "Gamma",
+                "nl": "Gamma"
+              },
+              "hint": {
+                "en": "Must be greater than zero. Default: 1.9.",
+                "cs": "Musí být větší než nula. Výchozí hodnota: 1,9.",
+                "de": "Muss größer als null sein. Standardwert: 1,9.",
+                "nl": "Moet groter zijn dan nul. Standaardwaarde: 1,9."
+              }
+            },
+            {
+              "id": "colorCorrection",
+              "type": "text",
+              "value": "",
+              "label": {
+                "en": "Color correction",
+                "cs": "Barevná korekce",
+                "de": "Farbkorrektur",
+                "nl": "Kleurcorrectie"
+              },
+              "hint": {
+                "en": "Enter #RRGGBB. Leave empty to turn off. Multiplies the color of every pixel; #000000 makes the panel black.",
+                "cs": "Zadejte #RRGGBB. Prázdné pole funkci vypne. Násobí barvu každého pixelu; #000000 vytvoří černý obraz.",
+                "de": "Geben Sie #RRGGBB ein. Leer lassen zum Deaktivieren. Multipliziert die Farbe jedes Pixels; #000000 macht das Display schwarz.",
+                "nl": "Voer #RRGGBB in. Laat leeg om uit te schakelen. Vermenigvuldigt de kleur van elke pixel; #000000 maakt het display zwart."
+              }
+            },
+            {
+              "id": "colorTint",
+              "type": "text",
+              "value": "",
+              "label": {
+                "en": "Color tint",
+                "cs": "Barevný nádech",
+                "de": "Farbtönung",
+                "nl": "Kleurtint"
+              },
+              "hint": {
+                "en": "Enter #RRGGBB. Leave empty to turn off. Multiplies the color of every pixel; #000000 makes the panel black.",
+                "cs": "Zadejte #RRGGBB. Prázdné pole funkci vypne. Násobí barvu každého pixelu; #000000 vytvoří černý obraz.",
+                "de": "Geben Sie #RRGGBB ein. Leer lassen zum Deaktivieren. Multipliziert die Farbe jedes Pixels; #000000 macht das Display schwarz.",
+                "nl": "Voer #RRGGBB in. Laat leeg om uit te schakelen. Vermenigvuldigt de kleur van elke pixel; #000000 maakt het display zwart."
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
             "en": "Default apps",
             "nl": "Standaard apps",
             "de": "Standard-Apps",
@@ -2254,6 +3786,216 @@
       "insights": false,
       "uiComponent": "button",
       "icon": "/assets/capability_awtrix_matrix.svg"
+    },
+    "awtrixng_alert_volume": {
+      "type": "number",
+      "title": {
+        "en": "Alert volume",
+        "cs": "Hlasitost upozornění",
+        "de": "Lautstärke der Benachrichtigungen",
+        "nl": "Volume van meldingen"
+      },
+      "getable": true,
+      "setable": true,
+      "insights": false,
+      "uiComponent": "slider",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "units": "%",
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "awtrixng_app_volume": {
+      "type": "number",
+      "title": {
+        "en": "App volume",
+        "cs": "Hlasitost aplikací",
+        "de": "App-Lautstärke",
+        "nl": "Appvolume"
+      },
+      "getable": true,
+      "setable": true,
+      "insights": false,
+      "uiComponent": "slider",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "units": "%",
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "awtrixng_audio_clip": {
+      "type": "boolean",
+      "title": {
+        "en": "Audio clips",
+        "cs": "Zvukové klipy",
+        "de": "Audioclips",
+        "nl": "Audiofragmenten"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
+    "awtrixng_audio_groups": {
+      "type": "boolean",
+      "title": {
+        "en": "Audio groups",
+        "cs": "Zvukové skupiny",
+        "de": "Audiogruppen",
+        "nl": "Audiogroepen"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
+    "awtrixng_audio_mixer": {
+      "type": "boolean",
+      "title": {
+        "en": "Audio mixer",
+        "cs": "Zvukový mixer",
+        "de": "Audiomixer",
+        "nl": "Audiomixer"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
+    "awtrixng_audio_radio": {
+      "type": "boolean",
+      "title": {
+        "en": "Internet radio",
+        "cs": "Internetové rádio",
+        "de": "Internetradio",
+        "nl": "Internetradio"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
+    "awtrixng_audio_speech": {
+      "type": "boolean",
+      "title": {
+        "en": "Speech",
+        "cs": "Řeč",
+        "de": "Sprachausgabe",
+        "nl": "Spraak"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
+    "awtrixng_audio_synth": {
+      "type": "boolean",
+      "title": {
+        "en": "Audio synthesizer",
+        "cs": "Zvukový syntetizátor",
+        "de": "Audiosynthesizer",
+        "nl": "Audiosynthesizer"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
+    "awtrixng_audio_url": {
+      "type": "boolean",
+      "title": {
+        "en": "MP3 URL playback",
+        "cs": "Přehrávání MP3 z URL",
+        "de": "MP3-Wiedergabe von einer URL",
+        "nl": "MP3 afspelen vanaf een URL"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
+    "awtrixng_display_16px": {
+      "type": "boolean",
+      "title": {
+        "en": "16-pixel display",
+        "cs": "Displej s výškou 16 pixelů",
+        "de": "Display mit 16 Pixeln Höhe",
+        "nl": "Display van 16 pixels hoog"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
+    "awtrixng_knob": {
+      "type": "boolean",
+      "title": {
+        "en": "Rotary knob",
+        "cs": "Otočný ovladač",
+        "de": "Drehknopf",
+        "nl": "Draaiknop"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
+    "awtrixng_layout": {
+      "type": "boolean",
+      "title": {
+        "en": "Layouts",
+        "cs": "Rozložení do oblastí",
+        "de": "Bereichslayouts",
+        "nl": "Indelingen met gebieden"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
+    "awtrixng_radio_volume": {
+      "type": "number",
+      "title": {
+        "en": "Radio volume",
+        "cs": "Hlasitost rádia",
+        "de": "Radiolautstärke",
+        "nl": "Radiovolume"
+      },
+      "getable": true,
+      "setable": true,
+      "insights": false,
+      "uiComponent": "slider",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "units": "%",
+      "preventTag": true,
+      "preventInsights": true
+    },
+    "awtrixng_volume": {
+      "type": "number",
+      "title": {
+        "en": "Master volume",
+        "cs": "Celková hlasitost",
+        "de": "Gesamtlautstärke",
+        "nl": "Hoofdvolume"
+      },
+      "getable": true,
+      "setable": true,
+      "insights": false,
+      "uiComponent": "slider",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "units": "%",
+      "preventTag": true,
+      "preventInsights": true
     },
     "awtrixng_weather_overlay": {
       "type": "enum",
@@ -2387,7 +4129,10 @@
       "insights": false,
       "icon": "/assets/rssi.svg",
       "units": {
-        "en": "dBm"
+        "en": "dBm",
+        "de": "dBm",
+        "nl": "dBm",
+        "cs": "dBm"
       }
     }
   },

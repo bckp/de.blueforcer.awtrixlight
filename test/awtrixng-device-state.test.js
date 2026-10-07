@@ -88,6 +88,9 @@ const baseCapabilityValues = [{
 }, {
   capabilityId: 'ip',
   value: '192.168.1.44',
+}, {
+  capabilityId: 'dim',
+  value: baseDeviceState.brightness / 255,
 }];
 
 test('AWTRIX NG initial capability ids include base controls and supported optional fields present at init/pairing', () => {

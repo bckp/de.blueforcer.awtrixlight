@@ -44,21 +44,30 @@ const isAwtrixNgFileEntry = (value: unknown): boolean => (
 export const toAwtrixNgIconAutocompleteItems = (
   response: AwtrixNgApiFilesResponse,
   labels: AwtrixNgIconListLabels,
-): AwtrixNgIconAutocompleteItem[] => [
-  {
+): AwtrixNgIconAutocompleteItem[] => {
+  const items: AwtrixNgIconAutocompleteItem[] = [{
     name: labels.emptyName,
     id: '-',
     description: labels.emptyDescription,
-  },
-  ...response.files.map((file): AwtrixNgIconAutocompleteItem => {
+  }];
+  const seen = new Set<string>();
+
+  for (const file of response.files) {
     const iconName = path.parse(file.name).name;
 
-    return {
+    if (seen.has(iconName)) {
+      continue;
+    }
+
+    seen.add(iconName);
+    items.push({
       name: iconName,
       id: iconName,
-    };
-  }),
-];
+    });
+  }
+
+  return items;
+};
 
 export const createAwtrixNgIconUploadForm = (source: AwtrixNgIconUploadSource): FormData => {
   const form = new FormData();

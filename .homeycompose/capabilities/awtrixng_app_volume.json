@@ -1,0 +1,20 @@
+{
+  "type": "number",
+  "title": {
+    "en": "App volume",
+    "cs": "Hlasitost aplikací",
+    "de": "App-Lautstärke",
+    "nl": "Appvolume"
+  },
+  "getable": true,
+  "setable": true,
+  "insights": false,
+  "uiComponent": "slider",
+  "min": 0,
+  "max": 100,
+  "step": 1,
+  "decimals": 0,
+  "units": "%",
+  "preventTag": true,
+  "preventInsights": true
+}

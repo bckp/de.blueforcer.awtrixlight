@@ -1,6 +1,9 @@
 {
   "name": {
-    "en": "Awtrix3"
+    "en": "Awtrix3",
+    "de": "Awtrix3",
+    "nl": "Awtrix3",
+    "cs": "Awtrix3"
   },
   "class": "other",
   "capabilities": [

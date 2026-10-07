@@ -468,6 +468,6 @@ test('AWTRIX NG transformer rejects legacy text fragments', () => {
 test('AWTRIX NG transformer rejects invalid enum values', () => {
   assertUnsupportedField(() => toAwtrixNgNotificationPayload({ textCase: 2 }), 'textCase', 'notification', 'invalid-value');
   assertUnsupportedField(() => toAwtrixNgNotificationPayload({ iconMode: 'push-once' }), 'iconMode', 'notification', 'invalid-value');
-  assertUnsupportedField(() => toAwtrixNgNotificationPayload({ font: 'medium' }), 'font', 'notification', 'invalid-value');
+  assertUnsupportedField(() => toAwtrixNgNotificationPayload({ font: '' }), 'font', 'notification', 'invalid-value');
   assertUnsupportedField(() => toAwtrixNgPushedAppPayload({ lifetimeExpiry: 1 }), 'lifetimeExpiry', 'pushedApp', 'invalid-value');
 });

@@ -49,6 +49,7 @@ test('AWTRIX NG driver compose declares base control capabilities', () => {
     'alarm_generic.indicator2',
     'alarm_generic.indicator3',
     'awtrix_matrix',
+    'dim',
     'awtrixng_weather_overlay',
     'rssi',
     'ip',

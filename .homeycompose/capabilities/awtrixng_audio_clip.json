@@ -1,0 +1,13 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Audio clips",
+    "cs": "Zvukové klipy",
+    "de": "Audioclips",
+    "nl": "Audiofragmenten"
+  },
+  "getable": true,
+  "setable": false,
+  "insights": false,
+  "uiComponent": null
+}

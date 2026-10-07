@@ -68,6 +68,14 @@ const ngDeviceResponse = {
   humidity: 45,
 };
 
+test('TC002 beta device identity is accepted by the NG probe shape', () => {
+  assert.equal(isAwtrixNgDeviceStateResponse({
+    ...ngDeviceResponse,
+    boardType: 'tc002',
+    soc: 'armv7l',
+  }), true);
+});
+
 const awtrix3StatsLikeResponse = {
   bat: 82,
   lux: 120,

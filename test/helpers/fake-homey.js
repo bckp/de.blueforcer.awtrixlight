@@ -6,6 +6,7 @@ const createFakeHomey = () => {
   const clearIntervalCalls = [];
 
   const homey = {
+    flow: { getDeviceTriggerCard: () => ({ getArgumentValues: async () => [], trigger: async () => {} }) },
     __: (key) => key,
     setIntervalCalls,
     clearIntervalCalls,

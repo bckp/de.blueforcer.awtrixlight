@@ -198,6 +198,25 @@ test('AWTRIX NG app order preserves pushed and script apps when changing built-i
   });
 });
 
+test('AWTRIX NG app order preserves the TC002 Status app when built-ins report a null slot', () => {
+  const tc002Apps = [
+    {
+      name: 'Time', enabled: true, inLoop: true, slot: null, present: true, origin: 'builtin',
+    },
+    {
+      name: 'Status', enabled: true, inLoop: true, slot: null, present: true, origin: 'builtin',
+    },
+  ];
+
+  assert.deepEqual(createAwtrixNgAppsOrderPayloadFromBuiltinSettings(tc002Apps, {
+    ...allBuiltinSettings,
+    showBuiltinDate: false,
+  }), {
+    order: ['Time', 'Status'],
+    disabled: ['Date', 'Temperature', 'Humidity', 'Battery'],
+  });
+});
+
 test('AWTRIX NG app order rejects unavailable built-in app when enabling it', () => {
   assert.throws(
     () => createAwtrixNgAppsOrderPayloadFromBuiltinSettings(createAppsInventory(), {

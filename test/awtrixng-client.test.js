@@ -298,6 +298,15 @@ test('AWTRIX NG client maps sounds, apps and reboot routes', async () => {
   }]);
 });
 
+test('synth fx uses the observed audio play payload', async () => {
+  const { client, transport } = createClient();
+  const fx = 'bpm 120; inst lead wave=pulse volume=40; lead: c4 e g c5';
+  assert.deepEqual(await client.playSynthFx(fx), ok);
+  assert.deepEqual(transport.calls, [{
+    method: 'POST', path: '/api/v1/audio/play', body: { fx },
+  }]);
+});
+
 test('AWTRIX NG client maps files list and upload routes', async () => {
   const { client, transport } = createClient();
   const filesResponse = {

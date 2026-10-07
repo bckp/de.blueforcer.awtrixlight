@@ -113,6 +113,19 @@ test('AWTRIX NG icon mapper converts /api/v1/files response files to Homey autoc
   ]);
 });
 
+test('AWTRIX NG icon autocomplete lists a name once when its old JPEG and new GIF coexist', () => {
+  const response = {
+    files: [{ name: 'homey.jpg', size: 100 }, { name: 'homey.gif', size: 200 }],
+    usedBytes: 300,
+    totalBytes: 1048576,
+  };
+
+  assert.deepEqual(toAwtrixNgIconAutocompleteItems(response, labels), [
+    { name: 'Empty', id: '-', description: 'Without icon' },
+    { name: 'homey', id: 'homey' },
+  ]);
+});
+
 test('AWTRIX NG icons list uses GET /api/v1/files semantics via /ICONS directory and supports autocomplete filtering', async () => {
   const client = new FakeIconClient();
   client.listResponses = [{

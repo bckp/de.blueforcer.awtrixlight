@@ -40,11 +40,15 @@ const redactSensitiveHeaders = (headers: AwtrixNgHeaders): AwtrixNgHeaders => Ob
   return result;
 }, {});
 
-const redactSystemCallback = (url: string, data: unknown): unknown => {
-  if (!url.includes('/api/v1/system')) {
-    return data;
+const redactSensitivePayload = (url: string, data: unknown): unknown => {
+  // Audio state and payloads can contain Soundboard's bearer-like file locator.
+  if (url.includes('/api/v1/system') || url.includes('/api/v1/audio')) {
+    return RedactedHeaderValue;
   }
-  return RedactedHeaderValue;
+  if (url.includes('/api/v1/notifications') && isRecord(data) && data.sound !== undefined) {
+    return { ...data, sound: RedactedHeaderValue };
+  }
+  return data;
 };
 
 export default class FetchAwtrixNgHttpTransport implements AwtrixNgHttpTransport {
@@ -198,7 +202,7 @@ export default class FetchAwtrixNgHttpTransport implements AwtrixNgHttpTransport
       url,
       headers: redactSensitiveHeaders(headers),
       query,
-      data: redactSystemCallback(url, data),
+      data: redactSensitivePayload(url, data),
     });
   }
 
@@ -213,7 +217,7 @@ export default class FetchAwtrixNgHttpTransport implements AwtrixNgHttpTransport
       dump: {
         status,
         statusText,
-        data: redactSystemCallback(url, data),
+        data: redactSensitivePayload(url, data),
         headers,
       },
     });

@@ -1,6 +1,5 @@
 import {
   AwtrixNgApiDisplayPatch,
-  AwtrixNgApiFonts,
   AwtrixNgApiIconModes,
   AwtrixNgApiIndicatorPayload,
   AwtrixNgApiNotificationPayload,
@@ -15,8 +14,10 @@ import {
   AwtrixNgApiSettingsPatch,
   AwtrixNgApiSoundPlayPayload,
   AwtrixNgApiTextCases,
+  AwtrixNgApiTextAlignments,
 } from '../Api/Types';
 import { isPlainObject } from '../Support/Guards';
+import { assertAwtrixNgSound } from '../Services/Audio';
 
 export {
   AwtrixNgHomeyPushedAppName,
@@ -87,6 +88,10 @@ export interface AwtrixNgSettingsPatchInput {
   blockNavigation?: boolean;
   uppercase?: boolean;
   transitionEffect?: string;
+  saturation?: number;
+  gamma?: number;
+  colorCorrection?: string | null;
+  colorTint?: string | null;
 }
 
 const pageFieldMap: Record<keyof AwtrixNgApiPagePayload, true> = {
@@ -100,11 +105,12 @@ const pageFieldMap: Record<keyof AwtrixNgApiPagePayload, true> = {
   effectSpeed: true,
   font: true,
   icon: true,
-  iconGap: true,
-  icons: true,
   iconMode: true,
   iconOffsetX: true,
+  iconGap: true,
+  icons: true,
   lineChart: true,
+  layout: true,
   overlay: true,
   palette: true,
   paletteBlend: true,
@@ -119,6 +125,7 @@ const pageFieldMap: Record<keyof AwtrixNgApiPagePayload, true> = {
   textBlinkMs: true,
   textCase: true,
   textCenter: true,
+  textAlign: true,
   textColor: true,
   textFadeMs: true,
   textInFront: true,
@@ -176,6 +183,10 @@ const settingsFieldMap: Record<keyof AwtrixNgSettingsPatchInput, true> = {
   blockNavigation: true,
   transitionEffect: true,
   uppercase: true,
+  saturation: true,
+  gamma: true,
+  colorCorrection: true,
+  colorTint: true,
 };
 
 export const AwtrixNgWritableSettingsFields = Object.keys(settingsFieldMap);
@@ -616,64 +627,208 @@ const assertBooleanField = (input: Record<string, unknown>, field: string, targe
   });
 };
 
-// Bounds verified against the public AWTRIX NG v1.1.2 PayloadParser.cpp.
-const assertIconValues = (input: Record<string, unknown>, target: 'notification' | 'pushedApp'): void => {
-  if (input.iconGap !== undefined
-    && (!Number.isInteger(input.iconGap) || Number(input.iconGap) < 0 || Number(input.iconGap) > 128)) {
-    throw new UnsupportedAwtrixNgPayloadFieldError({
-      field: 'iconGap', target, reason: 'invalid-value', details: 'Expected an integer from 0 to 128.',
-    });
-  }
+const layoutFields = new Set(['version', 'regions', 'backgroundColor', 'effect', 'effectSpeed', 'overlay',
+  'palette', 'paletteBlend', 'paletteSpan', 'paletteSpeed']);
+const regionContents = ['text', 'icon', 'chart', 'progress', 'draw'] as const;
+const regionOptions: Record<typeof regionContents[number], string[]> = {
+  text: ['font', 'color', 'textColor', 'palette', 'paletteBlend', 'paletteSpan', 'paletteSpeed', 'align', 'valign',
+    'scroll', 'repeat', 'textCase', 'textBlinkMs', 'textFadeMs'],
+  icon: ['align', 'valign'],
+  chart: ['color', 'textColor', 'palette', 'paletteBlend', 'paletteSpan', 'paletteSpeed'],
+  progress: ['color', 'textColor', 'palette', 'paletteBlend', 'paletteSpan', 'paletteSpeed', 'trackColor'],
+  draw: ['color', 'textColor', 'font'],
+};
 
-  if (input.icons === undefined) return;
+const invalidLayoutField = (
+  field: string, target: AwtrixNgTransformTarget, details: string,
+  reason: AwtrixNgUnsupportedPayloadFieldReason = 'invalid-value',
+): never => {
+  throw new UnsupportedAwtrixNgPayloadFieldError({
+    field, target, reason, details,
+  });
+};
 
-  if (!Array.isArray(input.icons) || input.icons.length > 4) {
-    throw new UnsupportedAwtrixNgPayloadFieldError({
-      field: 'icons', target, reason: 'invalid-value', details: 'Expected an array of at most four positioned icons.',
-    });
-  }
-
-  input.icons.forEach((item, index) => {
-    const field = `icons[${index}]`;
-    if (!isPlainObject(item)) {
+/** Keep nested validation errors attached to the actual JSON field. */
+const withLayoutPath = (path: string, validate: () => void): void => {
+  try {
+    validate();
+  } catch (error: unknown) {
+    if (error instanceof UnsupportedAwtrixNgPayloadFieldError) {
       throw new UnsupportedAwtrixNgPayloadFieldError({
-        field, target, reason: 'invalid-value', details: 'Expected an icon object.',
+        field: `${path}.${error.field}`, target: error.target, reason: error.reason, details: error.details,
       });
     }
+    throw error;
+  }
+};
 
-    for (const key of Object.keys(item)) {
-      if (key !== 'icon' && key !== 'x' && key !== 'y') {
-        throw new UnsupportedAwtrixNgPayloadFieldError({
-          field: `${field}.${key}`, target, reason: 'unknown-field',
-        });
+const assertLayoutPalette = (value: Record<string, unknown>, target: AwtrixNgTransformTarget): void => {
+  assertPaletteValue(value, target);
+  assertBooleanField(value, 'paletteBlend', target);
+  for (const key of ['paletteSpan', 'paletteSpeed']) assertFiniteNumberField(value, key, target);
+  if (['paletteBlend', 'paletteSpan', 'paletteSpeed'].some((key) => value[key] !== undefined)
+    && value.palette === undefined) {
+    invalidLayoutField('palette', target, 'Palette options require a palette in the same object.');
+  }
+};
+
+const assertLayoutRegion = (region: Record<string, unknown>, target: AwtrixNgTransformTarget): void => {
+  const contents = regionContents.filter((key) => region[key] !== undefined);
+  if (contents.length !== 1) invalidLayoutField('<content>', target, 'A region requires exactly one of text, icon, chart, progress or draw.');
+  const content = contents[0];
+  assertKnownFields(region, new Set(['id', 'box', content, ...regionOptions[content]]), target);
+  if (typeof region.id !== 'string' || region.id.length === 0 || Buffer.byteLength(region.id) > 64) {
+    invalidLayoutField('id', target, 'Region ID must be a non-empty string of at most 64 UTF-8 bytes.');
+  }
+  if (!Array.isArray(region.box) || region.box.length !== 4
+    || !region.box.every((coordinate) => Number.isInteger(coordinate) && coordinate >= 0)
+    || region.box[2] === 0 || region.box[3] === 0) {
+    invalidLayoutField('box', target, 'Expected [x, y, width, height] with non-negative integer coordinates and positive sizes.');
+  }
+  for (const key of ['align', 'valign']) assertStringEnumField(region, key, ['start', 'center', 'end'], target);
+  if (region.font !== undefined && (typeof region.font !== 'string' || region.font.length === 0)) {
+    invalidLayoutField('font', target, 'Expected a font name from device capabilities.');
+  }
+  if (region.color !== undefined && region.textColor !== undefined) {
+    invalidLayoutField('textColor', target, 'Use color or textColor, not both.');
+  }
+  assertLayoutPalette(region, target);
+  if (content === 'text') {
+    assertTextValue(region, target);
+    if (typeof region.scroll === 'string') {
+      assertStringEnumField(region, 'scroll', AwtrixNgApiScrollModes, target);
+    } else {
+      assertScrollValue(region, target);
+    }
+    const scroll = isPlainObject(region.scroll) ? region.scroll : {};
+    for (const [key, max] of [['speed', 1000000], ['holdMs', 1000000], ['gap', 32767]] as const) {
+      if (typeof scroll[key] === 'number' && scroll[key] > max) {
+        invalidLayoutField(`scroll.${key}`, target, `Expected a value no greater than ${max}.`);
       }
     }
-
-    if (typeof item.icon !== 'string' || item.icon.length === 0) {
-      throw new UnsupportedAwtrixNgPayloadFieldError({
-        field: `${field}.icon`, target, reason: 'invalid-value', details: 'Expected a nonempty icon string.',
-      });
-    }
-
-    for (const key of ['x', 'y']) {
-      const value = item[key];
-      if (value !== undefined && (!Number.isInteger(value) || Math.abs(Number(value)) > 65535)) {
-        throw new UnsupportedAwtrixNgPayloadFieldError({
-          field: `${field}.${key}`, target, reason: 'invalid-value', details: 'Expected an integer from -65535 to 65535.',
-        });
+    assertStringEnumField(region, 'textCase', AwtrixNgApiTextCases, target);
+    for (const key of ['repeat', 'textBlinkMs', 'textFadeMs']) {
+      assertFiniteNumberField(region, key, target, true);
+      if (typeof region[key] === 'number' && (region[key] < 0 || (key === 'repeat' && region[key] > 1000000))) {
+        invalidLayoutField(key, target, key === 'repeat' ? 'Expected an integer in the range 0..1000000.' : 'Expected a non-negative integer.');
       }
     }
+  }
+  if (content === 'icon' && (typeof region.icon !== 'string' || region.icon.length === 0)) {
+    invalidLayoutField('icon', target, 'Expected a non-empty icon ID or data URL.');
+  }
+  if (content === 'draw') assertDrawValue(region, target);
+  if (content === 'progress' && (typeof region.progress !== 'number' || !Number.isFinite(region.progress)
+    || region.progress < 0 || region.progress > 100)) {
+    invalidLayoutField('progress', target, 'Expected a number in the range 0..100.');
+  }
+  if (content === 'chart') {
+    if (!isPlainObject(region.chart)) invalidLayoutField('chart', target, 'Expected a chart object.');
+    const chart = region.chart as Record<string, unknown>;
+    withLayoutPath('chart', () => {
+      assertKnownFields(chart, new Set(['values', 'type', 'min', 'max']), target);
+      assertStringEnumField(chart, 'type', ['line', 'bar'], target);
+      if (!Array.isArray(chart.values) || chart.values.length === 0 || chart.values.length > 128
+        || !chart.values.every(Number.isInteger)) invalidLayoutField('values', target, 'Expected 1..128 integer chart points.');
+      if (chart.min !== undefined || chart.max !== undefined) {
+        if (typeof chart.min !== 'number' || typeof chart.max !== 'number'
+          || !Number.isFinite(chart.min) || !Number.isFinite(chart.max) || chart.min >= chart.max) {
+          invalidLayoutField('min', target, 'Set both min and max, with min smaller than max.');
+        }
+      }
+    });
+  }
+};
+
+const assertLayoutValue = (input: Record<string, unknown>, target: 'notification' | 'pushedApp'): void => {
+  if (input.layout === undefined) return;
+  const conflicting = pageFields.find((key) => !['layout', 'durationMs', 'repeat'].includes(key) && input[key] !== undefined);
+  if (conflicting !== undefined) {
+    invalidLayoutField(conflicting, target, 'Drawing fields must be inside layout when a layout is supplied.', 'unsupported-field');
+  }
+  if (!isPlainObject(input.layout)) invalidLayoutField('layout', target, 'Expected a layout object.');
+  const layout = input.layout as Record<string, unknown>;
+  withLayoutPath('layout', () => {
+    assertKnownFields(layout, layoutFields, target);
+    if (layout.version !== 1) invalidLayoutField('version', target, 'Only layout version 1 is supported.');
+    if (!Array.isArray(layout.regions) || layout.regions.length === 0 || layout.regions.length > 16) {
+      invalidLayoutField('regions', target, 'Expected 1..16 regions.');
+    }
+    const ids = new Set<string>();
+    (layout.regions as unknown[]).forEach((region, index) => withLayoutPath(`regions[${index}]`, () => {
+      if (!isPlainObject(region)) invalidLayoutField('<region>', target, 'Expected a region object.');
+      const record = region as Record<string, unknown>;
+      assertLayoutRegion(record, target);
+      if (ids.has(record.id as string)) invalidLayoutField('id', target, 'Region IDs must be unique within the layout.');
+      ids.add(record.id as string);
+    }));
+    if (layout.backgroundColor !== undefined && layout.effect !== undefined) {
+      invalidLayoutField('effect', target, 'An effect cannot be combined with backgroundColor.');
+    }
+    for (const key of ['effect', 'overlay']) {
+      if (layout[key] !== undefined && typeof layout[key] !== 'string') invalidLayoutField(key, target, 'Expected a name from device capabilities.');
+    }
+    if (layout.effectSpeed !== undefined && (typeof layout.effectSpeed !== 'number' || !Number.isFinite(layout.effectSpeed)
+      || layout.effectSpeed < 0.1 || layout.effectSpeed > 10)) {
+      invalidLayoutField('effectSpeed', target, 'Expected a number in the range 0.1..10.');
+    }
+    assertLayoutPalette(layout, target);
   });
 };
 
 const assertPagePayload = (input: Record<string, unknown>, target: 'notification' | 'pushedApp'): void => {
-  assertIconValues(input, target);
+  assertLayoutValue(input, target);
   assertTextValue(input, target);
   assertScrollValue(input, target);
   assertDrawValue(input, target);
   assertPaletteValue(input, target);
   assertStringEnumField(input, 'textCase', AwtrixNgApiTextCases, target);
-  assertStringEnumField(input, 'font', AwtrixNgApiFonts, target);
+  assertStringEnumField(input, 'textAlign', AwtrixNgApiTextAlignments, target);
+  if (input.textAlign !== undefined && input.textCenter !== undefined) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'textAlign', target, reason: 'invalid-value', details: 'Use either textAlign or the legacy textCenter option, not both.',
+    });
+  }
+  if (input.font !== undefined && (typeof input.font !== 'string' || input.font.length === 0)) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'font', target, reason: 'invalid-value', details: 'Expected a non-empty font name advertised by the device.',
+    });
+  }
+  if (input.iconGap !== undefined && (!Number.isInteger(input.iconGap) || Number(input.iconGap) < 0 || Number(input.iconGap) > 128)) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'iconGap', target, reason: 'invalid-value', details: 'Expected an integer from 0 to 128.',
+    });
+  }
+  if (input.icons !== undefined) {
+    if (!Array.isArray(input.icons) || input.icons.length > 4) {
+      throw new UnsupportedAwtrixNgPayloadFieldError({
+        field: 'icons', target, reason: 'invalid-value', details: 'Expected an array of at most four icons.',
+      });
+    }
+    input.icons.forEach((item, index) => {
+      const path = `icons[${index}]`;
+      if (!isPlainObject(item)) {
+        throw new UnsupportedAwtrixNgPayloadFieldError({
+          field: path, target, reason: 'invalid-value', details: 'Expected an icon object.',
+        });
+      }
+      if (typeof item.icon !== 'string' || item.icon.length === 0) {
+        throw new UnsupportedAwtrixNgPayloadFieldError({
+          field: `${path}.icon`, target, reason: 'invalid-value', details: 'Expected a non-empty icon.',
+        });
+      }
+      for (const key of Object.keys(item)) {
+        if (!['icon', 'x', 'y'].includes(key)) {
+          throw new UnsupportedAwtrixNgPayloadFieldError({ field: `${path}.${key}`, target, reason: 'unknown-field' });
+        }
+        if (key !== 'icon' && item[key] !== undefined && (!Number.isInteger(item[key]) || Math.abs(Number(item[key])) > 65535)) {
+          throw new UnsupportedAwtrixNgPayloadFieldError({
+            field: `${path}.${key}`, target, reason: 'invalid-value', details: 'Expected an integer from -65535 to 65535.',
+          });
+        }
+      }
+    });
+  }
   assertStringEnumField(input, 'iconMode', AwtrixNgApiIconModes, target);
   // UNKNOWN: range not documented (durationMs).
   assertFiniteNumberField(input, 'durationMs', target);
@@ -706,6 +861,23 @@ const assertSettingsPatch = (input: Record<string, unknown>): void => {
   assertBooleanField(input, 'autoTransition', 'settings');
   assertBooleanField(input, 'blockNavigation', 'settings');
   assertBooleanField(input, 'uppercase', 'settings');
+  if (input.saturation !== undefined && (!Number.isInteger(input.saturation) || Number(input.saturation) < 0 || Number(input.saturation) > 100)) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'saturation', target: 'settings', reason: 'invalid-value', details: 'Expected an integer from 0 to 100.',
+    });
+  }
+  if (input.gamma !== undefined && (typeof input.gamma !== 'number' || !Number.isFinite(input.gamma) || input.gamma <= 0)) {
+    throw new UnsupportedAwtrixNgPayloadFieldError({
+      field: 'gamma', target: 'settings', reason: 'invalid-value', details: 'Gamma must be a finite number greater than zero.',
+    });
+  }
+  for (const field of ['colorCorrection', 'colorTint']) {
+    if (input[field] !== undefined && input[field] !== null && (typeof input[field] !== 'string' || !/^#[0-9a-f]{6}$/i.test(input[field] as string))) {
+      throw new UnsupportedAwtrixNgPayloadFieldError({
+        field, target: 'settings', reason: 'invalid-value', details: 'Expected #RRGGBB or null to turn off the correction.',
+      });
+    }
+  }
 
   if (input.transitionEffect !== undefined && typeof input.transitionEffect !== 'string') {
     throw new UnsupportedAwtrixNgPayloadFieldError({
@@ -743,6 +915,7 @@ export const toAwtrixNgNotificationPayload = (input: AwtrixNgNotificationInput):
   assertBooleanField(inputRecord, 'stack', 'notification');
   assertBooleanField(inputRecord, 'wakeup', 'notification');
   assertBooleanField(inputRecord, 'soundLoop', 'notification');
+  if (inputRecord.sound !== undefined && typeof inputRecord.sound !== 'number') assertAwtrixNgSound(inputRecord.sound);
 
   return {
     ...input,

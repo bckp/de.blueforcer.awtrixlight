@@ -155,5 +155,23 @@
   "2.2.13": {
     "en": "Added multiple positioned icons (icons) and adjustable icon spacing (iconGap) to AWTRIX NG JSON notifications and custom apps. Requires AWTRIX NG firmware 1.1.2 or newer.",
     "cs": "Přidány ikony s vlastní pozicí (icons) a nastavitelná mezera mezi hlavní ikonou a textem (iconGap) do AWTRIX NG JSON notifikací a vlastních aplikací. Vyžaduje firmware AWTRIX NG 1.1.2 nebo novější."
+  },
+  "2.3.2": {
+    "en": "Private NG test build: manual brightness, panel color settings, script settings and data Flow cards, and named notification dismissal.",
+    "cs": "Soukromá testovací NG verze: ruční jas, nastavení obrazu, Flow pro volby a data skriptů a zrušení pojmenovaných notifikací."
+  },
+  "2.3.3": {
+    "en": "Private NG test build: state Flow triggers for active application, audio and radio changes, and new playback errors. Polling only while the cards are configured.",
+    "cs": "Soukromá testovací NG verze: stavové Flow pro změnu aktivní aplikace, audia a rádia a nové chyby přehrávání. Sledování jen při použití příslušných karet."
+  },
+  "2.3.4": {
+    "en": "Private NG test build: improved title-and-text cards with header color, validated JSON options, clearer names and static fitting text. Existing Flow card IDs retained.",
+    "cs": "Soukromá testovací NG verze: upravené karty nadpis a text s barvou nadpisu, ověřenými JSON options, přesnějšími názvy a statickým krátkým textem. ID stávajících Flow zachována."
+  },
+  "2.3.5": {
+    "en": "Fixed UTF8 in scripts"
+  },
+  "2.3.6": {
+    "en": "Add speech flowcard (TCO02)"
   }
 }
