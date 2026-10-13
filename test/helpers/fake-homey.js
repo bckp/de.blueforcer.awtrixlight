@@ -1,3 +1,5 @@
+const { EventEmitter } = require('node:events');
+
 const createFakeHomey = () => {
   let now = 0;
   let nextTimerId = 1;
@@ -5,8 +7,15 @@ const createFakeHomey = () => {
   const setIntervalCalls = [];
   const clearIntervalCalls = [];
 
+  const flowCards = new Map();
+
   const homey = {
-    flow: { getDeviceTriggerCard: () => ({ getArgumentValues: async () => [], trigger: async () => {} }) },
+    flow: {
+      getDeviceTriggerCard: (id) => {
+        if (!flowCards.has(id)) flowCards.set(id, Object.assign(new EventEmitter(), { getArgumentValues: async () => [], trigger: async () => {} }));
+        return flowCards.get(id);
+      },
+    },
     __: (key) => key,
     setIntervalCalls,
     clearIntervalCalls,

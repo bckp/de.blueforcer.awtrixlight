@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { randomBytes, timingSafeEqual } from 'crypto';
-import { Device, DiscoveryResultMDNSSD } from 'homey';
+import { Device, DiscoveryResultMDNSSD, FlowCardTriggerDevice } from 'homey';
 import path from 'path';
 import AwtrixNgApi, {
   AwtrixNgBasicAuthOptions,
@@ -112,6 +112,14 @@ class AwtrixNgDevice extends Device {
 
   private stateFlowSnapshot?: AwtrixNgStateFlowSnapshot;
 
+  private stateFlowSubscriptions: AwtrixNgStateFlowSubscriptions = {
+    application: false, audio: false, radio: false, error: false,
+  };
+
+  private stateFlowSubscriptionSync: Promise<void> = Promise.resolve();
+
+  private stateFlowUpdateListeners: { card: FlowCardTriggerDevice; listener: () => void }[] = [];
+
   private stateFlowSubscriptionKey?: string;
 
   private stateFlowEpoch = 0;
@@ -180,8 +188,10 @@ class AwtrixNgDevice extends Device {
         `${this.homey.__('states.awtrixNg.initialSynchronizationFailed')}: ${formatAwtrixNgErrorDetails(error)}`,
       );
     } finally {
-      poll.start();
-      this.startStateFlowPoll();
+      if (!this.deleted) {
+        poll.start();
+        await this.startStateFlowPoll().catch(this.error);
+      }
     }
   }
 
@@ -195,8 +205,10 @@ class AwtrixNgDevice extends Device {
     this.deleted = true;
     this.stateFlowEpoch += 1;
     this.stateFlowPoll?.stop();
-    await this.clearOwnedButtonCallbackOnDelete();
     this.poll?.stop();
+    for (const { card, listener } of this.stateFlowUpdateListeners) card.removeListener('update', listener);
+    this.stateFlowUpdateListeners = [];
+    await this.clearOwnedButtonCallbackOnDelete();
     this.icons?.invalidate();
   }
 
@@ -382,27 +394,55 @@ class AwtrixNgDevice extends Device {
     return this.api;
   }
 
-  private startStateFlowPoll(): void {
-    if (this.deleted || this.stateFlowPoll?.isActive()) return;
+  private async startStateFlowPoll(): Promise<void> {
+    if (this.deleted || this.stateFlowUpdateListeners.length > 0) return;
     this.stateFlowPoll = new Poll(() => this.refreshStateFlows(), this.homey, {
       intervalMs: StateFlowPollIntervalMs,
       onError: (error: unknown) => this.error(error),
     });
-    this.stateFlowPoll.start();
+    for (const id of Object.values(AwtrixNgStateFlowCardIds)) {
+      const card = this.homey.flow.getDeviceTriggerCard(id);
+      const listener = () => {
+        this.synchronizeStateFlowSubscriptions().catch(this.error);
+      };
+      card.on('update', listener);
+      this.stateFlowUpdateListeners.push({ card, listener });
+    }
+    await this.synchronizeStateFlowSubscriptions();
+  }
+
+  private synchronizeStateFlowSubscriptions(): Promise<void> {
+    const sync = async () => {
+      if (this.deleted) return;
+      const entries = await Promise.all(Object.entries(AwtrixNgStateFlowCardIds).map(async ([key, id]) => (
+        [key, (await this.homey.flow.getDeviceTriggerCard(id).getArgumentValues(this)).length > 0] as const
+      )));
+      if (this.deleted) return;
+      const subscriptions = Object.fromEntries(entries) as unknown as AwtrixNgStateFlowSubscriptions;
+      const subscriptionKey = JSON.stringify(subscriptions);
+      if (subscriptionKey !== this.stateFlowSubscriptionKey) {
+        this.stateFlowEpoch += 1;
+        this.stateFlowSnapshot = undefined;
+      }
+      this.stateFlowSubscriptions = subscriptions;
+      this.stateFlowSubscriptionKey = subscriptionKey;
+      if (Object.values(subscriptions).some(Boolean)) {
+        if (!this.stateFlowPoll?.isActive()) this.stateFlowPoll?.start();
+      } else {
+        this.stateFlowPoll?.stop();
+      }
+    };
+    // Every caller reports its error; allow later updates to recover a failed refresh.
+    this.stateFlowSubscriptionSync = this.stateFlowSubscriptionSync.then(sync, sync);
+    return this.stateFlowSubscriptionSync;
   }
 
   private async refreshStateFlows(): Promise<void> {
     const epoch = this.stateFlowEpoch;
     let next: AwtrixNgStateFlowSnapshot;
-    const subscriptions = {} as AwtrixNgStateFlowSubscriptions;
+    const subscriptions = this.stateFlowSubscriptions;
+    if (this.deleted || !Object.values(subscriptions).some(Boolean)) return;
     try {
-      for (const [key, id] of Object.entries(AwtrixNgStateFlowCardIds)) {
-        subscriptions[key as keyof AwtrixNgStateFlowSubscriptions] = (await this.homey.flow.getDeviceTriggerCard(id).getArgumentValues(this)).length > 0;
-      }
-      const subscriptionKey = JSON.stringify(subscriptions);
-      if (subscriptionKey !== this.stateFlowSubscriptionKey) this.stateFlowSnapshot = undefined;
-      this.stateFlowSubscriptionKey = subscriptionKey;
-      if (!Object.values(subscriptions).some(Boolean)) return;
       next = await this.getApi().readStateFlowSnapshot(this.getData().id as string, subscriptions);
     } catch (error: unknown) {
       if (epoch === this.stateFlowEpoch) this.stateFlowSnapshot = undefined;
@@ -533,6 +573,10 @@ class AwtrixNgDevice extends Device {
     await this.getApi().saveRadioStation(name, url);
   }
 
+  async getStoredMp3Choices(): Promise<{ id: string; name: string }[]> {
+    return this.getApi().readStoredMp3Choices();
+  }
+
   async playStoredSound(name: string): Promise<void> {
     await this.getApi().playStoredSound(name);
   }
@@ -585,7 +629,9 @@ class AwtrixNgDevice extends Device {
   }
 
   async refreshDeviceState(options: { allowAddCapabilities: boolean }): Promise<AwtrixNgDeviceProbeResult | undefined> {
-    const result = await this.getApi().probe();
+    if (this.deleted) return undefined;
+    const result = await this.getApi().probe(this.getData().id as string);
+    if (this.deleted) return undefined;
 
     if (result.status === 'detected') {
       await this.applyDeviceState(result.device, options.allowAddCapabilities);
@@ -1050,7 +1096,9 @@ class AwtrixNgDevice extends Device {
       this.getAuthFromSettingsSnapshot(settings),
     );
 
+    if (this.deleted) return false;
     await this.commitConnection(connection, api, true);
+    if (this.deleted) return false;
     await this.reconcileButtonCallbackSafely(api, settings);
     this.ensurePollingStarted();
 
@@ -1083,12 +1131,13 @@ class AwtrixNgDevice extends Device {
   }
 
   private ensurePollingStarted(): void {
+    if (this.deleted) return;
     const poll = this.poll || this.initializePoll();
 
     if (!poll.isActive()) {
       poll.start();
     }
-    this.startStateFlowPoll();
+    this.startStateFlowPoll().catch(this.error);
   }
 
   /**

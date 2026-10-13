@@ -9,7 +9,7 @@ const { AwtrixNgApiError } = require('../.homeybuild/lib/awtrixng/Api/ErrorParse
 const root = path.resolve(__dirname, '..');
 
 const createDeviceState = (overrides = {}) => ({
-  uid: '48e7291211d8',
+  uid: 'aabbccddeeff',
   version: '1.0.4-dev',
   boardType: 'awtrixng',
   ipAddress: '192.0.2.60',

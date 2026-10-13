@@ -383,3 +383,37 @@ test('RAW returns text and empty responses with actual HTTP status and preserves
   await assert.rejects(client.sendRawCommand('POST', '/api/v1/test'), (error) => error.httpStatus === 422
     && error.code === 'invalid' && error.message === 'Bad value' && error.field === 'futureField');
 });
+
+test('stored MP3 autocomplete reads the clock files, filters extensions and refreshes each lookup', async () => {
+  let files = [{ name: 'Zed.mp3' }, { name: 'door-bell.MP3' }, { name: 'ignore.txt' }, { name: 'Zed.mp3' }];
+  const { api, calls } = createApi({ 'GET /api/v1/files': () => ({ files }) });
+  assert.deepEqual(await api.readStoredMp3Choices(), [{ id: 'door-bell', name: 'door-bell' }, { id: 'Zed', name: 'Zed' }]);
+  assert.deepEqual(calls.at(-1).query, { dir: '/MP3' });
+  files = [{ name: 'New.mp3' }];
+  assert.deepEqual(await api.readStoredMp3Choices(), [{ id: 'New', name: 'New' }]);
+  files = [];
+  assert.deepEqual(await api.readStoredMp3Choices(), []);
+});
+
+test('stored MP3 autocomplete rejects malformed lists and unsupported devices and propagates HTTP errors', async () => {
+  for (const response of [{}, { files: [null] }, { files: [{ name: '' }] }]) {
+    const { api } = createApi({ 'GET /api/v1/files': response });
+    await assert.rejects(api.readStoredMp3Choices(), /files array/);
+  }
+  const unsupported = createApi({ 'GET /api/v1/capabilities': { ...caps, audio: { ...caps.audio, mp3: false } } });
+  await assert.rejects(unsupported.api.readStoredMp3Choices(), /stored MP3/);
+  assert.equal(unsupported.calls.some((call) => call.path === '/api/v1/files'), false);
+  const { api } = createApi({
+    'GET /api/v1/files': () => {
+      throw new AwtrixNgHttpError({
+        method: 'GET',
+        url: 'http://192.0.2.10/api/v1/files',
+        status: 403,
+        message: 'Denied',
+        rawBody: { error: { code: 'forbidden', message: 'Access denied', field: 'dir' } },
+      });
+    },
+  });
+  await assert.rejects(api.readStoredMp3Choices(), (error) => error.httpStatus === 403
+    && error.code === 'forbidden' && error.field === 'dir');
+});

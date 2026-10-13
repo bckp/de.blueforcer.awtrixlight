@@ -27,7 +27,7 @@ import { AwtrixNgAudioGroup, AwtrixNgRadioStation } from '../Services/Audio';
 
 export type AwtrixNgIndicatorId = 1 | 2 | 3;
 
-export type AwtrixNgFileDirectory = '/ICONS' | '/MELODIES' | '/PALETTES';
+export type AwtrixNgFileDirectory = '/ICONS' | '/MELODIES' | '/PALETTES' | '/MP3';
 
 export interface AwtrixNgFileUploadRequest<TBody = unknown> {
   dir: AwtrixNgFileDirectory;
@@ -44,7 +44,9 @@ export default class AwtrixNgClient {
 
   async sendRawCommand(method: AwtrixNgHttpRequest['method'], path: string, body?: string): Promise<{ status: number; response: string }> {
     try {
-      const result = await this.#transport.request({ method, path, body });
+      const result = await this.#transport.request({
+        method, path, body, redactDebug: true,
+      });
       return { status: result.status, response: typeof result.data === 'string' ? result.data : JSON.stringify(result.data) ?? '' };
     } catch (error: unknown) {
       if (error instanceof AwtrixNgHttpError) throw parseAwtrixNgApiError(error);

@@ -267,10 +267,13 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
 
   // ---- identity / availability -------------------------------------------
 
-  async probe(): Promise<AwtrixNgDeviceProbeResult> {
+  async probe(expectedUid?: string): Promise<AwtrixNgDeviceProbeResult> {
     const result = await probeAwtrixNgDevice(this.#client);
 
     if (result.status === 'detected') {
+      if (expectedUid !== undefined && result.device.uid !== expectedUid) {
+        throw new AwtrixNgDeviceIdentityMismatchError(expectedUid, result.device.uid);
+      }
       this.#firmwareVersion = result.device.version;
     }
 
@@ -283,7 +286,7 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
    * AwtrixNgDeviceIdentityMismatchError when the address answers as a different device.
    */
   async verifyIdentity(expectedUid: string): Promise<AwtrixNgDetectedDeviceProbeResult> {
-    const result = await this.probe();
+    const result = await this.probe(expectedUid);
 
     if (result.status === 'auth-required' || result.status === 'offline') {
       throw result.error;
@@ -295,10 +298,6 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
         expectedShape: 'a valid AWTRIX NG device state object',
         actualValue: result.rawResponse,
       });
-    }
-
-    if (result.device.uid !== expectedUid) {
-      throw new AwtrixNgDeviceIdentityMismatchError(expectedUid, result.device.uid);
     }
 
     return result;
@@ -724,6 +723,19 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     });
     this.#stationWrites = write.then(() => undefined, () => undefined);
     await write;
+  }
+
+  async readStoredMp3Choices(): Promise<{ id: string; name: string }[]> {
+    const caps = await this.requireGroupAudio();
+    if (caps.audio?.mp3 !== true) throw new Error('This AWTRIX NG device does not support stored MP3 playback.');
+    const response = await this.#client.listFiles('/MP3');
+    if (!isPlainObject(response) || !Array.isArray(response.files)
+      || !response.files.every((file) => isPlainObject(file) && typeof file.name === 'string' && file.name.length > 0)) {
+      throw new AwtrixNgInvalidResponseError({ endpoint: '/api/v1/files', expectedShape: 'a files array with non-empty file names', actualValue: response });
+    }
+    return [...new Set(response.files.filter((file) => /\.mp3$/i.test(file.name))
+      .map((file) => file.name.slice(0, -4)))].sort((a, b) => a.localeCompare(b))
+      .map((name) => ({ id: name, name }));
   }
 
   async playStoredSound(name: string): Promise<void> {

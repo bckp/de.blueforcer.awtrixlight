@@ -169,12 +169,15 @@
     "cs": "Soukromá testovací NG verze: upravené karty nadpis a text s barvou nadpisu, ověřenými JSON options, přesnějšími názvy a statickým krátkým textem. ID stávajících Flow zachována."
   },
   "2.3.5": {
-    "en": "Fixed UTF8 in scripts"
+    "en": "Fixed UTF8 in scripts",
+    "cs": "Opraveno ověřování délky textů skriptů podle bajtů UTF-8."
   },
   "2.3.6": {
-    "en": "Add speech flowcard (TCO02)"
+    "en": "Add speech flowcard (TCO02)",
+    "cs": "Přidána Flow karta pro přečtení textu na podporovaných zařízeních TC002."
   },
   "2.3.7": {
-    "en": "Add RAW and MP3 flowcard"
+    "en": "Add RAW and MP3 flowcard",
+    "cs": "Přidány Flow karty pro RAW HTTP příkazy a přehrávání MP3 uložených v hodinách."
   }
 }

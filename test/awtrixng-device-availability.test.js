@@ -440,9 +440,8 @@ test('AWTRIX NG starts polling and preserves API error details when initial sett
   assert.deepEqual(calls.setUnavailable, [
     'states.awtrixNg.initialSynchronizationFailed: invalid brightness | field: brightness | code: validationFailed | HTTP status: 422',
   ]);
-  assert.equal(homey.setIntervalCalls.length, 2);
+  assert.equal(homey.setIntervalCalls.length, 1);
   assert.equal(homey.setIntervalCalls[0].intervalMs, 60000);
-  assert.equal(homey.setIntervalCalls[1].intervalMs, 5000);
   assert.equal(awtrixNgDevice.poll.isActive(), true);
 
   const pollingError = calls.error[0];
@@ -581,4 +580,43 @@ test('AWTRIX NG onDeleted stops polling and clears the icon cache timer', async 
   await awtrixNgDevice.onDeleted();
 
   assert.deepEqual(calls, ['poll.stop', 'icons.invalidate']);
+});
+
+test('NG startup and normal polling reject a different device UID before state or remote writes', async () => {
+  const requests = [];
+  const foreign = { ...fullDeviceState, uid: '112233445566', version: '1.2.0' };
+  const transport = {
+    async request(request) {
+      requests.push(request);
+      return { status: 200, headers: {}, data: foreign };
+    },
+  };
+  const { awtrixNgDevice: clock, calls } = createAwtrixNgDeviceHarness(transport);
+  await clock.onInit();
+  assert.equal(calls.setAvailable.length, 0);
+  assert.equal(calls.setCapabilityValue.length, 0);
+  assert.match(calls.setUnavailable[0], /identity mismatch/);
+  assert.deepEqual(requests.map((request) => request.path), ['/api/v1/device']);
+  requests.length = 0;
+  await assert.rejects(clock.refreshDeviceState({ allowAddCapabilities: false }), /identity mismatch/);
+  assert.equal(calls.setAvailable.length, 0);
+  assert.equal(calls.setCapabilityValue.length, 0);
+  assert.deepEqual(requests.map((request) => request.method), ['GET']);
+});
+
+test('a device deleted during a normal refresh receives no availability or capability writes', async () => {
+  const { awtrixNgDevice: clock, calls } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
+  let release;
+  clock.api = {
+    probe: () => new Promise((resolve) => {
+      release = resolve;
+    }),
+  };
+  clock.clearOwnedButtonCallbackOnDelete = async () => {};
+  const pending = clock.refreshDeviceState({ allowAddCapabilities: false });
+  await clock.onDeleted();
+  release({ status: 'detected', device: fullDeviceState });
+  assert.equal(await pending, undefined);
+  assert.equal(calls.setAvailable.length, 0);
+  assert.equal(calls.setCapabilityValue.length, 0);
 });

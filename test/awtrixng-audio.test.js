@@ -174,6 +174,6 @@ test('Soundboard resolves fresh metadata by ID and exposes only MP3 choices', as
   assert.equal(await resolveSoundboardMp3Url(soundboard([{ ...mp3, path: `/${mp3.path}` }]), 'http://192.0.2.40', mp3.id), `http://192.0.2.40/app/com.athom.soundboard/${mp3.path}`);
   await assert.rejects(getSoundboardMp3s(soundboard([], false)), /Install Soundboard/);
   await assert.rejects(resolveSoundboardMp3Url(soundboard([]), '192.0.2.40', mp3.id), /Select the sound again/);
-  await assert.rejects(resolveSoundboardMp3Url(soundboard([{ ...mp3, path: '../secret.mp3' }]), '192.0.2.40', mp3.id), /unsupported MP3 file path/);
+  await assert.rejects(resolveSoundboardMp3Url(soundboard([{ ...mp3, path: '../secret.mp3' }]), '192.0.2.40', mp3.id), /unsupported audio file path/);
   await assert.rejects(getSoundboardMp3s(soundboard([{ name: 'bad' }])), /invalid sound list/);
 });

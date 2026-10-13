@@ -1,3 +1,4 @@
+/* eslint-disable mocha/handle-done-callback -- node:test supplies a TestContext. */
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
@@ -17,17 +18,18 @@ const createRecordingFetch = (responseFactory) => {
       throw mockedResponse;
     }
 
-    return {
-      ok: mockedResponse.status >= 200 && mockedResponse.status < 300,
+    const body = mockedResponse.data === undefined ? null : new ReadableStream({
+      start(controller) {
+        const text = typeof mockedResponse.data === 'string' ? mockedResponse.data : JSON.stringify(mockedResponse.data);
+        controller.enqueue(new TextEncoder().encode(text));
+        controller.close();
+      },
+    });
+    return new Response(body, {
       status: mockedResponse.status,
       statusText: mockedResponse.statusText || 'OK',
-      headers: new Headers(mockedResponse.headers || {}),
-      text: async () => {
-        if (typeof mockedResponse.data === 'string') return mockedResponse.data;
-        return JSON.stringify(mockedResponse.data);
-      },
-      arrayBuffer: async () => new ArrayBuffer(0),
-    };
+      headers: mockedResponse.headers || {},
+    });
   };
 
   fetchMock.calls = calls;
@@ -530,4 +532,117 @@ test('fetch AWTRIX NG transport preserves the redirect response', async () => {
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test('NG timeout includes stalled JSON, text and binary body reads and always clears the deadline', { timeout: 1000 }, async (context) => {
+  for (const responseType of ['json', 'text', 'binary']) {
+    let aborted = false;
+    context.mock.method(global, 'fetch', async (url, config) => {
+      const body = new ReadableStream({
+        start(controller) {
+          config.signal.addEventListener('abort', () => {
+            aborted = true; controller.error(config.signal.reason);
+          }, { once: true });
+        },
+      });
+      return new Response(body, { status: 200 });
+    });
+    const transport = new FetchAwtrixNgHttpTransport({ baseUrl: 'http://192.0.2.10', timeoutMs: 10 });
+    await assert.rejects(transport.request({ method: 'GET', path: '/api/v1/device', responseType }), /Timeout/);
+    assert.equal(aborted, true);
+  }
+});
+
+test('NG transport never follows redirects, including authenticated requests', async (context) => {
+  let sent;
+  context.mock.method(global, 'fetch', async (url, config) => {
+    sent = config;
+    return new Response('', { status: 302, headers: { Location: 'http://192.0.2.20/other' } });
+  });
+  const transport = new FetchAwtrixNgHttpTransport({ baseUrl: 'http://192.0.2.10', auth: { username: 'synthetic', password: 'synthetic' } });
+  await assert.rejects(transport.request({ method: 'GET', path: '/api/v1/device' }), (error) => error.status === 302);
+  assert.equal(sent.redirect, 'manual');
+});
+
+test('NG response limit rejects an oversized declared body before reading and preserves HTTP details', async (context) => {
+  let signal;
+  let reads = 0;
+  context.mock.method(global, 'fetch', async (url, config) => {
+    signal = config.signal;
+    return {
+      status: 403,
+      headers: new Headers({ 'Content-Length': '33', 'X-Result': 'synthetic' }),
+      body: {
+        getReader: () => {
+          reads += 1; throw new Error('Should not read');
+        },
+      },
+    };
+  });
+  const transport = new FetchAwtrixNgHttpTransport({ baseUrl: 'http://192.0.2.10', maxResponseBytes: 32 });
+  await assert.rejects(transport.request({ method: 'GET', path: '/api/v1/files' }), (error) => error.status === 403
+    && error.headers['x-result'] === 'synthetic' && /32-byte limit/.test(error.message));
+  assert.equal(reads, 0);
+  assert.equal(signal.aborted, true);
+});
+
+test('NG counts streamed UTF-8 bytes with absent, false or compressed-length headers for every response type', async (context) => {
+  for (const contentLength of [undefined, '2']) {
+    for (const responseType of ['json', 'text', 'binary']) {
+      let signal;
+      context.mock.method(global, 'fetch', async (url, config) => {
+        signal = config.signal;
+        const headers = contentLength === undefined ? {} : { 'Content-Length': contentLength, 'Content-Encoding': 'gzip' };
+        return new Response(new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('ŽŽ'));
+            controller.enqueue(new TextEncoder().encode('🐱'));
+            controller.close();
+          },
+        }), { headers });
+      });
+      const transport = new FetchAwtrixNgHttpTransport({ baseUrl: 'http://192.0.2.10', maxResponseBytes: 7 });
+      await assert.rejects(transport.request({ method: 'GET', path: '/api/v1/device', responseType }), /7-byte limit/);
+      assert.equal(signal.aborted, true);
+    }
+  }
+});
+
+test('NG accepts exact limits, split UTF-8, binary bytes, RAW text and empty responses without truncation', async (context) => {
+  const bytes = new TextEncoder().encode('Ž🐱');
+  const transport = new FetchAwtrixNgHttpTransport({ baseUrl: 'http://192.0.2.10', maxResponseBytes: bytes.length });
+  context.mock.method(global, 'fetch', async () => new Response(new ReadableStream({
+    start(controller) {
+      for (const byte of bytes) controller.enqueue(Uint8Array.of(byte));
+      controller.close();
+    },
+  })));
+  assert.equal((await transport.request({ method: 'GET', path: '/api/v1/device', responseType: 'text' })).data, 'Ž🐱');
+  assert.deepEqual(new Uint8Array((await transport.request({ method: 'GET', path: '/api/v1/device', responseType: 'binary' })).data), bytes);
+  assert.equal((await transport.request({ method: 'GET', path: '/api/v1/device' })).data, 'Ž🐱');
+  context.mock.method(global, 'fetch', async () => new Response('{"n":0}', { headers: { 'Content-Length': '7' } }));
+  const json = new FetchAwtrixNgHttpTransport({ baseUrl: 'http://192.0.2.10', maxResponseBytes: 7 });
+  assert.deepEqual((await json.request({ method: 'GET', path: '/api/v1/device' })).data, { n: 0 });
+  context.mock.method(global, 'fetch', async () => new Response(null, { status: 204 }));
+  assert.equal((await json.request({ method: 'DELETE', path: '/api/v1/apps/test' })).data, undefined);
+});
+
+test('NG oversized RAW responses fail without exposing payload/query in debug logs, and later requests recover', async (context) => {
+  // eslint-disable-next-line global-require
+  const Client = require('../.homeybuild/lib/awtrixng/Api/Client').default;
+  const secret = 'synthetic-callback-secret';
+  const logs = [];
+  const transport = new FetchAwtrixNgHttpTransport({
+    baseUrl: 'http://192.0.2.10',
+    maxResponseBytes: 8,
+    debug: true,
+    log: (entry) => logs.push(entry),
+  });
+  const client = new Client(transport);
+  context.mock.method(global, 'fetch', async () => new Response(secret));
+  await assert.rejects(client.sendRawCommand('GET', `/api/v1/system?secret=${secret}`),
+    (error) => error.httpStatus === 200 && /8-byte limit/.test(error.message));
+  assert.equal(JSON.stringify(logs).includes(secret), false);
+  context.mock.method(global, 'fetch', async () => new Response('{"ok":1}'));
+  assert.deepEqual(await client.sendRawCommand('GET', '/api/v1/device'), { status: 200, response: '{"ok":1}' });
 });

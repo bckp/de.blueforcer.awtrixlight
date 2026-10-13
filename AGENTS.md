@@ -24,9 +24,11 @@ it. Re-reporting them as findings wastes a review cycle.
   independent drivers. Duplication between them is intentional. No shared class, no shared
   transport, no import across the two lib layers. `app.ts` and
   `drivers/shared-flow-actions.ts` keep their own guard copies for the same reason.
-  - The one owner-approved exception (update-plan-3, M6): `lib/shared/` may contain
+  - Owner-approved shared infrastructure (update-plan-3, M6; existing concurrency
+    utility confirmed during the October 2026 review): `lib/shared/` may contain
     exclusively protocol-agnostic infrastructure with no knowledge of the AWTRIX 3/NG APIs -
-    currently only `Poll` (+ `TimerHost`). Anything else requires explicit owner approval.
+    currently `Poll` (+ `TimerHost`) and the `runWithConcurrencyLimit` function in
+    `Concurrency.ts`. Anything else requires explicit owner approval.
     `lib/shared` must not import `homey`, anything from `drivers/` or from either protocol
     lib layer, and must not contain any protocol type (guarded by
     `test/shared-lib-structure.test.js`).
@@ -64,6 +66,15 @@ it. Re-reporting them as findings wastes a review cycle.
   This covers `onAdded()` in both drivers and the `button.rediscover` listener: a successful
   rediscovery is not reported as failed just because the `ip` capability write failed. They
   are awaited with `.catch(this.error)` so nothing leaks as an unhandled rejection.
+
+**Privileged RAW HTTP access**
+
+- Owner-approved exception to the callback plan's no-Flow-token rule: the NG RAW HTTP
+  card deliberately returns unredacted device responses and firmware errors, including
+  system/callback secrets when the owner explicitly requests them. It uses the paired
+  device credentials. RAW system writes deliberately bypass managed callback ownership
+  checks. The card hint and maintainer guide must explain this privileged behavior.
+  Debug transport logs remain redacted. Do not silently redact RAW payloads or responses.
 
 **API contracts**
 

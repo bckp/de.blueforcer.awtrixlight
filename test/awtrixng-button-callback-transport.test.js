@@ -72,3 +72,36 @@ test('system debug logger redacts a callback URL echoed inside an API error body
     global.fetch = originalFetch;
   }
 });
+
+test('privileged RAW system aliases and query secrets stay out of logs while responses and errors remain intact', async () => {
+  // eslint-disable-next-line global-require
+  const Client = require('../.homeybuild/lib/awtrixng/Api/Client').default;
+  const originalFetch = global.fetch;
+  const secret = 'synthetic-callback-secret';
+  const logs = [];
+  const sent = [];
+  const transport = new FetchTransport({ baseUrl: 'http://192.0.2.10', debug: true, log: (entry) => logs.push(entry) });
+  const client = new Client(transport);
+  global.fetch = async (url, config) => {
+    sent.push({ url, body: config.body });
+    return new Response(JSON.stringify({ buttonCallback: secret }), { status: 200, headers: { 'X-Secret': secret } });
+  };
+  try {
+    for (const endpoint of ['/api/v1/system', '/api/v1/%73ystem', '/api/v1/%2573ystem']) {
+      const path = `${endpoint}?secret=${secret}`;
+      const body = JSON.stringify({ buttonCallback: secret });
+      const result = await client.sendRawCommand('PUT', path, body);
+      assert.equal(JSON.parse(result.response).buttonCallback, secret);
+      assert.equal(sent.at(-1).url, `http://192.0.2.10${path}`);
+      assert.equal(sent.at(-1).body, body);
+    }
+    global.fetch = async () => new Response(JSON.stringify({ error: { code: 'invalid', message: secret, field: 'buttonCallback' } }), { status: 422 });
+    await assert.rejects(client.sendRawCommand('PUT', `/api/v1/%73ystem?secret=${secret}`, '{}'),
+      (error) => error.httpStatus === 422 && error.message === secret && error.field === 'buttonCallback');
+    assert.equal(JSON.stringify(logs).includes(secret), false);
+    assert.equal(JSON.stringify(logs).includes('%73ystem'), false);
+    assert.equal(logs[0].url, '<redacted>');
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

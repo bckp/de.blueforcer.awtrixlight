@@ -4,7 +4,7 @@ const test = require('node:test');
 
 const { createFakeHomey } = require('./helpers/fake-homey');
 
-const expectedUid = '48e7291211d8';
+const expectedUid = 'aabbccddeeff';
 
 const deferred = () => {
   let resolve;
@@ -1288,7 +1288,7 @@ test('AWTRIX NG enables an empty callback with one stable token and does not log
   const token = harness.store.get('buttonCallbackToken');
   const url = harness.store.get('managedButtonCallbackUrl');
   assert.match(token, /^[a-f0-9]{64}$/);
-  assert.match(url, /^http:\/\/192\.0\.2\.2:8080\/api\/app\/de\.blueforcer\.awtrixlight\/awtrixng\/button\/48e7291211d8\//);
+  assert.match(url, /^http:\/\/192\.0\.2\.2:8080\/api\/app\/de\.blueforcer\.awtrixlight\/awtrixng\/button\/aabbccddeeff\//);
   assert.deepEqual(harness.requestLog(), ['GET /api/v1/system', 'PUT /api/v1/system']);
   assert.equal(JSON.stringify(harness.logs).includes(token), false);
   assert.equal(JSON.stringify(harness.logs).includes(url), false);
@@ -1320,7 +1320,7 @@ test('AWTRIX NG refuses a foreign callback and never overwrites it', async () =>
 
 test('AWTRIX NG disables only a callback it owns and accepts token checks per device', async () => {
   const token = 'a'.repeat(64);
-  const ownedUrl = `http://192.0.2.2:8080/api/app/de.blueforcer.awtrixlight/awtrixng/button/48e7291211d8/${token}`;
+  const ownedUrl = `http://192.0.2.2:8080/api/app/de.blueforcer.awtrixlight/awtrixng/button/aabbccddeeff/${token}`;
   const harness = createButtonCallbackHarness({
     storeEntries: [
       ['baseUrl', 'http://192.0.2.10:80'],

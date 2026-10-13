@@ -28,7 +28,7 @@ export const getSoundboardAudioFiles = async (api: SoundboardApi): Promise<Sound
 
 const soundboardFileUrl = (sound: SoundboardSound, address: string, extensions: string[]): string => {
   const path = sound.path.replace(/^\//, '');
-  if (!extensions.some((extension) => path === `userdata/${sound.id}.${extension}`)) throw new Error('Soundboard returned an unsupported MP3 file path.');
+  if (!extensions.some((extension) => path === `userdata/${sound.id}.${extension}`)) throw new Error('Soundboard returned an unsupported audio file path.');
   const base = new URL(address.includes('://') ? address : `http://${address}`);
   if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password || base.pathname !== '/' || base.search || base.hash) {
     throw new Error('Homey returned an invalid local address.');

@@ -37,7 +37,7 @@ Neposílají se do AWTRIX NG API jako device settings.
 
 Na fyzickém AWTRIX NG zařízení bylo 5. srpna 2026 ověřeno, že mDNS TXT hodnota
 `id` služby `_awtrixng._tcp` je shodná s `uid` vráceným z `GET /api/v1/device`.
-Konkrétní ověřená hodnota byla v obou odpovědích `48e7291211d8`.
+UID se v obou odpovědích shodovalo; v příkladech používáme syntetické `aabbccddeeff`.
 
 Driver proto přiřazuje Homey discovery výsledky k uloženému zařízení podle tohoto ID.
 Před přepnutím na nově objevenou adresu navíc vytvoří dočasného klienta, provede
@@ -396,8 +396,11 @@ Podklady: [HTTP API](https://ang.blueforcer.de/tc002/reference/http/).
 ### Zvuky uložené v hodinách
 
 Karta `awtrixng_audio_stored` přehraje jednou uložený MP3 zvuk přes
-`POST /api/v1/audio/play` s tělem `{"file":"ding"}`. Zadejte název bez `.mp3`,
-ne cestu `/MP3/ding.mp3`. Zvuky skriptů lze zadat jako `Racer/boost`.
+`POST /api/v1/audio/play` s tělem `{"file":"ding"}`. Autocomplete načítá seznam přes `GET /api/v1/files?dir=/MP3` z vybraných hodin,
+nabízí pouze MP3, seřadí názvy a při každém hledání seznam obnoví. Vybraný
+název odešle bez přípony `.mp3`. Původní Flow s ručně zadaným názvem
+(včetně `Racer/boost`) fungují dál. Seznam nezahrnuje zvuky ze složek skriptů;
+ty lze nově přehrát přes RAW příkaz.
 Podle aktuální dokumentace mají části názvu 1–32 znaků z `A-Za-z0-9_-`.
 Karta vyžaduje nové audio API a `audio.mp3 === true`; nepotřebuje `audio.url`.
 Marker `awtrixng_audio_stored` se přidá při párování či inicializaci a podpora
@@ -425,3 +428,52 @@ Příklad samostatného přehrání uloženého zvuku:
 - JSON: `{"file":"ding"}`
 
 Podklady: [HTTP API a pravidla uložených zvuků](https://ang.blueforcer.de/tc002/reference/http/).
+
+RAW karta je privilegovaný přístup s přihlašovacími údaji vybraných hodin.
+Odpovědi ani chyby firmware nerediguje: GET system může vrátit callback URL
+s tokenem a API může zpřístupnit další tajné údaje. RAW zápis do system obchází
+spravovanou kontrolu vlastnictví callbacku. Tyto výstupy nejsou určené ke sdílení
+s dalšími uživateli nebo službami. RAW diagnostika zaznamená jen metodu a HTTP status; endpoint, query, hlavičky, tělo i detail chyby jsou redigované.
+Toto chování je záměrná výjimka schválená vlastníkem; RAW není neautentizovaný
+Homey App API endpoint.
+
+URL MP3 karta nadále čeká na dokončení přehrání nejvýše 120 sekund, aby zachovala
+stávající pořadí Flow a předání pozdějších chyb stahování. Přesný maximální čas
+akčního run listeneru není v dostupných oficiálních Homey SDK podkladech uveden;
+kompatibilita s případným kratším limitem Homey core zůstává neověřená. Nezaměňovat
+120 sekund aplikačního monitoru s doloženým limitem Homey. Návrat hned po startu
+by změnil chování stávajících Flow a vyžaduje samostatnou volbu kontraktu.
+
+Při inicializaci a běžném pollingu NG se UID z odpovědi porovnává s UID spárovaných
+hodin dříve, než se použije stav nebo zapisují aplikace/callback. Odpověď jiných
+hodin vyvolá identity mismatch; offline a auth výsledky probe si zachovávají
+stávající klasifikaci. UID kontrola není kryptografické ověření protistrany.
+
+## Limit HTTP odpovědí
+
+Aplikace omezuje načítanou HTTP odpověď na **8 MiB (8 388 608 bajtů)**.
+NG limit platí pro JSON, text i binární odpovědi včetně RAW karty a chybových
+odpovědí; AWTRIX 3 jej používá pro GET a přímé čtení souborů. AWTRIX 3 POST/upload
+nepotřebná těla odpovědí rovnou ruší. Obě implementace zůstávají ve svých vrstvách;
+není zavedený společný transport ani další modul v lib/shared.
+
+Limit se kontroluje před čtením podle Content-Length a následně podle skutečně
+načtených bajtů streamu, takže jej neobejde chybějící/nesprávná hlavička ani
+dekomprese ve fetch. Buffer roste postupně a nejvýše k limitu. Překročení ukončí
+přenos přes AbortController a vyvolá explicitní chybu; useknutá data se nevracejí.
+NG uchová HTTP status a hlavičky dostupné v okamžiku odmítnutí. Firmware kód,
+zpráva a pole z nadlimitního těla nejsou dostupné, protože se tělo neparsuje.
+Dosavadní timeout dále pokrývá celou dobu čtení.
+
+Jde o aplikační ochranný limit, nikoliv tvrzení o maximální velikosti firmware
+odpovědí. Stávající limity audio klipů a MP3 downloadu zůstávají samostatné.
+
+## Živé ověření MP3 autocomplete — čeká na majitele nebo kolegu
+
+- [ ] Po instalaci testovací verze nabídka zobrazí skutečné MP3 vybraných hodin
+      a po přidání/smazání souboru se při dalším hledání obnoví.
+- [ ] Dříve uložené Flow s textovým názvem zvuku lze otevřít a spustit po změně
+      argumentu na autocomplete. Runtime přijímá původní řetězec i nový výběr.
+- [ ] Vybraný soubor se skutečně přehraje; chybějící soubor/chyba hodin je vidět ve Flow.
+
+Toto ověření není nahrazené syntetickými automatickými testy.

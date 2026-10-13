@@ -1,3 +1,4 @@
+/* eslint-disable mocha/handle-done-callback -- node:test supplies a TestContext. */
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
@@ -7,17 +8,14 @@ const Client = require('../.homeybuild/lib/awtrix3/Api/Client').default;
 const createRecordingFetch = () => {
   const calls = [];
   const responseObj = {
-    ok: true,
-    status: 200,
-    statusText: 'OK',
-    headers: new Headers({ 'content-type': 'application/json' }),
-    text: async () => JSON.stringify({ ok: true }),
+    status: 200, statusText: 'OK', headers: new Headers({ 'content-type': 'application/json' }), bodyText: '{"ok":true}',
   };
 
   const fetchMock = async (url, config) => {
     calls.push({ method: config?.method || 'GET', url, config });
     if (fetchMock.error) throw fetchMock.error;
-    return fetchMock.response;
+    const { response } = fetchMock;
+    return new Response(response.bodyText, { status: response.status, statusText: response.statusText, headers: response.headers });
   };
 
   fetchMock.calls = calls;
@@ -65,11 +63,7 @@ test('AWTRIX 3 client maps a mocked 302 response to Status.Error', async () => {
   const originalFetch = global.fetch;
   const fetchMock = createRecordingFetch();
   fetchMock.response = {
-    ok: false,
-    status: 302,
-    statusText: 'Found',
-    headers: new Headers(),
-    text: async () => 'Found',
+    bodyText: 'Found', status: 302, statusText: 'Found', headers: new Headers(),
   };
   global.fetch = fetchMock;
 
@@ -187,4 +181,69 @@ test('AWTRIX 3 client reports a request timeout as Status.Timeout, not as NotFou
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test('AWTRIX 3 GET timeout includes a stalled response body', { timeout: 1000 }, async (context) => {
+  const schedule = global.setTimeout;
+  context.mock.method(global, 'setTimeout', (callback, ms, ...args) => schedule(callback, ms === 10000 ? 10 : ms, ...args));
+  let aborted = false;
+  context.mock.method(global, 'fetch', async (url, config) => new Response(new ReadableStream({
+    start(controller) {
+      config.signal.addEventListener('abort', () => {
+        aborted = true; controller.error(config.signal.reason);
+      }, { once: true });
+    },
+  }), { status: 200 }));
+  const client = new Client({ ip: '192.0.2.10' });
+  const result = await client.get('stats');
+  assert.equal(result.status, Status.Timeout);
+  assert.equal(aborted, true);
+});
+
+test('AWTRIX 3 POST and upload cancel unused response streams on success and HTTP errors', async (context) => {
+  for (const status of [200, 404]) {
+    let cancelled = 0;
+    context.mock.method(global, 'fetch', async () => ({
+      ok: status === 200,
+      status,
+      body: {
+        cancel: async () => {
+          cancelled += 1;
+        },
+      },
+    }));
+    const client = new Client({ ip: '192.0.2.10' });
+    const expected = status === 200 ? Status.Ok : Status.NotFound;
+    assert.equal((await client.post('power', { power: true })).status, expected);
+    assert.equal((await client.upload('edit', new FormData())).status, expected);
+    assert.equal(cancelled, 2);
+  }
+});
+
+test('AWTRIX 3 response limit aborts declared and streamed oversized bodies and preserves normal GET data', async (context) => {
+  const client = new Client({ ip: '192.0.2.10', maxResponseBytes: 7 });
+  let signal;
+  context.mock.method(global, 'fetch', async (url, config) => {
+    signal = config.signal;
+    return new Response('ignored', { headers: { 'Content-Length': '8' } });
+  });
+  const declared = await client.get('stats');
+  assert.equal(declared.status, Status.Error);
+  assert.match(declared.message, /7-byte limit/);
+  assert.equal(signal.aborted, true);
+  context.mock.method(global, 'fetch', async (url, config) => {
+    signal = config.signal;
+    return new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('ŽŽ'));
+        controller.enqueue(new TextEncoder().encode('🐱'));
+        controller.close();
+      },
+    }), { headers: { 'Content-Length': '1' } });
+  });
+  const streamed = await client.getDirect('api/stats');
+  assert.equal(streamed.status, Status.Error);
+  assert.equal(signal.aborted, true);
+  context.mock.method(global, 'fetch', async () => new Response('{"n":0}'));
+  assert.deepEqual(await client.get('stats'), { status: Status.Ok, data: { n: 0 } });
 });

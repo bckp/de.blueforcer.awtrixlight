@@ -31,6 +31,7 @@ export const isPlainObject = (value: unknown): value is Record<string, unknown> 
  * Callers that need a hard failure wrap this and throw themselves.
  */
 export const toValidTcpPort = (value: unknown): number | undefined => {
+  if (typeof value !== 'number' && typeof value !== 'string') return undefined;
   const port = Number(value);
 
   if (!Number.isInteger(port) || port < 1 || port > 65535) {

@@ -25,7 +25,7 @@ const loadAwtrixNgDriver = () => {
 };
 
 const deviceState = {
-  uid: '48e7291211d8',
+  uid: 'aabbccddeeff',
   version: '1.0.4-dev',
   boardType: 'awtrixng',
   ipAddress: '192.0.2.60',
@@ -148,4 +148,39 @@ test('stored sound and RAW Flow cards forward arguments and return RAW response 
   assert.deepEqual(await listeners.get('awtrixng_raw_command')({ device, method: 'GET', path: '/api/v1/device' }),
     { status: 200, response: '{}' });
   assert.deepEqual(calls, [['GET', '/api/v1/device', '']]);
+});
+
+test('stored sound autocomplete uses the selected device and plays selected IDs while keeping legacy text', async () => {
+  const Driver = loadAwtrixNgDriver();
+  const driver = new Driver();
+  const runs = new Map();
+  const completions = new Map();
+  driver.homey = {
+    flow: {
+      getActionCard: (id) => ({
+        registerRunListener: (listener) => runs.set(id, listener),
+        registerArgumentAutocompleteListener: (name, listener) => completions.set(`${id}:${name}`, listener),
+      }),
+    },
+  };
+  driver.registerAudioCards();
+  const played = [];
+  const device = {
+    getStoredMp3Choices: async () => [{ id: 'door', name: 'Door' }, { id: 'ding', name: 'Ding' }],
+    playStoredSound: async (name) => played.push(name),
+  };
+  const lookup = completions.get('awtrixng_audio_stored:name');
+  assert.deepEqual(await lookup('DO', { device }), [{ id: 'door', name: 'Door' }]);
+  assert.deepEqual(await lookup('', { device: { getStoredMp3Choices: async () => [] } }), []);
+  await runs.get('awtrixng_audio_stored')({ device, name: { id: 'door', name: 'Door' } });
+  await runs.get('awtrixng_audio_stored')({ device, name: 'Racer/boost' });
+  assert.deepEqual(played, ['door', 'Racer/boost']);
+  const error = new Error('Device offline');
+  await assert.rejects(lookup('', {
+    device: {
+      getStoredMp3Choices: async () => {
+        throw error;
+      },
+    },
+  }), (result) => result === error);
 });

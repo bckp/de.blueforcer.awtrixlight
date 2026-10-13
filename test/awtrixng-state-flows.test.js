@@ -129,13 +129,19 @@ const harness = () => {
   const homey = createFakeHomey();
   const events = [];
   const errors = [];
-  const state = { subscriptions: { ...all }, next: idle(), calls: 0 };
-  homey.flow.getDeviceTriggerCard = (id) => ({
-    getArgumentValues: async () => (state.subscriptions[Object.keys(AwtrixNgStateFlowCardIds).find((key) => AwtrixNgStateFlowCardIds[key] === id)] ? [{}] : []),
-    trigger: async (device, tokens) => {
+  const state = {
+    subscriptions: { ...all }, next: idle(), calls: 0, argumentReads: 0,
+  };
+  for (const [key, id] of Object.entries(AwtrixNgStateFlowCardIds)) {
+    const card = homey.flow.getDeviceTriggerCard(id);
+    card.getArgumentValues = async () => {
+      state.argumentReads += 1;
+      return state.subscriptions[key] ? [{}] : [];
+    };
+    card.trigger = async (device, tokens) => {
       events.push({ id, tokens }); if (state.triggerFailure) throw state.triggerFailure;
-    },
-  });
+    };
+  }
   const api = {
     async readStateFlowSnapshot() {
       state.calls += 1; if (state.failure) throw state.failure; return typeof state.next === 'function' ? state.next() : structuredClone(state.next);
@@ -157,10 +163,12 @@ test('state poll makes no reads without Flow, suppresses subscription baselines 
   state.subscriptions = {
     application: false, audio: false, radio: false, error: false,
   };
-  device.startStateFlowPoll();
+  await device.startStateFlowPoll();
   await homey.tick(5000);
   assert.equal(state.calls, 0);
   state.subscriptions.application = true;
+  homey.flow.getDeviceTriggerCard(AwtrixNgStateFlowCardIds.application).emit('update');
+  await device.stateFlowSubscriptionSync;
   await homey.tick(5000);
   assert.equal(events.length, 0);
   state.next.application = 'homey-weather';
@@ -179,6 +187,8 @@ test('state poll makes no reads without Flow, suppresses subscription baselines 
   await homey.tick(5000);
   assert.equal(events.length, 2);
   state.subscriptions.audio = true;
+  homey.flow.getDeviceTriggerCard(AwtrixNgStateFlowCardIds.audio).emit('update');
+  await device.stateFlowSubscriptionSync;
   state.next.audio.alert.playing = true;
   await homey.tick(5000);
   assert.equal(events.length, 2, 'new subscriptions baseline the snapshot');
@@ -193,6 +203,7 @@ test('connection replacement or deletion discards in-flight observations; Flow f
     const {
       device, state, events, api,
     } = harness();
+    await device.startStateFlowPoll();
     await device.refreshStateFlows();
     let resolve;
     state.next = () => new Promise((done) => {
@@ -209,6 +220,7 @@ test('connection replacement or deletion discards in-flight observations; Flow f
   const {
     device, state, events, errors,
   } = harness();
+  await device.startStateFlowPoll();
   await device.refreshStateFlows();
   state.next.application = 'Date';
   state.triggerFailure = new Error('Flow failed');
@@ -233,4 +245,107 @@ test('state trigger manifest exposes typed tokens with NG/audio/radio device fil
     const tokenType = key === 'audio' || key === 'radio' ? 'boolean' : 'string';
     assert.equal(card.tokens.find((token) => token.name === tokenName).type, tokenType);
   }
+});
+
+test('state subscriptions only read at init and update, stop when empty, and release listeners on deletion', async () => {
+  const { device, state, homey } = harness();
+  state.subscriptions = {
+    application: false, audio: false, radio: false, error: false,
+  };
+  await device.startStateFlowPoll();
+  assert.equal(state.argumentReads, 4);
+  assert.equal(homey.setIntervalCalls.length, 0);
+  await homey.tick(60000);
+  assert.equal(state.argumentReads, 4);
+  const card = homey.flow.getDeviceTriggerCard(AwtrixNgStateFlowCardIds.application);
+  state.subscriptions.application = true;
+  card.emit('update');
+  await device.stateFlowSubscriptionSync;
+  assert.equal(state.argumentReads, 8);
+  assert.equal(device.stateFlowPoll.isActive(), true);
+  await homey.tick(15000);
+  assert.equal(state.calls, 3);
+  assert.equal(state.argumentReads, 8);
+  state.subscriptions.application = false;
+  card.emit('update');
+  await device.stateFlowSubscriptionSync;
+  assert.equal(device.stateFlowPoll.isActive(), false);
+  await homey.tick(15000);
+  assert.equal(state.calls, 3);
+  await device.onDeleted();
+  for (const id of Object.values(AwtrixNgStateFlowCardIds)) assert.equal(homey.flow.getDeviceTriggerCard(id).listenerCount('update'), 0);
+  const reads = state.argumentReads;
+  card.emit('update');
+  await device.stateFlowSubscriptionSync;
+  assert.equal(state.argumentReads, reads);
+});
+
+test('deletion stops all polling before awaiting callback cleanup and drops an in-flight subscription sync', async () => {
+  const { device, homey } = harness();
+  await device.startStateFlowPoll();
+  const order = [];
+  device.poll = { stop: () => order.push('stop') };
+  let release;
+  device.clearOwnedButtonCallbackOnDelete = () => new Promise((resolve) => {
+    order.push('cleanup'); release = resolve;
+  });
+  const pending = device.onDeleted();
+  assert.deepEqual(order, ['stop', 'cleanup']);
+  assert.equal(device.stateFlowPoll.isActive(), false);
+  await homey.tick(10000);
+  release();
+  await pending;
+});
+
+test('restoring polling catches subscription errors, recovers on update, and never restarts deleted devices', async () => {
+  const { device, homey, errors } = harness();
+  const card = homey.flow.getDeviceTriggerCard(AwtrixNgStateFlowCardIds.application);
+  const read = card.getArgumentValues;
+  const failure = new Error('SDK unavailable');
+  card.getArgumentValues = async () => {
+    throw failure;
+  };
+  device.poll = { isActive: () => true, stop: () => {} };
+  device.ensurePollingStarted();
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  assert.deepEqual(errors, [failure]);
+  card.getArgumentValues = read;
+  card.emit('update');
+  await device.stateFlowSubscriptionSync;
+  assert.equal(device.stateFlowPoll.isActive(), true);
+  await device.onDeleted();
+  let starts = 0;
+  device.poll = {
+    isActive: () => false,
+    start: () => {
+      starts += 1;
+    },
+  };
+  device.ensurePollingStarted();
+  assert.equal(starts, 0);
+});
+
+test('discovery completed after deletion is discarded before connection or callback writes', async () => {
+  const { device, api, homey } = harness();
+  let release;
+  let writes = 0;
+  device.getSettings = async () => ({});
+  device.verifyCandidateConnection = () => new Promise((resolve) => {
+    release = resolve;
+  });
+  device.commitConnection = async () => {
+    writes += 1;
+  };
+  device.reconcileButtonCallbackSafely = async () => {
+    writes += 1;
+  };
+  const pending = device.commitDiscoveredConnection({ address: '192.0.2.10', port: 80 });
+  while (!release) await Promise.resolve();
+  await device.onDeleted();
+  release(api);
+  assert.equal(await pending, false);
+  assert.equal(writes, 0);
+  assert.equal(homey.setIntervalCalls.length, 0);
 });

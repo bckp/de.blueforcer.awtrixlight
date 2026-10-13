@@ -1331,7 +1331,7 @@
       "args": [
         {
           "name": "name",
-          "type": "text",
+          "type": "autocomplete",
           "title": {
             "en": "Sound name",
             "cs": "Název zvuku",
@@ -1341,10 +1341,10 @@
         }
       ],
       "hint": {
-        "en": "Enter the name without .mp3, e.g. ding, or Script/name for a script sound. Plays once as an alert. Requires MP3 support. The action ends when the request is accepted.",
-        "cs": "Zadejte název bez .mp3, např. ding, nebo Skript/nazev pro zvuk skriptu. Přehraje jednou jako upozornění. Vyžaduje podporu MP3. Akce skončí přijetím požadavku.",
-        "de": "Name ohne .mp3 eingeben, z. B. ding, oder Skript/Name für einen Skriptton. Spielt einmal als Alarm. Erfordert MP3-Unterstützung. Die Aktion endet mit Annahme der Anfrage.",
-        "nl": "Voer de naam zonder .mp3 in, bijv. ding, of Script/naam voor een scriptgeluid. Speelt één keer als melding. Vereist MP3-ondersteuning. De actie eindigt zodra het verzoek is geaccepteerd."
+        "en": "Select an MP3 stored on the selected clock. Plays once as an alert. The action ends when the request is accepted.",
+        "cs": "Vyberte MP3 uložené ve vybraných hodinách. Přehraje jednou jako upozornění. Akce skončí přijetím požadavku.",
+        "de": "Eine auf der ausgewählten Uhr gespeicherte MP3 auswählen. Spielt einmal als Alarm. Die Aktion endet mit Annahme der Anfrage.",
+        "nl": "Selecteer een MP3 die op de geselecteerde klok is opgeslagen. Speelt één keer als melding. De actie eindigt zodra het verzoek is geaccepteerd."
       }
     },
     {
@@ -1464,10 +1464,10 @@
         }
       ],
       "hint": {
-        "en": "Advanced: enter a relative /api/v1/ endpoint, optionally with a query string. Leave JSON empty for no body; GET has no body. Uses the selected clock connection. Sends JSON unchanged without feature validation. HTTP errors fail the Flow.",
-        "cs": "Pokročilé: zadejte relativní endpoint /api/v1/, případně s query parametry. Prázdné JSON znamená bez těla; GET tělo nemá. Použije připojení vybraných hodin. JSON odešle beze změny a bez kontroly funkcí. HTTP chyba způsobí chybu Flow.",
-        "de": "Erweitert: relativen /api/v1/-Endpunkt eingeben, optional mit Abfrageparametern. Leeres JSON bedeutet keinen Body; GET hat keinen Body. Verwendet die Verbindung der ausgewählten Uhr. Sendet JSON unverändert ohne Funktionsprüfung. HTTP-Fehler lassen den Flow fehlschlagen.",
-        "nl": "Geavanceerd: voer een relatief /api/v1/-eindpunt in, eventueel met queryparameters. Leeg JSON betekent geen inhoud; GET heeft geen inhoud. Gebruikt de verbinding van de geselecteerde klok. Verzendt JSON ongewijzigd zonder functiecontrole. HTTP-fouten laten de Flow mislukken."
+        "en": "Advanced: enter a relative /api/v1/ endpoint, optionally with a query string. Leave JSON empty for no body; GET has no body. Uses the selected clock connection. Sends JSON unchanged without feature validation. HTTP errors fail the Flow. Privileged RAW access: responses and errors may expose secrets, including callback tokens. System writes bypass callback ownership checks. Uses the clock credentials stored in Homey. Responses are limited to 8 MiB.",
+        "cs": "Pokročilé: zadejte relativní endpoint /api/v1/, případně s query parametry. Prázdné JSON znamená bez těla; GET tělo nemá. Použije připojení vybraných hodin. JSON odešle beze změny a bez kontroly funkcí. HTTP chyba způsobí chybu Flow. Privilegovaný RAW přístup: odpovědi i chyby mohou obsahovat tajné údaje včetně callback tokenů. Zápis do system obchází kontrolu vlastnictví callbacku. Používá přihlašovací údaje hodin uložené v Homey. Odpovědi mají limit 8 MiB.",
+        "de": "Erweitert: relativen /api/v1/-Endpunkt eingeben, optional mit Abfrageparametern. Leeres JSON bedeutet keinen Body; GET hat keinen Body. Verwendet die Verbindung der ausgewählten Uhr. Sendet JSON unverändert ohne Funktionsprüfung. HTTP-Fehler lassen den Flow fehlschlagen. Privilegierter RAW-Zugriff: Antworten und Fehler können Geheimnisse einschließlich Callback-Token enthalten. System-Schreibvorgänge umgehen Callback-Eigentumsprüfungen. Verwendet die in Homey gespeicherten Zugangsdaten der Uhr. Antworten sind auf 8 MiB begrenzt.",
+        "nl": "Geavanceerd: voer een relatief /api/v1/-eindpunt in, eventueel met queryparameters. Leeg JSON betekent geen inhoud; GET heeft geen inhoud. Gebruikt de verbinding van de geselecteerde klok. Verzendt JSON ongewijzigd zonder functiecontrole. HTTP-fouten laten de Flow mislukken. RAW-toegang met volledige rechten: antwoorden en fouten kunnen geheimen bevatten, waaronder callbacktokens. Systeemwijzigingen omzeilen de eigendomscontrole van callbacks. Gebruikt de klokgegevens die in Homey zijn opgeslagen. Antwoorden zijn beperkt tot 8 MiB."
       }
     }
   ]

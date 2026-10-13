@@ -1,5 +1,15 @@
 # Implementační plán: AWTRIX NG button callbacks do Homey Flow
 
+## Výjimka pro RAW kartu (schválená vlastníkem 2026-10-13)
+
+Pravidlo, že callback URL/token nesmí jít do Flow tokenu, nadále platí pro
+spravované callback funkce. Vlastník povolil výjimku pro obecnou RAW HTTP kartu:
+ta vrací nezměněné odpovědi a chyby a používá oprávnění spárovaných hodin.
+GET system proto může zpřístupnit callback token nebo další tajné údaje;
+RAW PUT system může přepsat callback mimo kontrolu vlastnictví. Nejde o
+neautentizovaný Homey API endpoint. Toto privilegované chování musí být popsáno
+v hintu karty i uživatelské dokumentaci. Redakce diagnostických logů zůstává.
+
 ## Aktualizace kontraktu 2026-09-15: firmware 1.1.1
 
 Blueforcer ve firmware 1.1.1 změnil callback transport na

@@ -1,5 +1,6 @@
 import { Response, Status } from './Response';
 import FetchError from './FetchError';
+import { DefaultMaxResponseBytes, readLimitedResponse } from './ResponseBody';
 
 const Timeout = 10000;
 const RedactedHeaderValue = '<redacted>';
@@ -16,6 +17,7 @@ type ClientOptions = {
   user?: string;
   pass?: string;
   log?: (message?: any, ...optionalParams: any[]) => void;
+  maxResponseBytes?: number;
 }
 
 export interface RequestHeaders {
@@ -32,6 +34,8 @@ const redactAuthorization = (headers: unknown): unknown => {
 
 export default class Client {
 
+  readonly #maxResponseBytes: number;
+
   ip: string;
   debug: boolean = false;
   user: string = '';
@@ -40,6 +44,8 @@ export default class Client {
   log: (message?: any, ...optionalParams: any[]) => void;
 
   constructor(options: ClientOptions) {
+    this.#maxResponseBytes = options.maxResponseBytes ?? DefaultMaxResponseBytes;
+    if (!Number.isSafeInteger(this.#maxResponseBytes) || this.#maxResponseBytes < 1) throw new RangeError('Invalid HTTP response byte limit.');
     this.ip = options.ip;
 
     this.user = options.user || '';
@@ -104,10 +110,9 @@ export default class Client {
         signal: controller.signal,
         redirect: 'manual',
       });
-      clearTimeout(timeoutId);
 
       let data;
-      const text = await response.text();
+      const text = new TextDecoder().decode(await readLimitedResponse(response, this.#maxResponseBytes, controller));
       try {
         data = text ? JSON.parse(text) : undefined;
       } catch {
@@ -125,8 +130,9 @@ export default class Client {
         data,
       };
     } catch (error: any) {
-      clearTimeout(timeoutId);
       return this.#requestError(error, url);
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -145,8 +151,8 @@ export default class Client {
         signal: controller.signal,
         redirect: 'manual',
       });
-      clearTimeout(timeoutId);
 
+      await response.body?.cancel();
       this.#debugResponse('POST', url, response);
 
       if (!response.ok) {
@@ -157,8 +163,9 @@ export default class Client {
         status: statusFromHttpCode(response.status),
       };
     } catch (error: any) {
-      clearTimeout(timeoutId);
       return this.#requestError(error, url);
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -182,8 +189,8 @@ export default class Client {
         signal: controller.signal,
         redirect: 'manual',
       });
-      clearTimeout(timeoutId);
 
+      await response.body?.cancel();
       this.#debugResponse('POST(upload)', url, response);
 
       if (!response.ok) {
@@ -194,8 +201,9 @@ export default class Client {
         status: statusFromHttpCode(response.status),
       };
     } catch (error: any) {
-      clearTimeout(timeoutId);
       return this.#requestError(error, url);
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

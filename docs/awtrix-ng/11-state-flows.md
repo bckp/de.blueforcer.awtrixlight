@@ -17,7 +17,7 @@ Rádio má samostatnou kartu; obecná karta zvuku sleduje pouze `alert` a `app`.
 
 ## Pozorování a životní cyklus
 
-- Homey kontroluje každých **5 sekund**, zda má konkrétní zařízení uloženou alespoň jednu z těchto Flow karet, přes SDK `FlowCardTriggerDevice.getArgumentValues(device)`.
+- Homey načte odběry přes SDK `FlowCardTriggerDevice.getArgumentValues(device)` při inicializaci a po události `update`. Stav hodin kontroluje každých **5 sekund** pouze při aktivním odběru.
 - Bez karet se žádný nový HTTP požadavek hodinám neposílá. Původní minutová synchronizace nastavení/capabilities zůstává samostatná.
 - Se samotnou kartou aplikace se čte pouze stav zařízení. Audio vyžaduje také capabilities a `/api/v1/audio`. Všechny požadavky této funkce jsou pouze GET. Audio/radio karty mají Homey filtry a facade podporu znovu ověří z aktuálních capabilities; nedostupná funkce se nepředstírá.
 - Každé pozorování ověří `uid`. Změna identity nevytvoří událost z cizích hodin.
@@ -46,3 +46,14 @@ Před vydáním ověřit v nainstalované Homey aplikaci:
 6. Odstranit Flow a ověřit v diagnostice/HTTP měření, že další rychlé GET zaniknou. Ověřit více zařízení bez přesahu událostí.
 
 Původní implementační testy byly syntetické. Dne 6. října 2026 prošlo skutečné doručení všech čtyř spouštěčů přes nové uložené Homey Flow na TC002 1.2.0: počáteční snapshot, změna aplikace, notifikace bez změny aplikace, audio start/stop, rádio start/stop a deduplikovaná chyba. Restartové, síťové a další zbývající zkoušky uvádí [živý QA protokol](13-live-qa-2026-10-06.md).
+
+## Odběry a životní cyklus
+
+Argumenty použitých trigger karet se načítají při inicializaci zařízení a při
+události SDK `update` (uložení nebo změna Flow). Pětisekundový poll čte jen stav
+hodin a běží pouze při alespoň jednom aktivním odběru; getArgumentValues se v něm
+nevolá. Změna odběrů nastaví novou výchozí hodnotu, aby nevytvářela falešnou událost.
+Při smazání zařízení se oba polly zastaví před čekáním na HTTP cleanup callbacku,
+odregistrují se update listenery a pozdní odpovědi se nepoužijí.
+
+Zdroj kontraktu update: [Homey Flow arguments](https://apps.developer.homey.app/the-basics/flow/arguments).

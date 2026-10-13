@@ -9,6 +9,7 @@ import {
   AwtrixNgHttpTransportOptions,
 } from './Transport';
 import { isRecord } from '../Support/Guards';
+import { DefaultMaxResponseBytes, readLimitedResponse, ResponseTooLargeError } from './ResponseBody';
 
 const DefaultTimeoutMs = 10000;
 const UserAgent = 'Homey/1.0';
@@ -55,6 +56,7 @@ export default class FetchAwtrixNgHttpTransport implements AwtrixNgHttpTransport
 
   readonly #baseUrl: string;
   readonly #timeoutMs: number;
+  readonly #maxResponseBytes: number;
   readonly #auth?: AwtrixNgHttpTransportOptions['auth'];
   readonly #debug: boolean;
   readonly #log: AwtrixNgDebugLogger;
@@ -62,6 +64,8 @@ export default class FetchAwtrixNgHttpTransport implements AwtrixNgHttpTransport
   constructor(options: AwtrixNgHttpTransportOptions) {
     this.#baseUrl = options.baseUrl.replace(/\/+$/, '');
     this.#timeoutMs = options.timeoutMs || DefaultTimeoutMs;
+    this.#maxResponseBytes = options.maxResponseBytes ?? DefaultMaxResponseBytes;
+    if (!Number.isSafeInteger(this.#maxResponseBytes) || this.#maxResponseBytes < 1) throw new RangeError('Invalid HTTP response byte limit.');
     this.#auth = options.auth;
     this.#debug = options.debug === true;
     // eslint-disable-next-line no-console
@@ -73,6 +77,7 @@ export default class FetchAwtrixNgHttpTransport implements AwtrixNgHttpTransport
   ): Promise<AwtrixNgHttpSuccess<TResponse>> {
     const url = this.#getUrl(request.path, request.query);
     const headers = this.#getHeaders(request.headers, request.body);
+    const debugUrl = request.redactDebug ? RedactedHeaderValue : url;
     const timeout = request.timeoutMs || this.#timeoutMs;
 
     const controller = new AbortController();
@@ -82,6 +87,7 @@ export default class FetchAwtrixNgHttpTransport implements AwtrixNgHttpTransport
       method: request.method,
       headers: headers as Record<string, string>,
       signal: controller.signal,
+      redirect: 'manual',
     };
 
     if (request.body instanceof FormData || request.body instanceof ArrayBuffer || request.body instanceof Uint8Array || typeof request.body === 'string') {
@@ -95,19 +101,23 @@ export default class FetchAwtrixNgHttpTransport implements AwtrixNgHttpTransport
       delete (config.headers as Record<string, string>)['Content-Type'];
     }
 
+    let response: Response | undefined;
     try {
-      this.#debugRequest(request.method, url, headers, request.body, request.query);
+      this.#debugRequest(request.method, debugUrl,
+        request.redactDebug ? {} : headers,
+        request.redactDebug ? RedactedHeaderValue : request.body,
+        request.redactDebug ? undefined : request.query);
 
-      const response = await fetch(url, config);
-      clearTimeout(timeoutId);
+      response = await fetch(url, config);
+      const bytes = await readLimitedResponse(response, this.#maxResponseBytes, controller);
 
       let responseData: any;
       if (request.responseType === 'binary') {
-        responseData = await response.arrayBuffer();
+        responseData = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
       } else if (request.responseType === 'text') {
-        responseData = await response.text();
+        responseData = new TextDecoder().decode(bytes);
       } else {
-        const text = await response.text();
+        const text = new TextDecoder().decode(bytes);
         try {
           responseData = text ? JSON.parse(text) : undefined;
         } catch {
@@ -116,7 +126,10 @@ export default class FetchAwtrixNgHttpTransport implements AwtrixNgHttpTransport
       }
 
       const normalizedHeaders = normalizeHeaders(response.headers);
-      this.#debugResponse(request.method, url, response.status, response.statusText, responseData, normalizedHeaders);
+      this.#debugResponse(request.method, debugUrl, response.status,
+        request.redactDebug ? RedactedHeaderValue : response.statusText,
+        request.redactDebug ? RedactedHeaderValue : responseData,
+        request.redactDebug ? {} : normalizedHeaders);
 
       if (!response.ok) {
         throw new AwtrixNgHttpError({
@@ -135,12 +148,23 @@ export default class FetchAwtrixNgHttpTransport implements AwtrixNgHttpTransport
         data: responseData as TResponse,
       };
     } catch (error: unknown) {
-      clearTimeout(timeoutId);
-      this.#debugFailure(request.method, url, error);
+      this.#debugFailure(request.method, debugUrl, request.redactDebug ? RedactedHeaderValue : error);
       if (error instanceof AwtrixNgHttpError) {
         throw error;
       }
+      if (error instanceof ResponseTooLargeError && response !== undefined) {
+        throw new AwtrixNgHttpError({
+          method: request.method,
+          url,
+          status: response.status,
+          headers: normalizeHeaders(response.headers),
+          message: error.message,
+          errorCause: error,
+        });
+      }
       throw this.#toHttpError(error, request.method, url);
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

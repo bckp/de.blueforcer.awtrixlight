@@ -6,7 +6,7 @@ const { AwtrixNgApiError } = require('../.homeybuild/lib/awtrixng/Api/ErrorParse
 const { AwtrixNgInvalidResponseError } = require('../.homeybuild/lib/awtrixng/Api/InvalidResponseError');
 const { createFakeHomey } = require('./helpers/fake-homey');
 
-const expectedUid = '48e7291211d8';
+const expectedUid = 'aabbccddeeff';
 
 const createDeviceState = (overrides = {}) => ({
   uid: expectedUid,
