@@ -179,5 +179,8 @@
   "2.3.7": {
     "en": "Add RAW and MP3 flowcard",
     "cs": "Přidány Flow karty pro RAW HTTP příkazy a přehrávání MP3 uložených v hodinách."
+  },
+  "2.3.8": {
+    "en": "Play MP3 now uses autocomplete"
   }
 }
