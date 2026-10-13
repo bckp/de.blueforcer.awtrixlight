@@ -392,3 +392,36 @@ Text musí být neprázdný a mít nejvýše 512 bajtů v UTF-8 (nikoliv 512 zna
 Hodiny potřebují nainstalovaný hlas. Akce končí přijetím požadavku na přehrání,
 nečeká na dokončení řeči. Chyby firmware se předávají beze ztráty detailů.
 Podklady: [HTTP API](https://ang.blueforcer.de/tc002/reference/http/).
+
+### Zvuky uložené v hodinách
+
+Karta `awtrixng_audio_stored` přehraje jednou uložený MP3 zvuk přes
+`POST /api/v1/audio/play` s tělem `{"file":"ding"}`. Zadejte název bez `.mp3`,
+ne cestu `/MP3/ding.mp3`. Zvuky skriptů lze zadat jako `Racer/boost`.
+Podle aktuální dokumentace mají části názvu 1–32 znaků z `A-Za-z0-9_-`.
+Karta vyžaduje nové audio API a `audio.mp3 === true`; nepotřebuje `audio.url`.
+Marker `awtrixng_audio_stored` se přidá při párování či inicializaci a podpora
+se kontroluje také při spuštění. Přehraje jako alert bez vizuální notifikace.
+Akce končí přijetím požadavku, ne dokončením přehrávání.
+
+### RAW HTTP příkaz
+
+Karta `awtrixng_raw_command` je pouze pro NG driver. Používá připojení a
+ověření vybraného zařízení. Nabízí GET, POST, PUT, PATCH a DELETE, relativní
+endpoint `/api/v1/...` včetně query parametrů a volitelné JSON tělo.
+Prázdné tělo se neodesílá; GET s tělem je odmítnut. Absolutní URL a průchod
+mimo API pomocí `..` nejsou přijímány. JSON se pouze zkontroluje syntakticky
+a odešle beze změny; aplikace neověřuje schéma ani podporu konkrétní funkce.
+Karta nepřijímá binární data ani multipart upload.
+
+Výstupní tokeny: `status` (HTTP stav) a `response` (text nebo JSON odpověď
+jako řetězec; prázdná odpověď jako prázdný řetězec). HTTP chyby způsobí
+chybu Flow a zachovávají status, kód, zprávu i pole firmware.
+
+Příklad samostatného přehrání uloženého zvuku:
+
+- Metoda: `POST`
+- Endpoint: `/api/v1/audio/play`
+- JSON: `{"file":"ding"}`
+
+Podklady: [HTTP API a pravidla uložených zvuků](https://ang.blueforcer.de/tc002/reference/http/).

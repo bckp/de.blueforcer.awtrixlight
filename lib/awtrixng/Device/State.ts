@@ -25,6 +25,7 @@ export const AwtrixNgFeatureCapabilityIds = {
   audioRadio: 'awtrixng_audio_radio',
   audioClip: 'awtrixng_audio_clip',
   audioSpeech: 'awtrixng_audio_speech',
+  audioStored: 'awtrixng_audio_stored',
   volume: 'awtrixng_volume',
   alertVolume: 'awtrixng_alert_volume',
   appVolume: 'awtrixng_app_volume',

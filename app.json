@@ -2286,6 +2286,172 @@
           "de": "Erfordert eine installierte Stimme auf der Uhr. Maximal 512 UTF-8-Bytes. Die Aktion endet, sobald die Wiedergabeanfrage angenommen wurde.",
           "nl": "Vereist een geïnstalleerde stem op de klok. Maximaal 512 UTF-8-bytes. De actie eindigt zodra het afspeelverzoek is geaccepteerd."
         }
+      },
+      {
+        "id": "awtrixng_audio_stored",
+        "title": {
+          "en": "Play a sound stored on the clock",
+          "cs": "Přehrát zvuk uložený v hodinách",
+          "de": "Auf der Uhr gespeicherten Ton abspielen",
+          "nl": "Een op de klok opgeslagen geluid afspelen"
+        },
+        "titleFormatted": {
+          "en": "Play stored sound [[name]]",
+          "cs": "Přehrát uložený zvuk [[name]]",
+          "de": "Gespeicherten Ton [[name]] abspielen",
+          "nl": "Speel opgeslagen geluid [[name]] af"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_stored"
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "title": {
+              "en": "Sound name",
+              "cs": "Název zvuku",
+              "de": "Tonname",
+              "nl": "Geluidsnaam"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Enter the name without .mp3, e.g. ding, or Script/name for a script sound. Plays once as an alert. Requires MP3 support. The action ends when the request is accepted.",
+          "cs": "Zadejte název bez .mp3, např. ding, nebo Skript/nazev pro zvuk skriptu. Přehraje jednou jako upozornění. Vyžaduje podporu MP3. Akce skončí přijetím požadavku.",
+          "de": "Name ohne .mp3 eingeben, z. B. ding, oder Skript/Name für einen Skriptton. Spielt einmal als Alarm. Erfordert MP3-Unterstützung. Die Aktion endet mit Annahme der Anfrage.",
+          "nl": "Voer de naam zonder .mp3 in, bijv. ding, of Script/naam voor een scriptgeluid. Speelt één keer als melding. Vereist MP3-ondersteuning. De actie eindigt zodra het verzoek is geaccepteerd."
+        }
+      },
+      {
+        "id": "awtrixng_raw_command",
+        "title": {
+          "en": "Send a RAW HTTP command",
+          "cs": "Odeslat RAW HTTP příkaz",
+          "de": "RAW-HTTP-Befehl senden",
+          "nl": "Een RAW HTTP-opdracht verzenden"
+        },
+        "titleFormatted": {
+          "en": "Send [[method]] to [[path]] with JSON [[json]]",
+          "cs": "Odeslat [[method]] na [[path]] s JSON [[json]]",
+          "de": "[[method]] an [[path]] mit JSON [[json]] senden",
+          "nl": "Verzend [[method]] naar [[path]] met JSON [[json]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "method",
+            "type": "dropdown",
+            "title": {
+              "en": "Method",
+              "cs": "Metoda",
+              "de": "Methode",
+              "nl": "Methode"
+            },
+            "values": [
+              {
+                "id": "GET",
+                "title": {
+                  "en": "GET",
+                  "cs": "GET",
+                  "de": "GET",
+                  "nl": "GET"
+                }
+              },
+              {
+                "id": "POST",
+                "title": {
+                  "en": "POST",
+                  "cs": "POST",
+                  "de": "POST",
+                  "nl": "POST"
+                }
+              },
+              {
+                "id": "PUT",
+                "title": {
+                  "en": "PUT",
+                  "cs": "PUT",
+                  "de": "PUT",
+                  "nl": "PUT"
+                }
+              },
+              {
+                "id": "PATCH",
+                "title": {
+                  "en": "PATCH",
+                  "cs": "PATCH",
+                  "de": "PATCH",
+                  "nl": "PATCH"
+                }
+              },
+              {
+                "id": "DELETE",
+                "title": {
+                  "en": "DELETE",
+                  "cs": "DELETE",
+                  "de": "DELETE",
+                  "nl": "DELETE"
+                }
+              }
+            ]
+          },
+          {
+            "name": "path",
+            "type": "text",
+            "title": {
+              "en": "API endpoint",
+              "cs": "API endpoint",
+              "de": "API-Endpunkt",
+              "nl": "API-eindpunt"
+            }
+          },
+          {
+            "name": "json",
+            "type": "text",
+            "title": {
+              "en": "JSON body",
+              "cs": "JSON tělo",
+              "de": "JSON-Body",
+              "nl": "JSON-inhoud"
+            },
+            "required": false
+          }
+        ],
+        "tokens": [
+          {
+            "name": "status",
+            "type": "number",
+            "title": {
+              "en": "HTTP status",
+              "cs": "HTTP stav",
+              "de": "HTTP-Status",
+              "nl": "HTTP-status"
+            }
+          },
+          {
+            "name": "response",
+            "type": "string",
+            "title": {
+              "en": "Response",
+              "cs": "Odpověď",
+              "de": "Antwort",
+              "nl": "Antwoord"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Advanced: enter a relative /api/v1/ endpoint, optionally with a query string. Leave JSON empty for no body; GET has no body. Uses the selected clock connection. Sends JSON unchanged without feature validation. HTTP errors fail the Flow.",
+          "cs": "Pokročilé: zadejte relativní endpoint /api/v1/, případně s query parametry. Prázdné JSON znamená bez těla; GET tělo nemá. Použije připojení vybraných hodin. JSON odešle beze změny a bez kontroly funkcí. HTTP chyba způsobí chybu Flow.",
+          "de": "Erweitert: relativen /api/v1/-Endpunkt eingeben, optional mit Abfrageparametern. Leeres JSON bedeutet keinen Body; GET hat keinen Body. Verwendet die Verbindung der ausgewählten Uhr. Sendet JSON unverändert ohne Funktionsprüfung. HTTP-Fehler lassen den Flow fehlschlagen.",
+          "nl": "Geavanceerd: voer een relatief /api/v1/-eindpunt in, eventueel met queryparameters. Leeg JSON betekent geen inhoud; GET heeft geen inhoud. Gebruikt de verbinding van de geselecteerde klok. Verzendt JSON ongewijzigd zonder functiecontrole. HTTP-fouten laten de Flow mislukken."
+        }
       }
     ],
     "triggers": [
@@ -3886,6 +4052,19 @@
         "cs": "Řeč",
         "de": "Sprachausgabe",
         "nl": "Spraak"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "uiComponent": null
+    },
+    "awtrixng_audio_stored": {
+      "type": "boolean",
+      "title": {
+        "en": "Stored MP3 playback",
+        "cs": "Přehrávání uložených MP3",
+        "de": "Gespeicherte MP3 abspielen",
+        "nl": "Opgeslagen MP3 afspelen"
       },
       "getable": true,
       "setable": false,

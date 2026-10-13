@@ -1,5 +1,5 @@
 import FetchAwtrixNgHttpTransport from '../Http/FetchTransport';
-import { AwtrixNgBasicAuthOptions, AwtrixNgDebugLogger } from '../Http/Transport';
+import { AwtrixNgBasicAuthOptions, AwtrixNgDebugLogger, AwtrixNgHttpMethod } from '../Http/Transport';
 import AwtrixNgClient, { AwtrixNgIndicatorId } from './Client';
 import { AwtrixNgInvalidResponseError } from './InvalidResponseError';
 import { AwtrixNgDeviceIdentityMismatchError } from './IdentityMismatchError';
@@ -221,6 +221,7 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
       features.push(AwtrixNgFeatureCapabilityIds.audioGroups, AwtrixNgFeatureCapabilityIds.audioMixer,
         AwtrixNgFeatureCapabilityIds.volume, AwtrixNgFeatureCapabilityIds.alertVolume, AwtrixNgFeatureCapabilityIds.appVolume);
       if (capabilities.audio?.radio === true) features.push(AwtrixNgFeatureCapabilityIds.audioRadio, AwtrixNgFeatureCapabilityIds.radioVolume);
+      if (capabilities.audio?.mp3 === true) features.push(AwtrixNgFeatureCapabilityIds.audioStored);
       if (capabilities.audio?.speech === true) features.push(AwtrixNgFeatureCapabilityIds.audioSpeech);
       if (capabilities.audio?.clip === true) features.push(AwtrixNgFeatureCapabilityIds.audioClip);
     }
@@ -723,6 +724,32 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     });
     this.#stationWrites = write.then(() => undefined, () => undefined);
     await write;
+  }
+
+  async playStoredSound(name: string): Promise<void> {
+    if (typeof name !== 'string' || !/^[A-Za-z0-9_-]{1,32}(\/[A-Za-z0-9_-]{1,32})?$/.test(name)) {
+      throw new TypeError('Stored sound must be a name without extension, optionally Script/name (1..32 characters per part).');
+    }
+    const caps = await this.requireGroupAudio();
+    if (caps.audio?.mp3 !== true) throw new Error('This AWTRIX NG device does not support stored MP3 playback.');
+    await this.#client.playSound({ file: name });
+  }
+
+  async sendRawCommand(method: AwtrixNgHttpMethod, path: string, json: string): Promise<{ status: number; response: string }> {
+    if (!['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) throw new TypeError('Unsupported HTTP method.');
+    if (typeof path !== 'string' || !path.startsWith('/api/v1/') || /[\\#\s]/.test(path)) {
+      throw new TypeError('Use a relative /api/v1/ endpoint, optionally with a query string.');
+    }
+    const pathname = path.split('?')[0];
+    for (const part of pathname.split('/')) {
+      const decoded = decodeURIComponent(part);
+      if (decoded === '.' || decoded === '..' || /[\\/?#%]/.test(decoded)) throw new TypeError('Invalid API path segment.');
+    }
+    if (typeof json !== 'string') throw new TypeError('The request body must be JSON text.');
+    const body = json.trim() === '' ? undefined : json;
+    if (method === 'GET' && body !== undefined) throw new TypeError('GET requests cannot have a body.');
+    if (body !== undefined) JSON.parse(body);
+    return this.#client.sendRawCommand(method, path, body);
   }
 
   async speakText(text: string): Promise<void> {

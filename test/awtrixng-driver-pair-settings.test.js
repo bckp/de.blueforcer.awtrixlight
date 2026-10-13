@@ -115,3 +115,37 @@ test('speech Flow forwards text to its device and propagates playback errors', a
     },
   }), (result) => result === error);
 });
+
+test('stored sound and RAW Flow cards forward arguments and return RAW response tokens', async () => {
+  const Driver = loadAwtrixNgDriver();
+  const driver = new Driver();
+  const listeners = new Map();
+  driver.homey = {
+    flow: {
+      getActionCard: (id) => ({
+        registerRunListener: (listener) => listeners.set(id, listener),
+        registerArgumentAutocompleteListener: () => {},
+      }),
+    },
+  };
+  driver.registerAudioCards();
+  let name;
+  await listeners.get('awtrixng_audio_stored')({
+    name: 'ding',
+    device: {
+      playStoredSound: async (value) => {
+        name = value;
+      },
+    },
+  });
+  assert.equal(name, 'ding');
+  const calls = [];
+  const device = {
+    sendRawCommand: async (...args) => {
+      calls.push(args); return { status: 200, response: '{}' };
+    },
+  };
+  assert.deepEqual(await listeners.get('awtrixng_raw_command')({ device, method: 'GET', path: '/api/v1/device' }),
+    { status: 200, response: '{}' });
+  assert.deepEqual(calls, [['GET', '/api/v1/device', '']]);
+});

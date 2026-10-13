@@ -42,6 +42,16 @@ export default class AwtrixNgClient {
     this.#transport = transport;
   }
 
+  async sendRawCommand(method: AwtrixNgHttpRequest['method'], path: string, body?: string): Promise<{ status: number; response: string }> {
+    try {
+      const result = await this.#transport.request({ method, path, body });
+      return { status: result.status, response: typeof result.data === 'string' ? result.data : JSON.stringify(result.data) ?? '' };
+    } catch (error: unknown) {
+      if (error instanceof AwtrixNgHttpError) throw parseAwtrixNgApiError(error);
+      throw error;
+    }
+  }
+
   getDevice(): Promise<AwtrixNgApiDeviceStateResponse> {
     return this.#request<AwtrixNgApiDeviceStateResponse>({
       method: 'GET',

@@ -242,6 +242,12 @@ class AwtrixNgDriver extends Driver {
     this.homey.flow.getActionCard('awtrixng_radio_save').registerRunListener(async (
       args: DeviceArgs & { name: string; url: string },
     ) => args.device.saveRadioStation(args.name, args.url));
+    this.homey.flow.getActionCard('awtrixng_audio_stored').registerRunListener(async (
+      args: DeviceArgs & { name: string },
+    ) => args.device.playStoredSound(args.name));
+    this.homey.flow.getActionCard('awtrixng_raw_command').registerRunListener(async (
+      args: DeviceArgs & { method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; path: string; json: string },
+    ) => args.device.sendRawCommand(args.method, args.path, args.json ?? ''));
     this.homey.flow.getActionCard('awtrixng_audio_speech').registerRunListener(async (
       args: DeviceArgs & { text: string },
     ) => args.device.speakText(args.text));

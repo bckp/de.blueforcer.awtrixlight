@@ -229,6 +229,7 @@ test('new JSON radio source requires radio hardware and rejects fallback/loop op
 test('new Flow cards have capability filters; the old stop card keeps its ID and arguments', () => {
   const flows = JSON.parse(fs.readFileSync('drivers/awtrixng/driver.flow.compose.json', 'utf8'));
   const filters = {
+    awtrixng_audio_stored: 'audio_stored',
     awtrixng_audio_speech: 'audio_speech',
     awtrixng_audio_volume: 'audio_mixer',
     awtrixng_audio_stop_group: 'audio_groups',
@@ -291,4 +292,94 @@ test('speech capability marker follows reported support, independently of panel 
     const features = await api.readFeatures({ boardType: 'awtrixng', version: '1.2.0' });
     assert.equal(features.includes('awtrixng_audio_speech'), speech === true);
   }
+});
+
+test('stored MP3 plays a local or script name without URL support and rejects unsupported hardware', async () => {
+  const { api, calls } = createApi({ 'GET /api/v1/capabilities': { ...caps, audio: { ...caps.audio, url: false } } });
+  for (const name of ['ding', 'Racer/boost', 'door-bell_2']) {
+    await api.playStoredSound(name);
+    assert.deepEqual(calls.at(-1).body, { file: name });
+    assert.equal(calls.at(-1).path, '/api/v1/audio/play');
+  }
+  const before = calls.length;
+  for (const name of ['', 'file name', '/MP3/ding.mp3', 'ding.mp3', 'a/b/c', 'https://example.com/a', 'x'.repeat(33)]) {
+    await assert.rejects(api.playStoredSound(name), /Stored sound/);
+  }
+  assert.equal(calls.length, before);
+  const absent = createApi({ 'GET /api/v1/capabilities': { ...caps, audio: { ...caps.audio, mp3: false } } });
+  await assert.rejects(absent.api.playStoredSound('ding'), /stored MP3/);
+  assert.equal(absent.calls.some((call) => call.method === 'POST'), false);
+  const noUrl = await api.readFeatures({ boardType: 'awtrixng', version: '1.2.0' });
+  assert.equal(noUrl.includes('awtrixng_audio_stored'), true);
+  assert.equal(noUrl.includes('awtrixng_audio_url'), false);
+  const features = await absent.api.readFeatures({ boardType: 'awtrixng', version: '1.2.0' });
+  assert.equal(features.includes('awtrixng_audio_stored'), false);
+});
+
+test('stored MP3 preserves missing-file firmware errors', async () => {
+  const { api } = createApi({
+    'POST /api/v1/audio/play': () => {
+      throw new AwtrixNgHttpError({
+        method: 'POST',
+        url: 'http://192.0.2.10/api/v1/audio/play',
+        status: 404,
+        message: 'Missing',
+        rawBody: { error: { code: 'notFound', message: 'Sound missing', field: 'file' } },
+      });
+    },
+  });
+  await assert.rejects(api.playStoredSound('missing'), (error) => error.httpStatus === 404
+    && error.code === 'notFound' && error.message === 'Sound missing' && error.field === 'file');
+});
+
+test('RAW commands preserve arbitrary JSON and query strings and return response tokens', async () => {
+  const { api, calls } = createApi({
+    'PATCH /api/v1/settings?custom=true': { gamma: 2 },
+    'POST /api/v1/settings': { ok: true },
+    'PUT /api/v1/settings': { ok: true },
+    'DELETE /api/v1/settings': { ok: true },
+    'GET /api/v1/device': { uid: 'synthetic' },
+  });
+  const json = ' {"futureField":false,"zero":0,"empty":"","null":null,"items":[1,2]} ';
+  assert.deepEqual(await api.sendRawCommand('PATCH', '/api/v1/settings?custom=true', json),
+    { status: 200, response: '{"gamma":2}' });
+  assert.equal(calls.at(-1).body, json);
+  assert.deepEqual(await api.sendRawCommand('GET', '/api/v1/device', ''),
+    { status: 200, response: '{"uid":"synthetic"}' });
+  assert.equal(calls.at(-1).body, undefined);
+  for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+    await api.sendRawCommand(method, '/api/v1/settings', '');
+  }
+});
+
+test('RAW rejects invalid JSON, GET bodies and endpoints outside the device API before HTTP', async () => {
+  const { api, calls } = createApi();
+  for (const path of ['https://example.com/api/v1/device', '//example.com/api/v1/device', '/api/v1/../system',
+    '/api/v1/%2e%2e/system', '/api/v1/a%2fb', '/api/v1/%252e%252e/system', '/api/v1/device#x', '/api/v1/device\\x']) {
+    await assert.rejects(api.sendRawCommand('POST', path, '{}'));
+  }
+  await assert.rejects(api.sendRawCommand('POST', '/api/v1/settings', '{broken'));
+  await assert.rejects(api.sendRawCommand('GET', '/api/v1/settings', '{}'), /cannot have a body/);
+  await assert.rejects(api.sendRawCommand('TRACE', '/api/v1/settings', ''), /method/);
+  assert.equal(calls.length, 0);
+});
+
+test('RAW returns text and empty responses with actual HTTP status and preserves error details', async () => {
+  const client = new AwtrixNgClient({
+    async request(request) {
+      if (request.path.endsWith('/empty')) return { status: 204, headers: {}, data: undefined };
+      if (request.path.endsWith('/text')) return { status: 202, headers: {}, data: 'Accepted' };
+      throw new AwtrixNgHttpError({
+        method: 'POST',
+        url: 'http://192.0.2.10/api/v1/test',
+        status: 422,
+        message: 'Rejected',
+        rawBody: { error: { code: 'invalid', message: 'Bad value', field: 'futureField' } },
+      });
+    },
+  });
+  assert.deepEqual(await client.sendRawCommand('GET', '/api/v1/empty'), { status: 204, response: '' });
+  assert.deepEqual(await client.sendRawCommand('POST', '/api/v1/text'), { status: 202, response: 'Accepted' });
+  await assert.rejects(client.sendRawCommand('POST', '/api/v1/test'), (error) => error.httpStatus === 422
+    && error.code === 'invalid' && error.message === 'Bad value' && error.field === 'futureField');
 });

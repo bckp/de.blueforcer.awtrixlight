@@ -1,0 +1,13 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Stored MP3 playback",
+    "cs": "Přehrávání uložených MP3",
+    "de": "Gespeicherte MP3 abspielen",
+    "nl": "Opgeslagen MP3 afspelen"
+  },
+  "getable": true,
+  "setable": false,
+  "insights": false,
+  "uiComponent": null
+}
