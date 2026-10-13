@@ -173,5 +173,8 @@
   },
   "2.3.6": {
     "en": "Add speech flowcard (TCO02)"
+  },
+  "2.3.7": {
+    "en": "Add RAW and MP3 flowcard"
   }
 }
