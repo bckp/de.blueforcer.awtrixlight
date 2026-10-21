@@ -1,5 +1,4 @@
 import { Device } from 'homey';
-import FormData from 'form-data';
 import Client, { RequestHeaders } from './Client';
 import {
   indicatorNumber,
@@ -101,7 +100,7 @@ export default class Api {
 
   async uploadImage(data: any, name: string): Promise<void> {
     const form = new FormData();
-    form.append('image', data, { filepath: `/ICONS/${name}` });
+    form.append('image', new Blob([data]), `/ICONS/${name}`);
 
     await this.#requireOk(this.clientUpload('edit', form));
   }
@@ -182,6 +181,10 @@ export default class Api {
 
       case Status.AuthFailed:
         await this.processUnavailability(this.device.homey.__('api.error.loginFailed'));
+        return;
+
+      case Status.Timeout:
+        await this.processUnavailability(this.device.homey.__('states.deviceUnreachable'));
         return;
 
       default:

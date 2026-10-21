@@ -1,0 +1,66 @@
+meta {
+  name: 01 Read callback configuration
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{awtrix_base_url}}/api/v1/system
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{awtrix_username}}
+  password: {{awtrix_password}}
+}
+
+script:post-response {
+  const body = res.getBody();
+  const callback = body && body.buttonCallback;
+
+  if (typeof callback === "string" && callback.length > 0) {
+    try {
+      const parsed = new URL(callback);
+      const routePrefix = "/api/app/de.blueforcer.awtrixlight/awtrixng/button/";
+
+      if (parsed.protocol !== "http:" || !parsed.pathname.startsWith(routePrefix)) {
+        console.error("The configured callback is not the expected local Homey HTTP route.");
+      } else {
+        const routeParts = parsed.pathname.slice(routePrefix.length).split("/");
+
+        if (routeParts.length !== 2 || routeParts.some((part) => part.length === 0)) {
+          console.error("The configured callback does not contain exactly one device UID and token.");
+        } else {
+          bru.setVar("homey_base_url", parsed.origin);
+          bru.setVar("device_uid", decodeURIComponent(routeParts[0]));
+          bru.setVar("callback_token", decodeURIComponent(routeParts[1]));
+          console.log("Homey callback runtime variables are ready for requests 02-09.");
+        }
+      }
+    } catch (error) {
+      console.error("The configured buttonCallback is not a valid URL.");
+    }
+  }
+}
+
+tests {
+  test("AWTRIX returns the system configuration", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("buttonCallback is an enabled local Homey HTTP URL", function() {
+    const callback = res.getBody().buttonCallback;
+    expect(callback).to.be.a("string").and.not.empty;
+    expect(callback).to.match(/^http:\/\//);
+    expect(callback).to.include("/api/app/de.blueforcer.awtrixlight/awtrixng/button/");
+  });
+}
+
+docs {
+  Run this after enabling "Enable button callbacks" in the Homey settings of the AWTRIX NG device.
+
+  Set awtrix_base_url in the Local environment. If AWTRIX API authentication is enabled, enter awtrix_username and awtrix_password as Bruno secret variables. When authentication is disabled, leave them empty.
+
+  On success this request extracts homey_base_url, device_uid and callback_token into in-memory runtime variables. Do not copy the callback URL or token into logs, issues or committed files.
+}

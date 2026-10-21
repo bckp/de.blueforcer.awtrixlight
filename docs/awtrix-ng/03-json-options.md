@@ -26,18 +26,22 @@ This table lists the JSON properties accepted by the Homey app for AWTRIX NG not
 | property | type | notify | app |
 |---|---|---|---|
 | `text` | `string` or `TextFragment[]` | X | X |
+| `layout` | `LayoutObject` (device must advertise layout version 1) | X | X |
 | `textCase` | `"inherit" \| "upper" \| "asTyped"` | X | X |
-| `font` | `"small" \| "large"` | X | X |
+| `font` | `string`: `small`, `large`, or a name advertised in `capabilities.fonts` | X | X |
 | `textColor` | `ColorInput \| "palette"` | X | X |
 | `textBlinkMs` | `number` | X | X |
 | `textFadeMs` | `number` | X | X |
-| `textCenter` | `boolean` | X | X |
+| `textCenter` | `boolean` (legacy compatibility option; see below) | X | X |
+| `textAlign` | `"start" \| "center" \| "end"` (firmware 1.1.7+) | X | X |
 | `textOffsetX` | `number` | X | X |
 | `textInFront` | `boolean` | X | X |
 | `scroll` | `ScrollObject` | X | X |
 | `icon` | `string` | X | X |
 | `iconMode` | `"fixed" \| "pushOnce" \| "push"` | X | X |
 | `iconOffsetX` | `number` | X | X |
+| `iconGap` | integer 0–128; NG 1.1.2 or newer | X | X |
+| `icons` | up to four `{ icon, x?, y? }` objects; NG 1.1.2 or newer | X | X |
 | `durationMs` | `number` | X | X |
 | `backgroundColor` | `ColorInput` | X | X |
 | `barChart` | `number[]` | X | X |
@@ -59,7 +63,7 @@ This table lists the JSON properties accepted by the Homey app for AWTRIX NG not
 | `hold` | `boolean` | X |  |
 | `stack` | `boolean` | X |  |
 | `wakeup` | `boolean` | X |  |
-| `sound` | `string \| number` | X |  |
+| `sound` | `string \| number \| SoundObject \| SoundList` | X |  |
 | `soundRtttl` | `string` | X |  |
 | `soundLoop` | `boolean` | X |  |
 | `repeat` | `number` | X | X |
@@ -90,17 +94,20 @@ These fields are accepted by both notification/message JSON payloads and pushed 
 |---|---|---|
 | `text` | `string` or `TextFragment[]` | Main text. Text fragments must use `{ "text": string, "color"?: ColorInput }`. Legacy `{ "t", "c" }` fragments are rejected. |
 | `textCase` | `"inherit" \| "upper" \| "asTyped"` | Text casing mode. |
-| `font` | `"small" \| "large"` | Panel font. `large` is seven rows high. |
+| `font` | `string` | `small`, `large`, or a Matrix font explicitly advertised in `capabilities.fonts`. |
 | `textColor` | `ColorInput \| "palette"` | Text color. Use `"palette"` together with `palette` for palette-based rendering. |
 | `textBlinkMs` | `number` | Text blink interval in milliseconds. |
 | `textFadeMs` | `number` | Text fade duration in milliseconds. |
-| `textCenter` | `boolean` | Center text when applicable. |
+| `textCenter` | `boolean` | Legacy centering. Before firmware 1.1.7, sent unchanged. On 1.1.7+, explicitly converted to `textAlign: "center"` for true or `"start"` for false. |
+| `textAlign` | `"start" \| "center" \| "end"` | Native still-text alignment, firmware 1.1.7+. Scrolling text is unaffected. Cannot be combined with `textCenter`; older firmware rejects this option instead of emulating it. |
 | `textOffsetX` | `number` | Horizontal text offset. |
 | `textInFront` | `boolean` | Draw text in front of decorations/effects where supported by AWTRIX NG. |
 | `scroll` | `ScrollObject` | Scroll configuration object. String shorthand is not accepted by the Homey transformer; use an object. |
 | `icon` | `string` | Icon ID/name or AWTRIX NG-supported inline icon value. Exact inline data URL compatibility is not guaranteed. |
 | `iconMode` | `"fixed" \| "pushOnce" \| "push"` | Icon movement mode. |
 | `iconOffsetX` | `number` | Horizontal icon offset. |
+| `iconGap` | integer 0–128 | Gap between the main icon and text; NG 1.1.2 or newer. |
+| `icons` | `{ icon: string, x?: integer, y?: integer }[]` | Up to four independent icons; coordinates −65535…65535. NG 1.1.2 or newer. |
 | `durationMs` | `number` | Page/notification duration in milliseconds. In regular Homey flows this is normally set via Homey's native Add duration option; in JSON-only flows use this field directly. |
 | `backgroundColor` | `ColorInput` | Background color. |
 | `barChart` | `number[]` | Bar chart values. |
@@ -118,6 +125,71 @@ These fields are accepted by both notification/message JSON payloads and pushed 
 | `paletteSpeed` | `number` | Palette animation speed. |
 | `overlay` | `string` | Per-page overlay string. Use documented AWTRIX NG overlay names. `"clear"` semantics are UNKNOWN and not treated as AWTRIX 3 compatibility. |
 | `draw` | `DrawCommand[]` | Low-level draw commands accepted by AWTRIX NG. |
+
+### Device-specific page extensions
+
+Named fonts are checked against the current `capabilities.fonts`, on either panel
+size. Internet icon URLs are accepted only on TC002, including layout regions.
+There is no explicit capability flag for `iconGap` or `icons`: the app deliberately
+requires firmware 1.1.2 or newer, matching the public release contract and current
+documentation. No unsupported field is silently removed. Layout cannot be combined
+with these flat visual fields; place icons in its regions instead.
+
+### Layout JSON
+
+`notificationRaw` and `applicationRaw` accept a `layout` object. Layouts are not
+exclusive to TC002: the [firmware layout guide](https://ang.blueforcer.de/guides/layouts/)
+also documents 32×8 examples. Before every layout write the NG facade reads
+`GET /api/v1/capabilities`: `layouts.version` must be 1, each region must fit within
+`display.width` and `display.height`, and fonts, named palettes, effects and overlays
+must be advertised by that device. Region, scroller, icon, chart-point and UTF-8 text
+limits come from `layouts.limits`. Memory preparation and icon decoding remain
+firmware checks; their HTTP error status, code, message and field propagate unchanged.
+
+Each region requires a unique `id` (at most 64 UTF-8 bytes), a `box` in
+`[x, y, width, height]` format, and exactly one content field:
+
+| Content | Options accepted by the Homey parser |
+|---|---|
+| `text`: string or `{text, color?}[]` | `font`, `color` or `textColor`, palette options, `align`, `valign`, `scroll`, `repeat`, `textCase`, `textBlinkMs`, `textFadeMs` |
+| `icon`: ID or data URL | `align`, `valign` |
+| `chart`: `{values, type?, min?, max?}` | Integer values, type `line` or `bar`; set both range bounds if either is present; region color and palette options |
+| `progress`: 0–100 | Region color, palette options and `trackColor` |
+| `draw`: `DrawCommand[]` | Region color and `font`; positions are relative to the region |
+
+Alignment values are `start`, `center`, `end`. Region scroll accepts the documented
+mode string or scroll object; top-level `scroll` retains its object-only contract.
+Palette options are `palette`, `paletteBlend`, `paletteSpan`, `paletteSpeed`;
+modifiers require a palette in the same object. Unknown nested fields are rejected.
+
+The layout itself accepts `version`, `regions`, `backgroundColor`, `effect`,
+`effectSpeed`, `overlay` and palette options. Background color and effect conflict.
+All visual page options must move inside the layout. Only `durationMs`, `repeat`,
+pushed-app lifetime fields and notification-specific fields remain outside it.
+
+Example for a 52×16 device with the reported font names (choose an existing icon):
+
+```json
+{
+  "durationMs": 10000,
+  "layout": {
+    "version": 1,
+    "regions": [
+      {"id": "icon", "box": [0, 0, 16, 16], "icon": "weather"},
+      {"id": "header", "box": [17, 0, 35, 8], "text": "OUTSIDE", "font": "matrix-light6", "color": "#00AAFF", "scroll": "static"},
+      {"id": "value", "box": [17, 8, 35, 8], "text": "21 C", "font": "matrix-chunky8x6", "scroll": {"mode": "loop"}}
+    ]
+  }
+}
+```
+
+A 32×8 device can use its own layout with regions confined to 32×8. The example
+above is rejected on that device before a notification/app write. Layout JSON is
+sent directly; the app never uploads a layout file or shrinks it to fit.
+
+The two title-and-text preset cards for 52×16 have a separate optional header color
+and JSON options for timing and notification/app behavior. Their options reject all
+visual fields, including a supplied `layout`; see [the preset card guide](12-header-cards.md).
 
 ### Text fragments
 
@@ -248,11 +320,28 @@ They accept all common page options plus the notification-only fields below.
 | `hold` | `boolean` | Keep the notification active until dismissed. Sticky notification flow forces this to `true`. |
 | `stack` | `boolean` | AWTRIX NG stack behavior. |
 | `wakeup` | `boolean` | Wake display/device behavior according to AWTRIX NG API. |
-| `sound` | `string \| number` | AWTRIX NG sound reference. |
+| `sound` | `string \| number \| SoundObject \| SoundList` | AWTRIX NG sound reference; objects/lists require the new audio API. |
 | `soundRtttl` | `string` | RTTTL sound embedded in the notification payload. |
 | `soundLoop` | `boolean` | Loop notification sound. |
 
 The common page field `repeat` sets the number of completed scrolling-text passes. If the text does not scroll, it has no effect.
+
+On TC002 1.1.6's audio API, `sound` also accepts an object with exactly one source:
+`file`, `rtttl`, `song`, `speech`, `track` or `station`. A list contains 1–4 names or sound objects
+and is passed to firmware for its documented fallback selection. `loop` must be a
+boolean; `nextBar` is only allowed with a looping song. Sound objects and lists are
+explicitly rejected on the older audio API. Existing NG `soundRtttl`, numeric
+`sound` and `soundLoop` options are adapted at the NG facade to the new sound object;
+conflicting sources or loop options are rejected instead of discarded.
+
+`station` accepts a saved name, a zero-based index or a stream URL, requires
+`audio.radio`, and cannot have loop/nextBar options or appear in a fallback list.
+`speech` is limited to 1–512 UTF-8 bytes. Single sound objects require their
+corresponding audio capability; lists retain firmware's explicit fallback behavior.
+
+```json
+{"text":"Door open","sound":[{"speech":"The front door is open."},"ding"]}
+```
 
 Notification JSON does not support pushed-app-only fields:
 
@@ -284,6 +373,21 @@ Sticky notification example:
   "hold": true
 }
 ```
+
+### Dismiss a named notification
+
+Set `name` in notification JSON, for example:
+
+```json
+{"name":"backup-job","text":"Backup running","hold":true}
+```
+
+The NG Flow card **Dismiss a named notification** removes that exact name anywhere
+in the queue. It sends `DELETE /api/v1/notifications/{name}` and preserves a native
+404 when the notification has already disappeared. It never substitutes an active
+notification dismissal. `active` is reserved by firmware; use the existing active
+dismissal card for that operation. Empty names and URL dot segments `.` / `..`
+are rejected locally; other names are encoded as one URL segment without rewriting.
 
 ## App / pushed app JSON options
 

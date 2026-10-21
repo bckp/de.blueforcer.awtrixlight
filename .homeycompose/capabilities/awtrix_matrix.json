@@ -1,7 +1,10 @@
 {
     "type": "boolean",
     "title": {
-        "en": "Display"
+        "en": "Display",
+        "nl": "Display",
+        "de": "Display",
+        "cs": "Displej"
     },
     "getable": true,
     "setable": true,

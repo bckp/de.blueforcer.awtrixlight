@@ -1,21 +1,44 @@
 import fs from 'fs';
-import { Device, DiscoveryResultMDNSSD } from 'homey';
+import { randomBytes, timingSafeEqual } from 'crypto';
+import { Device, DiscoveryResultMDNSSD, FlowCardTriggerDevice } from 'homey';
 import path from 'path';
 import AwtrixNgApi, {
   AwtrixNgBasicAuthOptions,
   AwtrixNgDeviceProbeResult,
+  AwtrixNgFeatureCapabilityIds,
+  AwtrixNgHeaderLayoutInput,
+  AwtrixNgAudioGroup,
+  AwtrixNgMixerField,
+  AwtrixNgMixerFields,
+  AwtrixNgMixerLevels,
   AwtrixNgWeatherOverlayCapabilityId,
   formatAwtrixNgErrorDetails,
+  AwtrixNgStateFlowCardIds,
+  AwtrixNgStateFlowSnapshot,
+  AwtrixNgStateFlowSubscriptions,
+  createAwtrixNgStateFlowEvents,
 } from '../../lib/awtrixng/Api/Api';
 import Poll from '../../lib/shared/Poll';
 import { toAwtrixNgBaseUrl } from '../../lib/awtrixng/Discovery/Detection';
-import { AwtrixNgHomeySettings, hasAwtrixNgLocalSettingsChange } from '../../lib/awtrixng/Services/Settings';
+import {
+  AwtrixNgHomeySettings,
+  hasAwtrixNgConnectionSettingsChange,
+} from '../../lib/awtrixng/Services/Settings';
+import runWithConcurrencyLimit from '../../lib/shared/Concurrency';
 import { toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
 import { AwtrixDeviceType } from '../awtrix-device-type';
 
 const PollIntervalMs = 60000;
+const StateFlowPollIntervalMs = 5000;
 const BundledIconsDirectory = path.join(__dirname, 'assets/images/icons');
+const BundledIcons16Directory = path.join(__dirname, 'assets/images/icons-16');
+const Tc002BundledIconsRevision = 1;
+const Tc002BundledIconsRevisionStoreKey = 'tc002BundledIconsRevision';
 const MaxConcurrentIconUploads = 3;
+const RedactedSettingValue = '<redacted>';
+const BuiltinAppsInitializedStoreKey = 'builtinAppsInitialized';
+const BuiltinAppsFirmwareVersionStoreKey = 'builtinAppsFirmwareVersion';
+const FirmwareVersionStoreKey = 'version';
 
 // Hard-failing wrapper: the connection cannot be built without a usable port.
 const toConnectionPort = (value: unknown): number => {
@@ -32,6 +55,11 @@ interface AwtrixNgDeviceStore {
   baseUrl?: string;
   address?: string;
   port?: number;
+  version?: string;
+  builtinAppsFirmwareVersion?: string;
+  builtinAppsInitialized?: boolean;
+  buttonCallbackToken?: string;
+  managedButtonCallbackUrl?: string;
 }
 
 interface AwtrixNgDeviceSettings extends AwtrixNgHomeySettings {
@@ -39,6 +67,7 @@ interface AwtrixNgDeviceSettings extends AwtrixNgHomeySettings {
   port?: number;
   authUser?: string;
   authPass?: string;
+  buttonCallbackEnabled?: boolean;
 }
 
 interface AwtrixNgDeviceSettingsChange {
@@ -63,14 +92,48 @@ interface AwtrixNgSettingsConnectionCandidate {
   syncAddressIntoSettings: boolean;
 }
 
+const redactSettingsForLog = (settings: Record<string, unknown>): Record<string, unknown> => ({
+  ...settings,
+  ...(typeof settings.authUser === 'string' && settings.authUser.length > 0
+    ? { authUser: RedactedSettingValue }
+    : {}),
+  ...(typeof settings.authPass === 'string' && settings.authPass.length > 0
+    ? { authPass: RedactedSettingValue }
+    : {}),
+});
+
 class AwtrixNgDevice extends Device {
 
   api?: AwtrixNgApi;
 
   poll?: Poll;
 
+  private stateFlowPoll?: Poll;
+
+  private stateFlowSnapshot?: AwtrixNgStateFlowSnapshot;
+
+  private stateFlowSubscriptions: AwtrixNgStateFlowSubscriptions = {
+    application: false, audio: false, radio: false, error: false,
+  };
+
+  private stateFlowSubscriptionSync: Promise<void> = Promise.resolve();
+
+  private stateFlowUpdateListeners: { card: FlowCardTriggerDevice; listener: () => void }[] = [];
+
+  private stateFlowSubscriptionKey?: string;
+
+  private stateFlowEpoch = 0;
+
+  private deleted = false;
+
   /** Resolves once the deferred Homey settings sync scheduled by onSettings() has finished. */
   pendingSettingsSync?: Promise<void>;
+
+  /** Serializes Homey settings writes and firmware-triggered app-order reconciliation. */
+  private builtinAppsOperation: Promise<void> = Promise.resolve();
+
+  /** Latest Homey snapshot, including a settings submission that has not been persisted yet. */
+  private homeySettingsSnapshot?: AwtrixNgHomeySettings;
 
   /**
    * The flow actions (drivers/awtrixng/flow-actions.ts) reach the API through `client`
@@ -101,15 +164,23 @@ class AwtrixNgDevice extends Device {
       return;
     }
 
-    this.configureApi(baseUrl, await this.getSettings() as AwtrixNgDeviceSettings);
+    const initialSettings = await this.getSettings() as AwtrixNgDeviceSettings;
+    this.homeySettingsSnapshot = initialSettings;
+    this.configureApi(baseUrl, initialSettings);
 
     try {
       const deviceStateResult = await this.refreshDeviceState({ allowAddCapabilities: true });
 
       if (deviceStateResult?.status === 'detected') {
+        await this.synchronizeAudioFeatures(deviceStateResult.device);
         await this.refreshSettingsFromDevice();
         await this.refreshDisplayFromDevice();
-        await this.refreshAppsFromDevice();
+        await this.synchronizeBuiltinAppsForFirmware(deviceStateResult.device.version, true, true);
+        await this.reconcileButtonCallbackOnStartup();
+        if (deviceStateResult.device.boardType === 'tc002'
+          && this.getStoreValue(Tc002BundledIconsRevisionStoreKey) !== Tc002BundledIconsRevision) {
+          await this.uploadBundledIconsSafely();
+        }
       }
     } catch (error: unknown) {
       this.error(error);
@@ -117,18 +188,28 @@ class AwtrixNgDevice extends Device {
         `${this.homey.__('states.awtrixNg.initialSynchronizationFailed')}: ${formatAwtrixNgErrorDetails(error)}`,
       );
     } finally {
-      poll.start();
+      if (!this.deleted) {
+        poll.start();
+        await this.startStateFlowPoll().catch(this.error);
+      }
     }
   }
 
   async onAdded(): Promise<void> {
     this.log('AwtrixNgDevice has been added');
-    await this.uploadBundledIcons();
+    await this.uploadBundledIconsSafely();
   }
 
   async onDeleted(): Promise<void> {
     this.log('AwtrixNgDevice has been deleted');
+    this.deleted = true;
+    this.stateFlowEpoch += 1;
+    this.stateFlowPoll?.stop();
     this.poll?.stop();
+    for (const { card, listener } of this.stateFlowUpdateListeners) card.removeListener('update', listener);
+    this.stateFlowUpdateListeners = [];
+    await this.clearOwnedButtonCallbackOnDelete();
+    this.icons?.invalidate();
   }
 
   onDiscoveryResult(discoveryResult: DiscoveryResultMDNSSD): boolean {
@@ -162,17 +243,57 @@ class AwtrixNgDevice extends Device {
   }
 
   async onSettings({ oldSettings, newSettings, changedKeys }: AwtrixNgDeviceSettingsChange): Promise<void> {
-    this.log('AwtrixNgDevice settings were changed', oldSettings, newSettings, changedKeys);
+    this.log(
+      'AwtrixNgDevice settings were changed',
+      redactSettingsForLog(oldSettings),
+      redactSettingsForLog(newSettings),
+      changedKeys,
+    );
 
     // Pure validation first: an invalid key or value must fail before any request is made.
     AwtrixNgApi.validateSettingsChange(newSettings, changedKeys);
+    const previousSettingsSnapshot = this.homeySettingsSnapshot;
+    this.homeySettingsSnapshot = {
+      ...(previousSettingsSnapshot ?? oldSettings),
+      ...newSettings,
+    };
 
-    if (hasAwtrixNgLocalSettingsChange(changedKeys)) {
-      await this.applySettingsChangesWithCandidateConnection(newSettings as AwtrixNgDeviceSettings, changedKeys);
-      return;
+    try {
+      if (hasAwtrixNgConnectionSettingsChange(changedKeys)) {
+        await this.applySettingsChangesWithCandidateConnection(newSettings as AwtrixNgDeviceSettings, changedKeys);
+        return;
+      }
+
+      await this.runBuiltinAppsOperation(async () => {
+        const api = this.getApi();
+        if (changedKeys.includes('buttonCallbackEnabled') && newSettings.buttonCallbackEnabled === true) {
+          api.requireButtonCallbackSupport();
+        }
+        await api.applySettingsChange(newSettings, changedKeys);
+        await this.applyButtonCallbackSettingChange(api, newSettings as AwtrixNgDeviceSettings, changedKeys);
+      });
+    } catch (error: unknown) {
+      this.homeySettingsSnapshot = previousSettingsSnapshot;
+      throw error;
+    }
+  }
+
+  /** Called by the driver only after it has found this device by the route uid. */
+  async acceptsButtonCallback(input: { routeUid: string; bodyUid: string; token: string }): Promise<boolean> {
+    if (input.routeUid !== input.bodyUid || input.routeUid !== this.getData().id) {
+      return false;
     }
 
-    await this.getApi().applySettingsChange(newSettings, changedKeys);
+    const settings = this.homeySettingsSnapshot ?? await this.getSettings() as AwtrixNgDeviceSettings;
+    if (settings.buttonCallbackEnabled !== true) {
+      return false;
+    }
+
+    const expectedToken = this.getStoreSnapshot().buttonCallbackToken;
+
+    return expectedToken !== undefined && this.isManagedButtonCallbackToken(expectedToken)
+      && this.isManagedButtonCallbackToken(input.token)
+      && timingSafeEqual(Buffer.from(input.token, 'hex'), Buffer.from(expectedToken, 'hex'));
   }
 
   /**
@@ -186,6 +307,7 @@ class AwtrixNgDevice extends Device {
   }
 
   private initCapabilityListeners(): void {
+    this.registerCapabilityListener('dim', async (value: number): Promise<void> => this.setBrightness(value));
     this.registerCapabilityListener('awtrix_matrix', async (value: unknown): Promise<void> => {
       await this.getApi().setMatrixPower(value);
     });
@@ -248,7 +370,12 @@ class AwtrixNgDevice extends Device {
 
   private initializePoll(): Poll {
     const poll = new Poll(async () => {
-      await this.refreshDeviceState({ allowAddCapabilities: false });
+      const result = await this.refreshDeviceState({ allowAddCapabilities: false });
+
+      if (result?.status === 'detected') {
+        await this.synchronizeBuiltinAppsForFirmware(result.device.version, false, true);
+        if (this.hasCapability(AwtrixNgFeatureCapabilityIds.audioMixer)) await this.refreshMixer();
+      }
     }, this.homey, {
       intervalMs: PollIntervalMs,
       onError: (error: unknown) => this.error(error),
@@ -267,8 +394,244 @@ class AwtrixNgDevice extends Device {
     return this.api;
   }
 
+  private async startStateFlowPoll(): Promise<void> {
+    if (this.deleted || this.stateFlowUpdateListeners.length > 0) return;
+    this.stateFlowPoll = new Poll(() => this.refreshStateFlows(), this.homey, {
+      intervalMs: StateFlowPollIntervalMs,
+      onError: (error: unknown) => this.error(error),
+    });
+    for (const id of Object.values(AwtrixNgStateFlowCardIds)) {
+      const card = this.homey.flow.getDeviceTriggerCard(id);
+      const listener = () => {
+        this.synchronizeStateFlowSubscriptions().catch(this.error);
+      };
+      card.on('update', listener);
+      this.stateFlowUpdateListeners.push({ card, listener });
+    }
+    await this.synchronizeStateFlowSubscriptions();
+  }
+
+  private synchronizeStateFlowSubscriptions(): Promise<void> {
+    const sync = async () => {
+      if (this.deleted) return;
+      const entries = await Promise.all(Object.entries(AwtrixNgStateFlowCardIds).map(async ([key, id]) => (
+        [key, (await this.homey.flow.getDeviceTriggerCard(id).getArgumentValues(this)).length > 0] as const
+      )));
+      if (this.deleted) return;
+      const subscriptions = Object.fromEntries(entries) as unknown as AwtrixNgStateFlowSubscriptions;
+      const subscriptionKey = JSON.stringify(subscriptions);
+      if (subscriptionKey !== this.stateFlowSubscriptionKey) {
+        this.stateFlowEpoch += 1;
+        this.stateFlowSnapshot = undefined;
+      }
+      this.stateFlowSubscriptions = subscriptions;
+      this.stateFlowSubscriptionKey = subscriptionKey;
+      if (Object.values(subscriptions).some(Boolean)) {
+        if (!this.stateFlowPoll?.isActive()) this.stateFlowPoll?.start();
+      } else {
+        this.stateFlowPoll?.stop();
+      }
+    };
+    // Every caller reports its error; allow later updates to recover a failed refresh.
+    this.stateFlowSubscriptionSync = this.stateFlowSubscriptionSync.then(sync, sync);
+    return this.stateFlowSubscriptionSync;
+  }
+
+  private async refreshStateFlows(): Promise<void> {
+    const epoch = this.stateFlowEpoch;
+    let next: AwtrixNgStateFlowSnapshot;
+    const subscriptions = this.stateFlowSubscriptions;
+    if (this.deleted || !Object.values(subscriptions).some(Boolean)) return;
+    try {
+      next = await this.getApi().readStateFlowSnapshot(this.getData().id as string, subscriptions);
+    } catch (error: unknown) {
+      if (epoch === this.stateFlowEpoch) this.stateFlowSnapshot = undefined;
+      throw error;
+    }
+    // Ignore observations from a deleted device or a connection replaced while awaiting HTTP.
+    if (this.deleted || epoch !== this.stateFlowEpoch) return;
+    const events = createAwtrixNgStateFlowEvents(this.stateFlowSnapshot, next, subscriptions);
+    this.stateFlowSnapshot = next;
+    for (const event of events) {
+      if (this.deleted || epoch !== this.stateFlowEpoch) return;
+      await this.homey.flow.getDeviceTriggerCard(AwtrixNgStateFlowCardIds[event.card]).trigger(this, event.tokens).catch(this.error);
+    }
+  }
+
+  async playSynthEffect(fx: string): Promise<void> {
+    if (!this.hasCapability(AwtrixNgFeatureCapabilityIds.audioSynth)) {
+      throw new Error('This AWTRIX NG device does not support synthesized audio.');
+    }
+    await this.getApi().playSynthFx(fx);
+  }
+
+  async setBrightness(value: number): Promise<void> {
+    const actual = await this.getApi().setBrightness(value);
+    await this.setCapabilityValue('dim', actual.brightness).catch(this.error);
+    await this.setSettings({ autoBrightness: actual.autoBrightness });
+  }
+
+  async sendHeaderNotification(input: AwtrixNgHeaderLayoutInput): Promise<void> {
+    this.requireHeaderLayoutCapabilities();
+    await this.getApi().sendHeaderNotification(input);
+  }
+
+  async putHeaderApp(name: string, input: AwtrixNgHeaderLayoutInput): Promise<void> {
+    this.requireHeaderLayoutCapabilities();
+    await this.getApi().putHeaderApp(name, input);
+  }
+
+  private requireHeaderLayoutCapabilities(): void {
+    if (!this.hasCapability(AwtrixNgFeatureCapabilityIds.layout)
+      || !this.hasCapability(AwtrixNgFeatureCapabilityIds.display16)) {
+      throw new Error('This AWTRIX NG device does not support the 16-row header layout.');
+    }
+  }
+
+  async playMp3Url(url: string): Promise<void> {
+    this.requireUrlAudioCapability();
+    await this.getApi().playMp3Url(url);
+  }
+
+  async stopUrlSound(): Promise<void> {
+    this.requireUrlAudioCapability();
+    await this.getApi().stopUrlSound();
+  }
+
+  async setAudioVolume(field: AwtrixNgMixerField, value: number): Promise<void> {
+    const levels = await this.getApi().setMixerLevel(field, value);
+    await this.updateMixerCapabilities(levels);
+  }
+
+  async stopAudioGroup(group: AwtrixNgAudioGroup): Promise<void> {
+    await this.getApi().stopAudioGroup(group);
+  }
+
+  async playRadio(station: string | number): Promise<void> {
+    await this.getApi().playRadio(station);
+  }
+
+  async getSelectableScripts(): Promise<{ id: string; name: string }[]> {
+    return (await this.getApi().readSelectableScripts()).map((script) => ({
+      id: script.name, name: script.meta?.name || script.name,
+    }));
+  }
+
+  async showScript(name: string): Promise<void> {
+    await this.getApi().showScript(name);
+  }
+
+  async getManageableScripts(): Promise<{ id: string; name: string }[]> {
+    return (await this.getApi().readManageableScripts()).map((script) => ({ id: script.name, name: script.meta?.name || script.name }));
+  }
+
+  async dismissNamedNotification(name: string): Promise<void> {
+    await this.getApi().dismissNamedNotification(name);
+  }
+
+  async getScriptSettingChoices(name: string) {
+    return this.getApi().readScriptSettingChoices(name);
+  }
+
+  async setScriptSetting(name: string, key: string, value: string): Promise<void> {
+    await this.getApi().writeScriptSetting(name, key, value);
+  }
+
+  async getScriptSetting(name: string, key: string) {
+    return this.getApi().readScriptSettingValue(name, key);
+  }
+
+  async getScriptDataChoices(name: string) {
+    return this.getApi().readScriptDataChoices(name);
+  }
+
+  async getScriptData(name: string, key: string) {
+    return this.getApi().readScriptDataValue(name, key);
+  }
+
+  async setScriptData(name: string, value: string): Promise<void> {
+    await this.getApi().writeScriptData(name, value);
+  }
+
+  async getSharedScriptChoices() {
+    return this.getApi().readSharedScriptChoices();
+  }
+
+  async getSharedScriptValue(id: string) {
+    return this.getApi().readSharedScriptValue(id);
+  }
+
+  async playRadioUrl(url: string): Promise<void> {
+    await this.getApi().playRadioUrl(url);
+  }
+
+  async getRadioStations(): Promise<{ name: string; url: string }[]> {
+    return this.getApi().readRadioStations();
+  }
+
+  async saveRadioStation(name: string, url: string): Promise<void> {
+    await this.getApi().saveRadioStation(name, url);
+  }
+
+  async getStoredMp3Choices(): Promise<{ id: string; name: string }[]> {
+    return this.getApi().readStoredMp3Choices();
+  }
+
+  async playStoredSound(name: string): Promise<void> {
+    await this.getApi().playStoredSound(name);
+  }
+
+  async sendRawCommand(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, json: string) {
+    return this.getApi().sendRawCommand(method, path, json);
+  }
+
+  async speakText(text: string): Promise<void> {
+    await this.getApi().speakText(text);
+  }
+
+  async playAudioClipUrl(url: string): Promise<void> {
+    await this.getApi().playAudioClipUrl(url);
+  }
+
+  private async synchronizeAudioFeatures(device: Extract<AwtrixNgDeviceProbeResult, { status: 'detected' }>['device']): Promise<void> {
+    // 1.1.6 is the first supported group-audio contract. Existing devices gain markers on restart.
+    if (!AwtrixNgApi.supportsGroupAudioFirmware(device.version)) return;
+    const features = await this.getApi().readFeatures(device);
+    for (const capability of features) {
+      if (!this.hasCapability(capability)) await this.addCapability(capability);
+    }
+    if (this.hasCapability(AwtrixNgFeatureCapabilityIds.audioMixer)) {
+      for (const field of AwtrixNgMixerFields) {
+        const capability = AwtrixNgFeatureCapabilityIds[field];
+        if (this.hasCapability(capability)) {
+          this.registerCapabilityListener(capability, async (value: number) => this.setAudioVolume(field, value));
+        }
+      }
+      await this.refreshMixer();
+    }
+  }
+
+  private async refreshMixer(): Promise<void> {
+    await this.updateMixerCapabilities(await this.getApi().readMixer());
+  }
+
+  private async updateMixerCapabilities(levels: AwtrixNgMixerLevels): Promise<void> {
+    for (const field of AwtrixNgMixerFields) {
+      const capability = AwtrixNgFeatureCapabilityIds[field];
+      if (this.hasCapability(capability)) await this.setCapabilityValue(capability, levels[field]);
+    }
+  }
+
+  private requireUrlAudioCapability(): void {
+    if (!this.hasCapability(AwtrixNgFeatureCapabilityIds.audioUrl)) {
+      throw new Error('This AWTRIX NG device does not support native MP3 URL playback.');
+    }
+  }
+
   async refreshDeviceState(options: { allowAddCapabilities: boolean }): Promise<AwtrixNgDeviceProbeResult | undefined> {
-    const result = await this.getApi().probe();
+    if (this.deleted) return undefined;
+    const result = await this.getApi().probe(this.getData().id as string);
+    if (this.deleted) return undefined;
 
     if (result.status === 'detected') {
       await this.applyDeviceState(result.device, options.allowAddCapabilities);
@@ -279,6 +642,172 @@ class AwtrixNgDevice extends Device {
     await this.setUnavailable(this.getUnavailableMessage(result));
 
     return result;
+  }
+
+  private async applyButtonCallbackSettingChange(
+    api: AwtrixNgApi,
+    settings: AwtrixNgDeviceSettings,
+    changedKeys: readonly string[],
+  ): Promise<void> {
+    if (!changedKeys.includes('buttonCallbackEnabled')) {
+      return;
+    }
+
+    if (settings.buttonCallbackEnabled === true) {
+      await this.enableButtonCallback(api);
+    } else {
+      await this.disableButtonCallback(api);
+    }
+  }
+
+  /** Reconcile only enabled integrations; a default-false upgrade must not touch /system. */
+  private async reconcileButtonCallback(api: AwtrixNgApi, settings: AwtrixNgDeviceSettings): Promise<void> {
+    if (settings.buttonCallbackEnabled === true) {
+      await this.enableButtonCallback(api);
+    }
+  }
+
+  private async reconcileButtonCallbackOnStartup(): Promise<void> {
+    const settings = await this.getSettings() as AwtrixNgDeviceSettings;
+
+    if (settings.buttonCallbackEnabled !== true) {
+      return;
+    }
+
+    await this.reconcileButtonCallbackSafely(this.getApi(), settings);
+  }
+
+  private async reconcileButtonCallbackSafely(api: AwtrixNgApi, settings: AwtrixNgDeviceSettings): Promise<void> {
+    if (settings.buttonCallbackEnabled !== true) {
+      return;
+    }
+
+    try {
+      await this.reconcileButtonCallback(api, settings);
+      await this.unsetWarning();
+    } catch (error: unknown) {
+      // Synchronization is optional: the primary device integration stays available, but the
+      // error is both logged and surfaced to the user rather than being swallowed.
+      this.reportButtonCallbackError(error);
+      await this.setWarning(this.homey.__('states.awtrixNg.buttonCallbackSynchronizationFailed'));
+    }
+  }
+
+  private async enableButtonCallback(api: AwtrixNgApi): Promise<void> {
+    api.requireButtonCallbackSupport();
+    const token = await this.getOrCreateButtonCallbackToken();
+    const desiredUrl = await this.buildButtonCallbackUrl(this.getData().id as string, token);
+    const { managedButtonCallbackUrl } = this.getStoreSnapshot();
+    const currentUrl = await api.readButtonCallback();
+
+    if (currentUrl === desiredUrl) {
+      if (managedButtonCallbackUrl !== desiredUrl) {
+        await this.setStoreValue('managedButtonCallbackUrl', desiredUrl);
+      }
+      return;
+    }
+
+    if (currentUrl !== '' && currentUrl !== managedButtonCallbackUrl) {
+      throw new Error(this.homey.__('states.awtrixNg.buttonCallbackConflict'));
+    }
+
+    await api.writeButtonCallback(desiredUrl);
+    await this.setStoreValue('managedButtonCallbackUrl', desiredUrl);
+  }
+
+  private async disableButtonCallback(api: AwtrixNgApi): Promise<void> {
+    const { managedButtonCallbackUrl } = this.getStoreSnapshot();
+    const currentUrl = await api.readButtonCallback();
+
+    if (currentUrl === '') {
+      await this.unsetStoreValue('managedButtonCallbackUrl');
+      return;
+    }
+
+    if (managedButtonCallbackUrl !== undefined && currentUrl === managedButtonCallbackUrl) {
+      await api.writeButtonCallback('');
+      await this.unsetStoreValue('managedButtonCallbackUrl');
+      return;
+    }
+
+    const token = this.getStoreSnapshot().buttonCallbackToken;
+    const desiredUrl = token === undefined || !this.isManagedButtonCallbackToken(token)
+      ? undefined
+      : await this.buildButtonCallbackUrl(this.getData().id as string, token);
+
+    if (desiredUrl !== undefined && currentUrl === desiredUrl) {
+      await api.writeButtonCallback('');
+      await this.unsetStoreValue('managedButtonCallbackUrl');
+    }
+
+    if (desiredUrl === undefined || currentUrl !== desiredUrl) {
+      await this.unsetStoreValue('managedButtonCallbackUrl');
+    }
+  }
+
+  private async clearOwnedButtonCallbackOnDelete(): Promise<void> {
+    const { buttonCallbackToken, managedButtonCallbackUrl } = this.getStoreSnapshot();
+    if (this.api === undefined || (buttonCallbackToken === undefined && managedButtonCallbackUrl === undefined)) {
+      return;
+    }
+
+    try {
+      await this.disableButtonCallback(this.api);
+    } catch (error: unknown) {
+      // Device removal must work while the AWTRIX is offline. The failed API operation is
+      // nevertheless reported; do not turn this lifecycle cleanup into a silent no-op.
+      this.reportButtonCallbackError(error);
+    }
+  }
+
+  private reportButtonCallbackError(error: unknown): void {
+    const { buttonCallbackToken, managedButtonCallbackUrl } = this.getStoreSnapshot();
+    let details = formatAwtrixNgErrorDetails(error);
+    if (managedButtonCallbackUrl !== undefined) {
+      details = details.split(managedButtonCallbackUrl).join('<redacted>');
+    }
+    details = details.replace(/https?:\/\/[^\s]+\/api\/app\/de\.blueforcer\.awtrixlight\/awtrixng\/button\/[^\s|]+/g, '<redacted>');
+    if (buttonCallbackToken !== undefined) {
+      details = details.split(buttonCallbackToken).join('<redacted>');
+    }
+    this.error('AWTRIX NG button callback operation failed', details);
+  }
+
+  private async getOrCreateButtonCallbackToken(): Promise<string> {
+    const token = this.getStoreSnapshot().buttonCallbackToken;
+
+    if (token !== undefined && this.isManagedButtonCallbackToken(token)) {
+      return token;
+    }
+
+    const nextToken = randomBytes(32).toString('hex');
+    await this.setStoreValue('buttonCallbackToken', nextToken);
+    return nextToken;
+  }
+
+  private isManagedButtonCallbackToken(token: string): boolean {
+    return /^[a-f0-9]{64}$/.test(token);
+  }
+
+  private async buildButtonCallbackUrl(uid: string, token: string): Promise<string> {
+    const localAddress = await this.homey.cloud.getLocalAddress();
+    const baseAddress = localAddress.includes('://') ? localAddress : `http://${localAddress}`;
+    let url: URL;
+
+    try {
+      url = new URL(baseAddress);
+    } catch {
+      throw new Error(this.homey.__('states.awtrixNg.buttonCallbackLocalAddressInvalid'));
+    }
+
+    if (url.protocol !== 'http:') {
+      throw new Error(this.homey.__('states.awtrixNg.buttonCallbackLocalAddressInvalid'));
+    }
+
+    url.pathname = `/api/app/de.blueforcer.awtrixlight/awtrixng/button/${encodeURIComponent(uid)}/${encodeURIComponent(token)}`;
+    url.search = '';
+    url.hash = '';
+    return url.toString();
   }
 
   private async refreshSettingsFromDevice(): Promise<void> {
@@ -304,7 +833,69 @@ class AwtrixNgDevice extends Device {
 
     if (homeySettingsUpdate !== undefined) {
       await this.setSettings(homeySettingsUpdate);
+      this.homeySettingsSnapshot = {
+        ...currentSettings,
+        ...homeySettingsUpdate,
+      };
+      return;
     }
+
+    this.homeySettingsSnapshot = currentSettings;
+  }
+
+  /**
+   * Keeps the normal device-to-Homey sync direction until a firmware version change is
+   * observed. On that one transition Homey's persisted built-in app settings are reapplied
+   * before the new version is committed, so a failed write is retried by the next poll.
+   */
+  private async synchronizeBuiltinAppsForFirmware(
+    detectedVersion: string,
+    syncFromDeviceWhenUnchanged: boolean,
+    initializeBaseline: boolean,
+  ): Promise<void> {
+    await this.runBuiltinAppsOperation(async () => {
+      const store = this.getStoreSnapshot();
+      const lastAppliedVersion = store.builtinAppsFirmwareVersion ?? store.version;
+      const isNewPairingBaseline = store.builtinAppsInitialized === false;
+      const isLegacyBaseline = store.builtinAppsInitialized === undefined
+        && (lastAppliedVersion === undefined || lastAppliedVersion === detectedVersion);
+
+      if (isNewPairingBaseline || isLegacyBaseline) {
+        if (!initializeBaseline) {
+          return;
+        }
+
+        await this.refreshAppsFromDevice();
+        await this.commitBuiltinAppsFirmwareVersion(detectedVersion);
+        return;
+      }
+
+      if (lastAppliedVersion !== detectedVersion) {
+        const currentSettings = this.homeySettingsSnapshot ?? await this.getSettings() as AwtrixNgHomeySettings;
+
+        await this.getApi().reapplyBuiltinAppSettings(currentSettings);
+        await this.commitBuiltinAppsFirmwareVersion(detectedVersion);
+        return;
+      }
+
+      if (syncFromDeviceWhenUnchanged) {
+        await this.refreshAppsFromDevice();
+      }
+    });
+  }
+
+  private async commitBuiltinAppsFirmwareVersion(version: string): Promise<void> {
+    await this.setStoreValue(BuiltinAppsFirmwareVersionStoreKey, version);
+    await this.setStoreValue(FirmwareVersionStoreKey, version);
+    await this.setStoreValue(BuiltinAppsInitializedStoreKey, true);
+  }
+
+  private runBuiltinAppsOperation<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.builtinAppsOperation.then(operation, operation);
+
+    this.builtinAppsOperation = result.then(() => undefined, () => undefined);
+
+    return result;
   }
 
   private async applyDeviceState(
@@ -314,6 +905,12 @@ class AwtrixNgDevice extends Device {
     const plan = this.getApi().planCapabilityUpdate(deviceState, this.getCapabilities(), {
       allowAddCapabilities,
     });
+
+    for (const capabilityId of plan.capabilitiesToRemove) {
+      if (this.hasCapability(capabilityId)) {
+        await this.removeCapability(capabilityId).catch((error: unknown) => this.error(error));
+      }
+    }
 
     for (const capabilityId of plan.capabilitiesToAdd) {
       if (!this.hasCapability(capabilityId)) {
@@ -349,6 +946,9 @@ class AwtrixNgDevice extends Device {
   }
 
   private activateApi(api: AwtrixNgApi): void {
+    this.stateFlowEpoch += 1;
+    this.stateFlowSnapshot = undefined;
+    this.stateFlowSubscriptionKey = undefined;
     this.api = api;
   }
 
@@ -436,7 +1036,17 @@ class AwtrixNgDevice extends Device {
     const { connection, syncAddressIntoSettings } = this.getConnectionCandidateFromSettings(newSettings, changedKeys);
     const api = await this.verifyCandidateConnection(connection.baseUrl, connection.auth);
 
-    await api.applySettingsChange(newSettings, changedKeys);
+    if (newSettings.buttonCallbackEnabled === true) {
+      api.requireButtonCallbackSupport();
+    }
+
+    await this.runBuiltinAppsOperation(async () => {
+      await api.applySettingsChange(newSettings, changedKeys);
+      await this.applyButtonCallbackSettingChange(api, newSettings, changedKeys);
+      if (!changedKeys.includes('buttonCallbackEnabled')) {
+        await this.reconcileButtonCallback(api, newSettings);
+      }
+    });
 
     await this.commitConnection(connection, api, false);
 
@@ -486,10 +1096,17 @@ class AwtrixNgDevice extends Device {
       this.getAuthFromSettingsSnapshot(settings),
     );
 
+    if (this.deleted) return false;
     await this.commitConnection(connection, api, true);
+    if (this.deleted) return false;
+    await this.reconcileButtonCallbackSafely(api, settings);
     this.ensurePollingStarted();
 
     const result = await this.refreshDeviceState({ allowAddCapabilities: false });
+
+    if (result?.status === 'detected') {
+      await this.synchronizeBuiltinAppsForFirmware(result.device.version, false, false);
+    }
 
     return result?.status === 'detected';
   }
@@ -514,11 +1131,13 @@ class AwtrixNgDevice extends Device {
   }
 
   private ensurePollingStarted(): void {
+    if (this.deleted) return;
     const poll = this.poll || this.initializePoll();
 
     if (!poll.isActive()) {
       poll.start();
     }
+    this.startStateFlowPoll().catch(this.error);
   }
 
   /**
@@ -529,42 +1148,54 @@ class AwtrixNgDevice extends Device {
    * instead of thrown and reported once. They are logged in file order so the diagnostics
    * stay stable regardless of which worker hit them.
    */
-  private async uploadBundledIcons(): Promise<void> {
+  private async uploadBundledIconsSafely(): Promise<void> {
+    try {
+      const iconSize = await this.getApi().getBundledIconSize(this.getData().id as string);
+
+      if (iconSize === 16 && this.getStoreValue(Tc002BundledIconsRevisionStoreKey) === Tc002BundledIconsRevision) {
+        return;
+      }
+
+      const success = await this.uploadBundledIcons(iconSize);
+
+      if (iconSize === 16 && success) {
+        await this.setStoreValue(Tc002BundledIconsRevisionStoreKey, Tc002BundledIconsRevision);
+      }
+    } catch (error: unknown) {
+      this.error(error);
+    }
+  }
+
+  private async uploadBundledIcons(iconSize: 8 | 16): Promise<boolean> {
     const { icons } = this;
 
     if (icons === undefined) {
       throw new Error(this.getConnectionNotConfiguredMessage());
     }
 
-    const iconFiles = fs.readdirSync(BundledIconsDirectory)
-      .filter((fileName) => fs.statSync(path.join(BundledIconsDirectory, fileName)).isFile());
+    const directory = iconSize === 16 ? BundledIcons16Directory : BundledIconsDirectory;
+    const dirEntries = await fs.promises.readdir(directory, { withFileTypes: true });
+    const iconFiles = dirEntries.filter((entry) => entry.isFile()).map((entry) => entry.name);
     const failures: Array<{ fileName: string; error: unknown; index: number }> = [];
-    let nextIconIndex = 0;
 
-    const uploadNextIcon = async (): Promise<void> => {
-      while (nextIconIndex < iconFiles.length) {
-        const index = nextIconIndex;
-        const fileName = iconFiles[index];
-        nextIconIndex += 1;
-
-        try {
-          await icons.upload({
-            fileName,
-            body: fs.readFileSync(path.join(BundledIconsDirectory, fileName)),
-          });
-        } catch (error: unknown) {
-          failures.push({ fileName, error, index });
-        }
+    await runWithConcurrencyLimit(iconFiles, MaxConcurrentIconUploads, async (fileName, index) => {
+      try {
+        const body = await fs.promises.readFile(path.join(directory, fileName));
+        await icons.upload({
+          fileName,
+          body,
+        });
+      } catch (error: unknown) {
+        failures.push({ fileName, error, index });
       }
-    };
-
-    const concurrency = Math.min(MaxConcurrentIconUploads, iconFiles.length);
-    await Promise.all(Array.from({ length: concurrency }, () => uploadNextIcon()));
+    });
 
     if (failures.length > 0) {
       failures.sort((left, right) => left.index - right.index);
       this.error(failures.map(({ fileName, error }) => ({ fileName, error })));
     }
+
+    return failures.length === 0;
   }
 
   private getBaseUrlFromStore(): string | undefined {
@@ -588,11 +1219,24 @@ class AwtrixNgDevice extends Device {
     const baseUrl = this.getStoreValue('baseUrl') as unknown;
     const address = this.getStoreValue('address') as unknown;
     const port = this.getStoreValue('port') as unknown;
+    const version = this.getStoreValue(FirmwareVersionStoreKey) as unknown;
+    const builtinAppsFirmwareVersion = this.getStoreValue(BuiltinAppsFirmwareVersionStoreKey) as unknown;
+    const builtinAppsInitialized = this.getStoreValue(BuiltinAppsInitializedStoreKey) as unknown;
+    const buttonCallbackToken = this.getStoreValue('buttonCallbackToken') as unknown;
+    const managedButtonCallbackUrl = this.getStoreValue('managedButtonCallbackUrl') as unknown;
 
     return {
       baseUrl: typeof baseUrl === 'string' && baseUrl.length > 0 ? baseUrl : undefined,
       address: typeof address === 'string' && address.length > 0 ? address : undefined,
       port: typeof port === 'number' ? port : undefined,
+      version: typeof version === 'string' && version.length > 0 ? version : undefined,
+      builtinAppsFirmwareVersion: typeof builtinAppsFirmwareVersion === 'string'
+        && builtinAppsFirmwareVersion.length > 0
+        ? builtinAppsFirmwareVersion
+        : undefined,
+      builtinAppsInitialized: typeof builtinAppsInitialized === 'boolean' ? builtinAppsInitialized : undefined,
+      buttonCallbackToken: typeof buttonCallbackToken === 'string' ? buttonCallbackToken : undefined,
+      managedButtonCallbackUrl: typeof managedButtonCallbackUrl === 'string' ? managedButtonCallbackUrl : undefined,
     };
   }
 

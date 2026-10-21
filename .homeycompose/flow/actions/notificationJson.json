@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Send a notification with JSON options"
+    "en": "Send a notification with JSON options",
+    "de": "Benachrichtigung mit JSON-Optionen senden",
+    "nl": "Notificatie met JSON-opties verzenden",
+    "cs": "Odeslat oznámení s JSON volbami"
   },
   "titleFormatted": {
-    "en": "Send notification [[msg]] with [[options]]"
+    "en": "Send notification [[msg]] with [[options]]",
+    "de": "Benachrichtigung [[msg]] mit [[options]] senden",
+    "nl": "Verzend notificatie [[msg]] met [[options]]",
+    "cs": "Odeslat oznámení [[msg]] s [[options]]"
   },
   "hint": {
-    "en": "Legacy notification JSON flow for AWTRIX 3. Use Send raw notification for new flows."
+    "en": "Legacy notification JSON flow for AWTRIX 3. Use Send raw notification for new flows.",
+    "de": "Veralteter JSON-Benachrichtigungs-Flow für AWTRIX 3. Verwenden Sie Raw-Benachrichtigung senden für neue Flows.",
+    "nl": "Verouderde JSON-notificatie flow voor AWTRIX 3. Gebruik Raw-notificatie verzenden voor nieuwe flows.",
+    "cs": "Zastaralý JSON flow oznámení pro AWTRIX 3. Pro nové flow použijte Odeslat raw oznámení."
   },
   "deprecated": true,
   "duration": true,
@@ -21,7 +30,10 @@
       "name": "msg",
       "required": false,
       "placeholder": {
-        "en": "message"
+        "en": "message",
+        "de": "Nachricht",
+        "nl": "bericht",
+        "cs": "zpráva"
       }
     },
     {
@@ -29,7 +41,10 @@
       "name": "options",
       "value": "{}",
       "placeholder": {
-        "en": "JSON options"
+        "en": "JSON options",
+        "de": "JSON-Optionen",
+        "nl": "JSON-opties",
+        "cs": "JSON volby"
       }
     }
   ]

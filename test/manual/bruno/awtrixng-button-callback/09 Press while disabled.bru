@@ -1,0 +1,30 @@
+meta {
+  name: 09 Press while disabled
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{homey_base_url}}/api/app/de.blueforcer.awtrixlight/awtrixng/button/{{device_uid}}/{{callback_token}}
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  button: left
+  state: 1
+  uid: {{device_uid}}
+}
+
+tests {
+  test("Homey rejects a previously valid callback after the feature is disabled", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.eql({ ok: false });
+  });
+}
+
+docs {
+  Run this request separately only after request 01 has populated runtime variables and you have then disabled "Enable button callbacks" in Homey.
+
+  Expected result: HTTP 200 with {"ok":false} and no Flow run. Do not rerun request 01 after disabling because AWTRIX will correctly report an empty buttonCallback.
+}

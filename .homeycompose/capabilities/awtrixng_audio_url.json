@@ -1,0 +1,8 @@
+{
+  "type": "boolean",
+  "title": { "en": "MP3 URL playback", "cs": "Přehrávání MP3 z URL", "de": "MP3-Wiedergabe von einer URL", "nl": "MP3 afspelen vanaf een URL" },
+  "getable": true,
+  "setable": false,
+  "insights": false,
+  "uiComponent": null
+}

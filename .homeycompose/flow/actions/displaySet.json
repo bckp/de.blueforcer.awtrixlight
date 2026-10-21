@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Set display power"
+    "en": "Set display power",
+    "de": "Display-Status einstellen",
+    "nl": "Displayschakelaar instellen",
+    "cs": "Nastavit stav displeje"
   },
   "titleFormatted": {
-    "en": "Set display [[power]]"
+    "en": "Set display [[power]]",
+    "de": "Display auf [[power]] setzen",
+    "nl": "Display op [[power]] zetten",
+    "cs": "Nastavit displej na [[power]]"
   },
   "hint": {
-    "en": "Enable or disable display"
+    "en": "Enable or disable display",
+    "de": "Display ein- oder ausschalten",
+    "nl": "Display in- of uitschakelen",
+    "cs": "Zapnout nebo vypnout displej"
   },
   "args": [
     {
@@ -18,19 +27,28 @@
       "type": "dropdown",
       "name": "power",
       "title": {
-        "en": "state"
+        "en": "state",
+        "de": "Status",
+        "nl": "status",
+        "cs": "stav"
       },
       "values": [
         {
           "id": "1",
           "title": {
-            "en": "on"
+            "en": "on",
+            "de": "ein",
+            "nl": "aan",
+            "cs": "zapnuto"
           }
         },
         {
           "id": "0",
           "title": {
-            "en": "off"
+            "en": "off",
+            "de": "aus",
+            "nl": "uit",
+            "cs": "vypnuto"
           }
         }
       ]

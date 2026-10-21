@@ -113,6 +113,19 @@ test('AWTRIX NG icon mapper converts /api/v1/files response files to Homey autoc
   ]);
 });
 
+test('AWTRIX NG icon autocomplete lists a name once when its old JPEG and new GIF coexist', () => {
+  const response = {
+    files: [{ name: 'homey.jpg', size: 100 }, { name: 'homey.gif', size: 200 }],
+    usedBytes: 300,
+    totalBytes: 1048576,
+  };
+
+  assert.deepEqual(toAwtrixNgIconAutocompleteItems(response, labels), [
+    { name: 'Empty', id: '-', description: 'Without icon' },
+    { name: 'homey', id: 'homey' },
+  ]);
+});
+
 test('AWTRIX NG icons list uses GET /api/v1/files semantics via /ICONS directory and supports autocomplete filtering', async () => {
   const client = new FakeIconClient();
   client.listResponses = [{
@@ -255,8 +268,8 @@ test('AWTRIX NG icon upload creates multipart form data and posts to /ICONS', as
   assert.equal(client.calls.length, 1);
   assert.equal(client.calls[0].method, 'uploadFile');
   assert.equal(client.calls[0].dir, '/ICONS');
-  assert.equal(typeof client.calls[0].body.getHeaders, 'function');
-  assert.match(client.calls[0].body.getHeaders()['content-type'], /^multipart\/form-data; boundary=/);
+  assert.equal(client.calls[0].body instanceof FormData, true);
+  assert.equal(client.calls[0].body.has('file'), true);
 });
 
 test('AWTRIX NG icon upload clears cached list after successful upload', async () => {
@@ -357,8 +370,8 @@ test('AWTRIX NG icon upload form exposes multipart headers for transport', () =>
     body: Buffer.from('icon'),
   });
 
-  assert.equal(typeof form.getHeaders, 'function');
-  assert.match(form.getHeaders()['content-type'], /^multipart\/form-data; boundary=/);
+  assert.equal(form instanceof FormData, true);
+  assert.equal(form.has('file'), true);
 });
 
 for (const scenario of [{

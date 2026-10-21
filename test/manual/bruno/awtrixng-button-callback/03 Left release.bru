@@ -1,0 +1,28 @@
+meta {
+  name: 03 Left release
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{homey_base_url}}/api/app/de.blueforcer.awtrixlight/awtrixng/button/{{device_uid}}/{{callback_token}}
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  button: left
+  state: 0
+  uid: {{device_uid}}
+}
+
+tests {
+  test("Homey accepts the release edge without rejecting the callback", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.eql({ ok: true });
+  });
+}
+
+docs {
+  Expected result: HTTP 200 with {"ok":true}, but no Flow run. This verifies that one physical press does not trigger twice when AWTRIX later sends state=0.
+}

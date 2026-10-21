@@ -4,3 +4,5 @@ test/
 AGENTS.md
 CONTRIBUTING.md
 CODE_OF_CONDUCT.md
+package-lock.json
+scripts/

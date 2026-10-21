@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Dismiss a notification"
+    "en": "Dismiss a notification",
+    "de": "Benachrichtigung verwerfen",
+    "nl": "Notificatie sluiten",
+    "cs": "Zavřít oznámení"
   },
   "titleFormatted": {
-    "en": "Dismiss notification"
+    "en": "Dismiss notification",
+    "de": "Benachrichtigung verwerfen",
+    "nl": "Notificatie sluiten",
+    "cs": "Zavřít oznámení"
   },
   "hint": {
-    "en": "Dismiss permanent notification"
+    "en": "Dismiss permanent notification",
+    "de": "Dauerhafte Benachrichtigung verwerfen",
+    "nl": "Permanente notificatie sluiten",
+    "cs": "Zavře trvalé oznámení"
   },
   "args": [
     {

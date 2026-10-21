@@ -1,0 +1,28 @@
+meta {
+  name: 06 Invalid select button
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{homey_base_url}}/api/app/de.blueforcer.awtrixlight/awtrixng/button/{{device_uid}}/{{callback_token}}
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  button: select
+  state: 1
+  uid: {{device_uid}}
+}
+
+tests {
+  test("Homey rejects the MQTT-only select name", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.eql({ ok: false });
+  });
+}
+
+docs {
+  Expected result: HTTP 200 with {"ok":false} and no Flow run. AWTRIX HTTP callbacks must use middle; select is used by other AWTRIX transports.
+}

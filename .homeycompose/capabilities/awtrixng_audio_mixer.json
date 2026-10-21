@@ -1,0 +1,13 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Audio mixer",
+    "cs": "Zvukový mixer",
+    "de": "Audiomixer",
+    "nl": "Audiomixer"
+  },
+  "getable": true,
+  "setable": false,
+  "insights": false,
+  "uiComponent": null
+}

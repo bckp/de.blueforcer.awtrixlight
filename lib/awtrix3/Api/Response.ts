@@ -5,6 +5,8 @@ export enum Status {
   AuthRequired,
   AuthFailed,
   NotFound,
+  /** The device did not answer within the request timeout. */
+  Timeout,
   Error,
 }
 /* eslint-enable no-unused-vars */

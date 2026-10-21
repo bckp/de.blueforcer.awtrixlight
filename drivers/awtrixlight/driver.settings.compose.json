@@ -2,29 +2,44 @@
     {
         "type": "group",
         "label": {
-            "en": "Login details"
+            "en": "Login details",
+            "nl": "Logingegevens",
+            "de": "Anmeldedaten",
+            "cs": "Přihlašovací údaje"
         },
         "children": [
             {
                 "id": "user",
                 "type": "text",
                 "label": {
-                    "en": "Username"
+                    "en": "Username",
+                    "nl": "Gebruikersnaam",
+                    "de": "Benutzername",
+                    "cs": "Uživatelské jméno"
                 },
                 "value": "",
                 "hint": {
-                    "en": "The name of the user."
+                    "en": "The name of the user.",
+                    "nl": "De gebruikersnaam.",
+                    "de": "Der Name des Benutzers.",
+                    "cs": "Jméno uživatele."
                 }
             },
             {
                 "id": "pass",
                 "type": "password",
                 "label": {
-                    "en": "Password"
+                    "en": "Password",
+                    "nl": "Wachtwoord",
+                    "de": "Passwort",
+                    "cs": "Heslo"
                 },
                 "value": "",
                 "hint": {
-                    "en": "The password of the user."
+                    "en": "The password of the user.",
+                    "nl": "Het wachtwoord van de gebruiker.",
+                    "de": "Das Passwort des Benutzers.",
+                    "cs": "Heslo uživatele."
                 }
             }
         ]
@@ -32,7 +47,10 @@
     {
         "type": "group",
         "label": {
-            "en": "Settings"
+            "en": "Settings",
+            "nl": "Instellingen",
+            "de": "Einstellungen",
+            "cs": "Nastavení"
         },
         "children": [
             {
@@ -40,7 +58,10 @@
                 "type": "checkbox",
                 "value": true,
                 "label": {
-                    "en": "Auto-brightness"
+                    "en": "Auto-brightness",
+                    "nl": "Automatische helderheid",
+                    "de": "Automatische Helligkeit",
+                    "cs": "Automatický jas"
                 }
             },
             {
@@ -48,7 +69,10 @@
                 "type": "checkbox",
                 "value": true,
                 "label": {
-                    "en": "Auto-cycle"
+                    "en": "Auto-cycle",
+                    "nl": "Automatisch wisselen",
+                    "de": "Automatischer Wechsel",
+                    "cs": "Automatické přepínání"
                 }
             },
             {
@@ -56,7 +80,10 @@
                 "type": "checkbox",
                 "value": true,
                 "label": {
-                    "en": "Block buttons"
+                    "en": "Block buttons",
+                    "nl": "Knoppen blokkeren",
+                    "de": "Tasten sperren",
+                    "cs": "Blokovat tlačítka"
                 }
             },
             {
@@ -64,7 +91,10 @@
                 "type": "checkbox",
                 "value": true,
                 "label": {
-                    "en": "Uppercase text"
+                    "en": "Uppercase text",
+                    "nl": "Tekst in hoofdletters",
+                    "de": "Großbuchstaben",
+                    "cs": "Text velkými písmeny"
                 }
             },
             {
@@ -72,73 +102,109 @@
                 "type": "dropdown",
                 "value": "0",
                 "label": {
-                    "en": "Transition effect"
+                    "en": "Transition effect",
+                    "nl": "Overgangseffect",
+                    "de": "Übergangseffekt",
+                    "cs": "Přechodový efekt"
                 },
                 "values": [
                     {
                         "id": "0",
                         "label": {
-                            "en": "Random"
+                            "en": "Random",
+                            "nl": "Willekeurig",
+                            "de": "Zufällig",
+                            "cs": "Náhodný"
                         }
                     },
                     {
                         "id": "1",
                         "label": {
-                            "en": "Slide"
+                            "en": "Slide",
+                            "nl": "Schuiven",
+                            "de": "Schieben",
+                            "cs": "Posunutí"
                         }
                     },
                     {
                         "id": "2",
                         "label": {
-                            "en": "Dim"
+                            "en": "Dim",
+                            "nl": "Dimmen",
+                            "de": "Dimmen",
+                            "cs": "Ztlumení"
                         }
                     },
                     {
                         "id": "3",
                         "label": {
-                            "en": "Zoom"
+                            "en": "Zoom",
+                            "nl": "Zoomen",
+                            "de": "Zoomen",
+                            "cs": "Přiblížení"
                         }
                     },
                     {
                         "id": "4",
                         "label": {
-                            "en": "Rotate"
+                            "en": "Rotate",
+                            "nl": "Draaien",
+                            "de": "Drehen",
+                            "cs": "Otočení"
                         }
                     },
                     {
                         "id": "5",
                         "label": {
-                            "en": "Pixelate"
+                            "en": "Pixelate",
+                            "nl": "Pixeleren",
+                            "de": "Verpixeln",
+                            "cs": "Pixelizace"
                         }
                     },
                     {
                         "id": "6",
                         "label": {
-                            "en": "Curtain"
+                            "en": "Curtain",
+                            "nl": "Gordijn",
+                            "de": "Vorhang",
+                            "cs": "Opona"
                         }
                     },
                     {
                         "id": "7",
                         "label": {
-                            "en": "Ripple"
+                            "en": "Ripple",
+                            "nl": "Rimpeling",
+                            "de": "Wellen",
+                            "cs": "Zvlnění"
                         }
                     },
                     {
                         "id": "8",
                         "label": {
-                            "en": "Blink"
+                            "en": "Blink",
+                            "nl": "Knipperen",
+                            "de": "Blinken",
+                            "cs": "Blikání"
                         }
                     },
                     {
                         "id": "9",
                         "label": {
-                            "en": "Reload"
+                            "en": "Reload",
+                            "nl": "Herladen",
+                            "de": "Neu laden",
+                            "cs": "Znovu načíst"
                         }
                     },
                     {
                         "id": "10",
                         "label": {
-                            "en": "Fade"
+                            "en": "Fade",
+                            "nl": "Vervagen",
+                            "de": "Überblenden",
+                            "cs": "Prolnutí"
                         }
                     }
                 ]
@@ -148,7 +214,10 @@
     {
         "type": "group",
         "label": {
-            "en": "Build-in apps"
+            "en": "Build-in apps",
+            "nl": "Ingebouwde apps",
+            "de": "Integrierte Apps",
+            "cs": "Vestavěné aplikace"
         },
         "children": [
             {
@@ -156,7 +225,10 @@
                 "type": "checkbox",
                 "value": true,
                 "label": {
-                    "en": "Time app"
+                    "en": "Time app",
+                    "nl": "Tijd app",
+                    "de": "Uhrzeit App",
+                    "cs": "Aplikace Čas"
                 }
             },
             {
@@ -164,7 +236,10 @@
                 "type": "checkbox",
                 "value": true,
                 "label": {
-                    "en": "Date app"
+                    "en": "Date app",
+                    "nl": "Datum app",
+                    "de": "Datum App",
+                    "cs": "Aplikace Datum"
                 }
             },
             {
@@ -172,7 +247,10 @@
                 "type": "checkbox",
                 "value": true,
                 "label": {
-                    "en": "Humidity app"
+                    "en": "Humidity app",
+                    "nl": "Luchtvochtigheid app",
+                    "de": "Luftfeuchtigkeit App",
+                    "cs": "Aplikace Vlhkost"
                 }
             },
             {
@@ -180,7 +258,10 @@
                 "type": "checkbox",
                 "value": true,
                 "label": {
-                    "en": "Temperature app"
+                    "en": "Temperature app",
+                    "nl": "Temperatuur app",
+                    "de": "Temperatur App",
+                    "cs": "Aplikace Teplota"
                 }
             },
             {
@@ -188,7 +269,10 @@
                 "type": "checkbox",
                 "value": true,
                 "label": {
-                    "en": "Battery app"
+                    "en": "Battery app",
+                    "nl": "Batterij app",
+                    "de": "Batterie App",
+                    "cs": "Aplikace Baterie"
                 }
             }
         ]

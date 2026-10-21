@@ -1,0 +1,13 @@
+auth {
+  mode: none
+}
+
+docs {
+  # AWTRIX NG Homey Button Callback
+
+  Manual LAN integration tests for the AWTRIX NG button callback endpoint exposed by the Homey app.
+
+  Start with request 01. It reads the callback URL from AWTRIX and stores the Homey address, device UID and callback token as in-memory Bruno runtime variables. The token is never persisted by this collection.
+
+  Requests 02-09 send the same application/x-www-form-urlencoded payload as the AWTRIX NG firmware.
+}

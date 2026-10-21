@@ -11,7 +11,7 @@ import {
 
 export const isColor = (color: any): color is string => {
   if (typeof color === 'string') {
-    return /^#[0-9A-F]{6}$/i.test(color.toString());
+    return /^#[0-9A-F]{6}$/i.test(color);
   }
   return false;
 };
@@ -54,9 +54,9 @@ const isColorPaletteColors = (colors: any): colors is ColorPaletteColors => {
   return false;
 };
 
-const isPaletteBuildIn = (pallete: any): pallete is ColorPaletteBuildIn => {
-  if (typeof pallete === 'string') {
-    return pallete === 'Cloud' || pallete === 'Lava' || pallete === 'Ocean' || pallete === 'Forest' || pallete === 'Stripe' || pallete === 'Party' || pallete === 'Heat' || pallete === 'Rainbow';
+const isPaletteBuildIn = (palette: any): palette is ColorPaletteBuildIn => {
+  if (typeof palette === 'string') {
+    return palette === 'Cloud' || palette === 'Lava' || palette === 'Ocean' || palette === 'Forest' || palette === 'Stripe' || palette === 'Party' || palette === 'Heat' || palette === 'Rainbow';
   }
   return false;
 };

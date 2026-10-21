@@ -139,6 +139,22 @@ test('AWTRIX NG client maps settings and display writes', async () => {
   }]);
 });
 
+test('AWTRIX NG client maps button callback system reads and explicit writes', async () => {
+  const { client, transport } = createClient();
+  const patch = { buttonCallback: 'http://homey.local/callback' };
+
+  transport.responseData = { buttonCallback: '' };
+  assert.deepEqual(await client.getSystem(), { buttonCallback: '' });
+  transport.responseData = { buttonCallback: patch.buttonCallback, ignored: true };
+  assert.deepEqual(await client.putSystem(patch), { buttonCallback: patch.buttonCallback, ignored: true });
+  assert.deepEqual(patch, { buttonCallback: 'http://homey.local/callback' });
+  assert.deepEqual(transport.calls, [{
+    method: 'GET', path: '/api/v1/system',
+  }, {
+    method: 'PUT', path: '/api/v1/system', body: { buttonCallback: 'http://homey.local/callback' },
+  }]);
+});
+
 test('AWTRIX NG client maps notification routes', async () => {
   const { client, transport } = createClient();
 
@@ -256,7 +272,7 @@ test('AWTRIX NG client maps sounds, apps and reboot routes', async () => {
 
   assert.deepEqual(transport.calls, [{
     method: 'POST',
-    path: '/api/v1/sounds/play',
+    path: '/api/v1/audio/play',
     body: {
       rtttl: 'beep:d=4,o=5,b=120:c',
     },
@@ -279,6 +295,15 @@ test('AWTRIX NG client maps sounds, apps and reboot routes', async () => {
   }, {
     method: 'POST',
     path: '/api/v1/device/reboot',
+  }]);
+});
+
+test('synth fx uses the observed audio play payload', async () => {
+  const { client, transport } = createClient();
+  const fx = 'bpm 120; inst lead wave=pulse volume=40; lead: c4 e g c5';
+  assert.deepEqual(await client.playSynthFx(fx), ok);
+  assert.deepEqual(transport.calls, [{
+    method: 'POST', path: '/api/v1/audio/play', body: { fx },
   }]);
 });
 

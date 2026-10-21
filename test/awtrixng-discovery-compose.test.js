@@ -49,11 +49,20 @@ test('AWTRIX NG driver compose declares base control capabilities', () => {
     'alarm_generic.indicator2',
     'alarm_generic.indicator3',
     'awtrix_matrix',
+    'dim',
     'awtrixng_weather_overlay',
     'rssi',
     'ip',
     'button.rediscover',
   ]);
+});
+
+test('AWTRIX NG driver describes its battery as internal', () => {
+  const awtrixNgDriver = readJson('drivers/awtrixng/driver.compose.json');
+
+  assert.deepEqual(awtrixNgDriver.energy, {
+    batteries: ['INTERNAL'],
+  });
 });
 
 test('AWTRIX NG pairing uses discovery list with a custom selection router', () => {

@@ -161,17 +161,41 @@ const isSharedIconDevice = (device: unknown): device is SharedIconDevice => {
 
 const getUnsupportedDeviceError = (): Error => new Error('Selected device does not support this flow action.');
 
-const parseAwtrix3JsonOptions = (source: string): Awtrix3JsonNotificationOptions => ({
-  ...(JSON.parse(source) as Awtrix3JsonNotificationOptions),
-});
+const parseAwtrix3JsonOptions = (source: string): Awtrix3JsonNotificationOptions => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(source);
+  } catch {
+    throw new TypeError('Notification options must be valid JSON.');
+  }
+
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new TypeError('Notification options must be a JSON object.');
+  }
+
+  return {
+    ...(parsed as Awtrix3JsonNotificationOptions),
+  };
+};
 
 const parseOptionalAwtrix3JsonOptions = (source: string | undefined): Awtrix3CustomAppOptions => {
   if (source === undefined || source.trim().length === 0) {
     return {};
   }
 
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(source);
+  } catch {
+    throw new TypeError('Custom app options must be valid JSON.');
+  }
+
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new TypeError('Custom app options must be a JSON object.');
+  }
+
   return {
-    ...(JSON.parse(source) as Awtrix3CustomAppOptions),
+    ...(parsed as Awtrix3CustomAppOptions),
   };
 };
 

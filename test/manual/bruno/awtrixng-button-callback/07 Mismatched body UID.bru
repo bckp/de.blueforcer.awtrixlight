@@ -1,0 +1,28 @@
+meta {
+  name: 07 Mismatched body UID
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{homey_base_url}}/api/app/de.blueforcer.awtrixlight/awtrixng/button/{{device_uid}}/{{callback_token}}
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  button: left
+  state: 1
+  uid: ffffffffffff
+}
+
+tests {
+  test("Homey rejects a route and body UID mismatch", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.eql({ ok: false });
+  });
+}
+
+docs {
+  Expected result: HTTP 200 with {"ok":false} and no Flow run. This verifies that a valid URL cannot submit an event for a different device UID.
+}

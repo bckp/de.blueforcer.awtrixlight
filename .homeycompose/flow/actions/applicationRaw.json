@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Create or update a raw application"
+    "en": "Create or update a raw application",
+    "de": "Raw-Applikation erstellen oder aktualisieren",
+    "nl": "Raw-applicatie maken of bijwerken",
+    "cs": "Vytvořit nebo aktualizovat raw aplikaci"
   },
   "titleFormatted": {
-    "en": "Create/update raw application [[name]] [[options]]"
+    "en": "Create/update raw application [[name]] [[options]]",
+    "de": "Raw-Applikation [[name]] [[options]] erstellen/aktualisieren",
+    "nl": "Raw-applicatie [[name]] [[options]] maken/bijwerken",
+    "cs": "Vytvořit/aktualizovat raw aplikaci [[name]] [[options]]"
   },
   "hint": {
-    "en": "Create or update an application using a raw JSON payload. Enter the app name without the internal homey- prefix. This card is for advanced users and accepts only fields supported by the selected device."
+    "en": "Create or update an application using a raw JSON payload. Enter the app name without the internal homey- prefix. This card is for advanced users and accepts only fields supported by the selected device.",
+    "de": "Erstellt oder aktualisiert eine Applikation über eine direkte JSON-Payload. Geben Sie den App-Namen ohne das interne Präfix homey- ein. Diese Karte ist für fortgeschrittene Benutzer und akzeptiert nur vom ausgewählten Gerät unterstützte Felder.",
+    "nl": "Maak of werk een applicatie bij met een directe JSON-payload. Voer de appnaam in zonder het interne homey- voorvoegsel. Deze kaart is voor gevorderde gebruikers en accepteert alleen velden die door het geselecteerde apparaat worden ondersteund.",
+    "cs": "Vytvoří nebo aktualizuje aplikaci pomocí přímého JSON payloadu. Zadejte název aplikace bez interní předpony homey-. Tato karta je pro pokročilé uživatele a přijímá pouze pole podporovaná vybraným zařízením."
   },
   "args": [
     {
@@ -18,7 +27,10 @@
       "type": "text",
       "name": "name",
       "placeholder": {
-        "en": "app name"
+        "en": "app name",
+        "de": "App-Name",
+        "nl": "appnaam",
+        "cs": "název aplikace"
       }
     },
     {
@@ -26,7 +38,10 @@
       "name": "options",
       "value": "{\"text\":\"Hello\"}",
       "placeholder": {
-        "en": "raw JSON payload"
+        "en": "raw JSON payload",
+        "de": "Raw JSON-Payload",
+        "nl": "raw JSON-payload",
+        "cs": "přímý JSON payload"
       }
     }
   ]

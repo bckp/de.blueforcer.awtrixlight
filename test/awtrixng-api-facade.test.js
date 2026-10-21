@@ -5,6 +5,7 @@ const AwtrixNgApi = require('../.homeybuild/lib/awtrixng/Api/Api').default;
 const AwtrixNgClient = require('../.homeybuild/lib/awtrixng/Api/Client').default;
 const { AwtrixNgDeviceIdentityMismatchError } = require('../.homeybuild/lib/awtrixng/Api/IdentityMismatchError');
 const { AwtrixNgInvalidResponseError } = require('../.homeybuild/lib/awtrixng/Api/InvalidResponseError');
+const { AwtrixNgUnsupportedVersionError } = require('../.homeybuild/lib/awtrixng/Api/UnsupportedVersionError');
 const { AwtrixNgBuiltinAppUnavailableError } = require('../.homeybuild/lib/awtrixng/Services/Apps');
 
 const BaseUrl = 'http://192.168.1.44:8080';
@@ -72,11 +73,98 @@ const createApi = (routes = {}) => {
   return { api, transport };
 };
 
+test('positioned icons and iconGap reach both public endpoints on firmware 1.1.2 and newer', async () => {
+  for (const version of ['1.1.2', '1.2.0']) {
+    const { api, transport } = createApi({
+      'GET /api/v1/device': { ...deviceStateResponse, version },
+      'GET /api/v1/capabilities': {},
+      'GET /api/v1/version': { version },
+      'POST /api/v1/notifications': { ok: true },
+      'PUT /api/v1/apps/pushed/homey-weather': { ok: true },
+    });
+    await api.probe();
+    const payload = { icon: 'homey', iconGap: 0, icons: [{ icon: '2422', x: 24, y: -1 }] };
+    assert.deepEqual(await api.sendNotification(payload), { ok: true });
+    assert.deepEqual(await api.putPushedApp('homey-weather', payload), { ok: true });
+    assert.deepEqual(transport.calls.filter(({ method }) => method !== 'GET').map(({ method, path, body }) => ({ method, path, body })), [
+      { method: 'POST', path: '/api/v1/notifications', body: payload },
+      { method: 'PUT', path: '/api/v1/apps/pushed/homey-weather', body: payload },
+    ]);
+  }
+});
+
+test('positioned icons and even zero iconGap are rejected on older or unknown firmware before writing', async () => {
+  for (const version of ['1.0.14', '1.1.1', undefined]) {
+    const { api, transport } = createApi({
+      'GET /api/v1/device': { ...deviceStateResponse, version },
+      'GET /api/v1/capabilities': {},
+      'GET /api/v1/version': { version },
+    });
+    if (version !== undefined) await api.probe();
+    for (const payload of [{ icons: [] }, { iconGap: 0 }]) {
+      for (const send of [() => api.sendNotification(payload), () => api.putPushedApp('homey-weather', payload)]) {
+        await assert.rejects(send, (error) => {
+          if (version === undefined) {
+            assert.ok(error instanceof AwtrixNgInvalidResponseError);
+          } else {
+            assert.equal(error.field, payload.icons !== undefined ? 'icons' : 'iconGap');
+          }
+          return true;
+        });
+      }
+    }
+    assert.equal(transport.calls.some(({ method }) => method !== 'GET'), false);
+  }
+});
+
+test('legacy icon payloads still work on older and unknown firmware without an extra request', async () => {
+  for (const version of ['1.0.14', undefined]) {
+    const { api, transport } = createApi({
+      'GET /api/v1/device': { ...deviceStateResponse, version },
+      'POST /api/v1/notifications': { ok: true },
+      'PUT /api/v1/apps/pushed/homey-weather': { ok: true },
+    });
+    if (version !== undefined) await api.probe();
+    const payload = { icon: 'homey', iconOffsetX: 0 };
+    await api.sendNotification(payload);
+    await api.putPushedApp('homey-weather', payload);
+    assert.equal(transport.calls.length, version === undefined ? 2 : 3);
+  }
+});
+
 test('fromConnection constructs a facade with baseUrl and icons', () => {
   const api = AwtrixNgApi.fromConnection({ baseUrl: BaseUrl }, { emptyIcon });
 
   assert.equal(api.baseUrl, BaseUrl);
   assert.ok(api.icons);
+});
+
+test('bundled icon size follows the verified TC002 display capabilities', async () => {
+  const { api, transport } = createApi({
+    'GET /api/v1/device': { ...deviceStateResponse, boardType: 'tc002' },
+    'GET /api/v1/capabilities': { platform: { id: 'tc002' }, display: { width: 52, height: 16 } },
+  });
+
+  assert.equal(await api.getBundledIconSize(deviceStateResponse.uid), 16);
+  assert.deepEqual(transport.calls.map((call) => call.path), ['/api/v1/device', '/api/v1/capabilities']);
+});
+
+test('bundled icon size keeps 8x8 for existing NG devices without a new capabilities request', async () => {
+  const { api, transport } = createApi({ 'GET /api/v1/device': deviceStateResponse });
+
+  assert.equal(await api.getBundledIconSize(deviceStateResponse.uid), 8);
+  assert.deepEqual(transport.calls.map((call) => call.path), ['/api/v1/device']);
+});
+
+test('bundled icon size rejects a TC002 panel shape that does not match its artwork', async () => {
+  const { api } = createApi({
+    'GET /api/v1/device': { ...deviceStateResponse, boardType: 'tc002' },
+    'GET /api/v1/capabilities': { platform: { id: 'tc002' }, display: { width: 32, height: 8 } },
+  });
+
+  await assert.rejects(api.getBundledIconSize(deviceStateResponse.uid), (error) => (
+    error instanceof AwtrixNgInvalidResponseError && error.endpoint === '/api/v1/capabilities'
+  ));
 });
 
 test('facade delegates flow client and control methods to the client endpoints', async () => {
@@ -112,10 +200,154 @@ test('facade delegates flow client and control methods to the client endpoints',
   assert.deepEqual(transport.calls[1].body, { power: true });
 });
 
+test('facade delegates callback reads and verified writes on firmware 1.1.1', async () => {
+  const { api, transport } = createApi({
+    'GET /api/v1/device': { ...deviceStateResponse, version: '1.1.1' },
+    'GET /api/v1/system': { buttonCallback: '' },
+    'PUT /api/v1/system': (request) => ({ buttonCallback: request.body.buttonCallback }),
+  });
+
+  await api.probe();
+  assert.equal(await api.readButtonCallback(), '');
+  await api.writeButtonCallback('http://homey.local/callback');
+  assert.deepEqual(transport.calls.map((call) => `${call.method} ${call.path}`), [
+    'GET /api/v1/device', 'GET /api/v1/system', 'PUT /api/v1/system',
+  ]);
+});
+
+test('facade rejects nonempty callback writes on firmware 1.1.0 but permits read and cleanup', async () => {
+  const { api, transport } = createApi({
+    'GET /api/v1/device': { ...deviceStateResponse, version: '1.1.0' },
+    'GET /api/v1/system': { buttonCallback: 'http://previous/callback' },
+    'PUT /api/v1/system': (request) => ({ buttonCallback: request.body.buttonCallback }),
+  });
+  await api.probe();
+
+  assert.equal(await api.readButtonCallback(), 'http://previous/callback');
+  await assert.rejects(api.writeButtonCallback('http://homey.local/callback'), (error) => {
+    assert.equal(error.currentVersion, '1.1.0');
+    assert.equal(error.minimumVersion, '1.1.1');
+    return true;
+  });
+  await api.writeButtonCallback('');
+
+  assert.deepEqual(transport.calls.map((call) => `${call.method} ${call.path}`), [
+    'GET /api/v1/device', 'GET /api/v1/system', 'PUT /api/v1/system',
+  ]);
+  assert.deepEqual(transport.calls.at(-1).body, { buttonCallback: '' });
+});
+
+test('button callback support accepts cached firmware 1.1.1 and newer without an API request', async () => {
+  for (const version of ['1.1.1', '1.1.2']) {
+    const { api, transport } = createApi({
+      'GET /api/v1/device': { ...deviceStateResponse, version },
+    });
+    await api.probe();
+    assert.doesNotThrow(() => api.requireButtonCallbackSupport());
+    assert.deepEqual(transport.calls.map((call) => `${call.method} ${call.path}`), ['GET /api/v1/device']);
+  }
+});
+
+test('button callback support accepts TC002 firmware 1.1.5', async () => {
+  const { api, transport } = createApi({
+    'GET /api/v1/device': { ...deviceStateResponse, version: '1.1.5', boardType: 'tc002' },
+    'PUT /api/v1/system': (request) => ({ buttonCallback: request.body.buttonCallback }),
+  });
+  await api.probe();
+
+  assert.doesNotThrow(() => api.requireButtonCallbackSupport());
+  await api.writeButtonCallback('http://homey.local/callback');
+  assert.deepEqual(transport.calls.map((call) => `${call.method} ${call.path}`), [
+    'GET /api/v1/device', 'PUT /api/v1/system',
+  ]);
+});
+
+test('button callback support rejects firmware 1.1.0 and unknown versions without touching system', async () => {
+  for (const version of ['1.1.0', undefined]) {
+    const { api, transport } = createApi({
+      'GET /api/v1/device': { ...deviceStateResponse, version: '1.1.0' },
+    });
+    if (version !== undefined) await api.probe();
+
+    assert.throws(() => api.requireButtonCallbackSupport(), (error) => {
+      assert.ok(error instanceof AwtrixNgUnsupportedVersionError);
+      assert.equal(error.currentVersion, version);
+      assert.equal(error.minimumVersion, '1.1.1');
+      return true;
+    });
+    assert.equal(transport.calls.some((call) => call.path === '/api/v1/system'), false);
+  }
+});
+
 test('setMatrixPower rejects non-boolean values without touching the device', async () => {
   const { api, transport } = createApi();
 
   await assert.rejects(api.setMatrixPower('on'), /must be a boolean/);
+  assert.equal(transport.calls.length, 0);
+});
+
+test('playRtttl uses the cached device version and the audio endpoint on firmware 1.1.0', async () => {
+  const { api, transport } = createApi({
+    'GET /api/v1/device': { ...deviceStateResponse, version: '1.1.0' },
+    'POST /api/v1/audio/play': { ok: true },
+  });
+
+  await api.probe();
+  await api.playRtttl('beep:d=4,o=5,b=120:c');
+
+  assert.deepEqual(
+    transport.calls.map((call) => `${call.method} ${call.path}`),
+    ['GET /api/v1/device', 'POST /api/v1/audio/play'],
+  );
+  assert.deepEqual(transport.calls[1].body, { rtttl: 'beep:d=4,o=5,b=120:c' });
+});
+
+test('synth fx rejects an empty effect and preserves the audio endpoint response', async () => {
+  const fx = 'bpm 120; inst lead wave=pulse volume=40; lead: c4 e g c5';
+  const { api, transport } = createApi({
+    'GET /api/v1/capabilities': { audio: { synth: true } },
+    'POST /api/v1/audio/play': { ok: true },
+  });
+  assert.throws(() => api.playSynthFx('  '), /non-empty string/);
+  assert.deepEqual(await api.playSynthFx(fx), { ok: true });
+  assert.deepEqual(transport.calls, [
+    { method: 'GET', path: '/api/v1/capabilities' },
+    { method: 'POST', path: '/api/v1/audio/play', body: { fx } },
+  ]);
+});
+
+test('playRtttl rejects cached firmware below 1.1.0 without calling the audio endpoint', async () => {
+  const { api, transport } = createApi({
+    'GET /api/v1/device': deviceStateResponse,
+  });
+
+  await api.probe();
+
+  await assert.rejects(api.playRtttl('beep:d=4,o=5,b=120:c'), (error) => {
+    assert.ok(error instanceof AwtrixNgUnsupportedVersionError);
+    assert.equal(error.name, 'AwtrixNgUnsupportedVersionError');
+    assert.equal(error.currentVersion, '1.0.14');
+    assert.equal(error.minimumVersion, '1.1.0');
+    assert.match(error.message, /requires AWTRIX NG firmware 1\.1\.0 or newer/);
+    return true;
+  });
+
+  assert.deepEqual(
+    transport.calls.map((call) => `${call.method} ${call.path}`),
+    ['GET /api/v1/device'],
+  );
+});
+
+test('playRtttl rejects with the same version error when no device version is known yet', async () => {
+  const { api, transport } = createApi();
+
+  await assert.rejects(api.playRtttl('beep:d=4,o=5,b=120:c'), (error) => {
+    assert.ok(error instanceof AwtrixNgUnsupportedVersionError);
+    assert.equal(error.currentVersion, undefined);
+    assert.equal(error.minimumVersion, '1.1.0');
+    return true;
+  });
+
   assert.equal(transport.calls.length, 0);
 });
 
@@ -226,6 +458,40 @@ test('applySettingsChange fails before any write when a built-in app is unavaila
   );
 });
 
+test('reapplyBuiltinAppSettings restores Homey truth while preserving every other app', async () => {
+  const { api, transport } = createApi({
+    'GET /api/v1/apps': [
+      builtinApp('Time', { slot: 0 }),
+      builtinApp('Date', { slot: 1 }),
+      {
+        name: 'weather', origin: 'pushed', present: true, enabled: true, slot: 2,
+      },
+      {
+        name: 'clock', origin: 'script', present: true, enabled: false, slot: null,
+      },
+    ],
+    'PUT /api/v1/apps/order': { ok: true },
+  });
+
+  const result = await api.reapplyBuiltinAppSettings({
+    showBuiltinTime: false,
+    showBuiltinDate: true,
+    showBuiltinTemperature: false,
+    showBuiltinHumidity: false,
+    showBuiltinBattery: false,
+  });
+
+  assert.deepEqual(
+    transport.calls.map((call) => `${call.method} ${call.path}`),
+    ['GET /api/v1/apps', 'PUT /api/v1/apps/order'],
+  );
+  assert.deepEqual(transport.calls[1].body, {
+    order: ['Date', 'weather'],
+    disabled: ['clock', 'Time', 'Temperature', 'Humidity', 'Battery'],
+  });
+  assert.deepEqual(result, transport.calls[1].body);
+});
+
 test('readSettings returns undefined when Homey settings are already in sync', async () => {
   const { api } = createApi({
     'GET /api/v1/settings': { uppercase: true, autoBrightness: false },
@@ -299,6 +565,7 @@ test('planCapabilityUpdate delegates to the capability update plan', () => {
 
   const plan = api.planCapabilityUpdate(deviceStateResponse, ['awtrix_matrix'], { allowAddCapabilities: false });
 
+  assert.deepEqual(plan.capabilitiesToRemove, []);
   assert.deepEqual(plan.capabilitiesToAdd, []);
   assert.ok(plan.valuesToSet.some((update) => update.capabilityId === 'awtrix_matrix' && update.value === true));
 });

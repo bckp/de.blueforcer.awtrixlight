@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Set the weather overlay"
+    "en": "Set the weather overlay",
+    "de": "Wetter-Overlay festlegen",
+    "nl": "Weer-overlay instellen",
+    "cs": "Nastavit překrytí počasí"
   },
   "titleFormatted": {
-    "en": "Set weather overlay [[overlay]]"
+    "en": "Set weather overlay [[overlay]]",
+    "de": "Wetter-Overlay auf [[overlay]] setzen",
+    "nl": "Stel weer-overlay in op [[overlay]]",
+    "cs": "Nastavit překrytí počasí na [[overlay]]"
   },
   "hint": {
-    "en": "Set the weather overlay shown on the display."
+    "en": "Set the weather overlay shown on the display.",
+    "de": "Das auf dem Display angezeigte Wetter-Overlay festlegen.",
+    "nl": "Stel de weer-overlay in die op het display wordt getoond.",
+    "cs": "Nastaví překrytí počasí zobrazované na displeji."
   },
   "args": [
     {
@@ -18,16 +27,19 @@
       "type": "dropdown",
       "name": "overlay",
       "title": {
-        "en": "overlay"
+        "en": "overlay",
+        "de": "Overlay",
+        "nl": "overlay",
+        "cs": "překrytí"
       },
       "values": [
-        { "id": "none", "title": { "en": "None" } },
-        { "id": "drizzle", "title": { "en": "Drizzle" } },
-        { "id": "frost", "title": { "en": "Frost" } },
-        { "id": "rain", "title": { "en": "Rain" } },
-        { "id": "snow", "title": { "en": "Snow" } },
-        { "id": "storm", "title": { "en": "Storm" } },
-        { "id": "thunder", "title": { "en": "Thunder" } }
+        { "id": "none", "title": { "en": "None", "de": "Keines", "nl": "Geen", "cs": "Žádné" } },
+        { "id": "drizzle", "title": { "en": "Drizzle", "de": "Nieselregen", "nl": "Motregen", "cs": "Mrholení" } },
+        { "id": "frost", "title": { "en": "Frost", "de": "Frost", "nl": "Vorst", "cs": "Mráz" } },
+        { "id": "rain", "title": { "en": "Rain", "de": "Regen", "nl": "Regen", "cs": "Déšť" } },
+        { "id": "snow", "title": { "en": "Snow", "de": "Schnee", "nl": "Sneeuw", "cs": "Sníh" } },
+        { "id": "storm", "title": { "en": "Storm", "de": "Sturm", "nl": "Storm", "cs": "Bouře" } },
+        { "id": "thunder", "title": { "en": "Thunder", "de": "Gewitter", "nl": "Onweer", "cs": "Hromobití" } }
       ]
     }
   ]

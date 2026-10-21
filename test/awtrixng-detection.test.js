@@ -68,6 +68,14 @@ const ngDeviceResponse = {
   humidity: 45,
 };
 
+test('TC002 beta device identity is accepted by the NG probe shape', () => {
+  assert.equal(isAwtrixNgDeviceStateResponse({
+    ...ngDeviceResponse,
+    boardType: 'tc002',
+    soc: 'armv7l',
+  }), true);
+});
+
 const awtrix3StatsLikeResponse = {
   bat: 82,
   lux: 120,
@@ -342,4 +350,14 @@ test('AWTRIX NG probe rejects AWTRIX 3 stats shape on /api/v1/device', async () 
   assert.equal(result.status, 'rejected');
   assert.equal(result.reason, 'wrong-shape');
   assert.deepEqual(result.rawResponse, awtrix3StatsLikeResponse);
+});
+
+test('TCP port validation rejects coercible nonnumeric values but keeps numeric configuration strings', () => {
+  // eslint-disable-next-line global-require
+  const { toValidTcpPort } = require('../.homeybuild/lib/awtrixng/Support/Guards');
+  for (const value of [true, false, null, undefined, [], [80], { valueOf: () => 80 }, '', 0, 65536]) {
+    assert.equal(toValidTcpPort(value), undefined);
+  }
+  assert.equal(toValidTcpPort('80'), 80);
+  assert.equal(toValidTcpPort(8080), 8080);
 });

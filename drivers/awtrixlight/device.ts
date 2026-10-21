@@ -12,6 +12,7 @@ import { AwtrixDeviceType } from '../awtrix-device-type';
 const RebootFields: ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'] = ['TIM', 'DAT', 'HUM', 'TEMP', 'BAT'];
 const PollInterval: number = 60000; // 1 minute
 const PollIntervalLong: number = 300000; // 5 minutes
+const RedactedSettingValue = '<redacted>';
 
 /** Capabilities whose relative order is part of the UI; rebuilt as a group when it drifts. */
 const desiredCapabilityOrder: string[] = ['button_prev', 'button_next', 'awtrix_matrix'];
@@ -23,6 +24,24 @@ const additionalCapabilities: string[] = ['rssi', 'ip', 'button.rediscover'];
 const isInDesiredOrder = (capabilities: string[], desiredOrder: string[]): boolean => desiredOrder.every(
   (capability, index) => index === 0 || capabilities.indexOf(desiredOrder[index - 1]) < capabilities.indexOf(capability),
 );
+
+/**
+ * Verbose per-poll diagnostics. Gated by the same DEBUG=1 switch as the HTTP client so a
+ * healthy device does not write to the Homey log every minute. A free function (not a
+ * method) so it works on the partial device contexts the lifecycle tests run against.
+ */
+const debugLog = (device: { log(...args: unknown[]): void }, ...args: unknown[]): void => {
+  if (process.env.DEBUG === '1') {
+    device.log(...args);
+  }
+};
+
+const redactSettingsForLog = (settings: Record<string, unknown>): Record<string, unknown> => ({
+  ...settings,
+  ...(typeof settings.pass === 'string' && settings.pass.length > 0
+    ? { pass: RedactedSettingValue }
+    : {}),
+});
 
 export default class AwtrixLightDevice extends Device implements DeviceFailer, DevicePoll {
 
@@ -68,7 +87,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     // Setup polling
     this.poll = new Poll(
       async () => {
-        this.log('polling...');
+        debugLog(this, 'polling...');
         await this.refreshCapabilities();
 
         if (!this.getAvailable()) {
@@ -114,7 +133,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
       this.failsReset();
       this.failsCritical(true);
       if (this.getAvailable()) {
-        this.log('Device availalible');
+        this.log('Device available');
         // Availability is governed by the fail counter, not by a single refresh hiccup,
         // so a refresh failure is reported but must not abort initialization.
         try {
@@ -179,12 +198,13 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     const uploadErrors: Error[] = [];
     for (const file of files) {
       try {
-        await this.api.uploadImage(fs.readFileSync(`${directory}/${file}`), file);
-        this.icons.invalidate();
+        const fileContent = await fs.promises.readFile(`${directory}/${file}`);
+        await this.api.uploadImage(fileContent, file);
       } catch (cause) {
         uploadErrors.push(new Error(`Failed to upload bundled icon: ${file}`, { cause }));
       }
     }
+    this.icons.invalidate();
 
     if (uploadErrors.length > 0) {
       this.error(new AggregateError(uploadErrors, 'Failed to upload bundled AWTRIX 3 icons'));
@@ -196,7 +216,12 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
     newSettings: { [key: string]: boolean | string | number | undefined | null };
     changedKeys: string[];
   }): Promise<string | void> {
-    this.log('AwtrixLightDevice settings where changed', oldSettings, newSettings, changedKeys);
+    this.log(
+      'AwtrixLightDevice settings were changed',
+      redactSettingsForLog(oldSettings),
+      redactSettingsForLog(newSettings),
+      changedKeys,
+    );
 
     // If user or pass changed, update credentials
     const credentialsChanged = changedKeys.includes('user') || changedKeys.includes('pass');
@@ -233,32 +258,37 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   async onDeleted() {
     this.log('AwtrixLightDevice has been deleted');
     this.poll.stop();
+    this.icons?.invalidate();
   }
 
   onDiscoveryResult(discoveryResult: DiscoveryResultMDNSSD) {
     return discoveryResult.id === this.getData().id;
   }
 
+  // Homey ignores the resolved value of the discovery hooks but reports rejections as unhandled,
+  // so failures are logged and reported as "not reconnected" - parity with the AWTRIX NG driver.
   async onDiscoveryAvailable(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {
-    if ('address' in discoveryResult && this.getStoreValue('address') !== discoveryResult.address) {
-      if (await this.onDiscoveryAddressChanged(discoveryResult)) {
-        await this.setAvailable();
-        return true;
+    try {
+      if ('address' in discoveryResult && this.getStoreValue('address') !== discoveryResult.address) {
+        if (await this.onDiscoveryAddressChanged(discoveryResult)) {
+          await this.setAvailable();
+          return true;
+        }
       }
+    } catch (error: unknown) {
+      this.error(error);
     }
     return false;
   }
 
   async onDiscoveryAddressChanged(discoveryResult: DiscoveryResultMDNSSD): Promise<boolean> {
-    // Set IP
-    this.api.setIp(discoveryResult.address);
-    await this.setStoreValue('address', discoveryResult.address);
-    await this.setCapabilityValue('ip', discoveryResult.address);
-
-    // Verify
     try {
+      this.api.setIp(discoveryResult.address);
+      await this.setStoreValue('address', discoveryResult.address);
+      await this.setCapabilityValue('ip', discoveryResult.address);
+
       return await this.testDevice() === Status.Ok;
-    } catch (error) {
+    } catch (error: unknown) {
       this.error(error);
     }
     return false;
@@ -302,7 +332,7 @@ export default class AwtrixLightDevice extends Device implements DeviceFailer, D
   // Refresh device capabilities, this is expensive so we do not want to poll too often
   async refreshCapabilities(): Promise<void> {
     const stats = await this.cmdGetStats();
-    this.log('refreshCapabilities', stats);
+    debugLog(this, 'refreshCapabilities', stats);
     if (!stats) {
       this.log('status endpoint failed');
       return;

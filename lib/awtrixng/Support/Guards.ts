@@ -7,7 +7,7 @@
  *
  * Two distinct record semantics exist and must not be conflated:
  * - `isRecord` accepts arrays (used where an array is still a usable object,
- *   for example mDNS TXT records, axios headers, API error envelopes).
+ *   for example mDNS TXT records, fetch headers, API error envelopes).
  * - `isPlainObject` rejects arrays and objects with a custom prototype (used
  *   where the value must be a JSON object, for example payload transforms).
  */
@@ -31,6 +31,7 @@ export const isPlainObject = (value: unknown): value is Record<string, unknown> 
  * Callers that need a hard failure wrap this and throw themselves.
  */
 export const toValidTcpPort = (value: unknown): number | undefined => {
+  if (typeof value !== 'number' && typeof value !== 'string') return undefined;
   const port = Number(value);
 
   if (!Number.isInteger(port) || port < 1 || port > 65535) {

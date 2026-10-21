@@ -8,6 +8,7 @@ const {
 const {
   applyAwtrixNgHomeySettingsChange,
   createAwtrixNgSettingsPatchFromChangedSettings,
+  hasAwtrixNgConnectionSettingsChange,
   hasAwtrixNgLocalSettingsChange,
   toAwtrixNgHomeySettingsFromApiSettings,
   toAwtrixNgHomeySettingsUpdate,
@@ -80,6 +81,10 @@ const assertSettingsError = (input, field, reason = 'unknown-field') => {
     assert.equal(error.reason, reason);
     return true;
   });
+};
+
+const panelSettings = {
+  saturation: 100, gamma: 1.9, colorCorrection: '', colorTint: '',
 };
 
 test('AWTRIX NG settings transformer accepts autoBrightness', () => {
@@ -167,6 +172,13 @@ test('AWTRIX NG settings change helper ignores local connection/auth fields and 
   }, ['address', 'port', 'authUser', 'authPass']), undefined);
 });
 
+test('button callback checkbox is local, does not create a connection candidate, and requires a boolean', () => {
+  assert.equal(hasAwtrixNgLocalSettingsChange(['buttonCallbackEnabled']), true);
+  assert.equal(hasAwtrixNgConnectionSettingsChange(['buttonCallbackEnabled']), false);
+  assert.equal(createAwtrixNgSettingsPatchFromChangedSettings({ buttonCallbackEnabled: true }, ['buttonCallbackEnabled']), undefined);
+  assert.throws(() => createAwtrixNgSettingsPatchFromChangedSettings({ buttonCallbackEnabled: 'true' }, ['buttonCallbackEnabled']), /must be a boolean/);
+});
+
 test('AWTRIX NG settings change helper builds a patch only from changed supported NG settings', () => {
   assert.deepEqual(createAwtrixNgSettingsPatchFromChangedSettings({
     authUser: 'homey',
@@ -216,6 +228,7 @@ test('AWTRIX NG settings response mapper keeps only Homey-supported settings sub
     uppercase: false,
     transitionEffect: 'Slide',
   })), {
+    ...panelSettings,
     autoBrightness: true,
     autoTransition: false,
     blockNavigation: true,
@@ -229,6 +242,7 @@ test('AWTRIX NG settings response update includes only values changed by returne
     autoBrightness: true,
     transitionEffect: 'Rain',
   }), {
+    ...panelSettings,
     autoBrightness: false,
     autoTransition: true,
     blockNavigation: false,
@@ -245,6 +259,7 @@ test('AWTRIX NG settings response update omits undefined values from a partial r
     transitionEffect: 'Slide',
     uppercase: undefined,
   }), {
+    ...panelSettings,
     autoBrightness: false,
     autoTransition: true,
     blockNavigation: false,
@@ -268,6 +283,7 @@ test('AWTRIX NG settings apply helper calls PATCH directly, then returns Homey u
   };
 
   const result = await applyAwtrixNgHomeySettingsChange(client, {
+    ...panelSettings,
     authUser: 'homey',
     transitionEffect: 'Rain',
     autoBrightness: true,

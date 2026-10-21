@@ -11,6 +11,7 @@ const {
 const { AwtrixNgApiError } = require('../.homeybuild/lib/awtrixng/Api/ErrorParser');
 const { AwtrixNgInvalidResponseError } = require('../.homeybuild/lib/awtrixng/Api/InvalidResponseError');
 const { AwtrixNgHttpError } = require('../.homeybuild/lib/awtrixng/Http/Transport');
+const { AwtrixNgBaseCapabilityIds } = require('../.homeybuild/lib/awtrixng/Device/State');
 const AwtrixNgApi = require('../.homeybuild/lib/awtrixng/Api/Api').default;
 const {
   createFakeHomey,
@@ -47,7 +48,7 @@ const loadAwtrixNgDevice = (transport) => {
 
   function FakeHomeyDevice() {}
 
-  function FakeAxiosTransport() {
+  function FakeFetchTransport() {
     return transport;
   }
 
@@ -56,8 +57,8 @@ const loadAwtrixNgDevice = (transport) => {
       return { Device: FakeHomeyDevice };
     }
     // The transport is created inside the AwtrixNgApi facade since update-plan-3 (M3).
-    if (request === '../Http/AxiosTransport') {
-      return FakeAxiosTransport;
+    if (request === '../Http/FetchTransport') {
+      return FakeFetchTransport;
     }
     return originalLoad.call(this, request, parent, isMain);
   };
@@ -75,11 +76,15 @@ const loadAwtrixNgDevice = (transport) => {
   }
 };
 
-const createAwtrixNgDeviceHarness = (transport) => {
+const createAwtrixNgDeviceHarness = (transport, { initialCapabilities = [] } = {}) => {
   const homey = createFakeHomey();
-  const capabilities = new Set();
+  const capabilities = new Set(initialCapabilities);
+  const store = new Map([['baseUrl', 'http://192.0.2.20:80']]);
   const calls = {
+    addCapability: [],
     error: [],
+    removeCapability: [],
+    setCapabilityValue: [],
     setAvailable: [],
     setUnavailable: [],
   };
@@ -92,8 +97,14 @@ const createAwtrixNgDeviceHarness = (transport) => {
     error(error) {
       calls.error.push(error);
     },
+    getData() {
+      return { id: fullDeviceState.uid };
+    },
     getStoreValue(key) {
-      return key === 'baseUrl' ? 'http://192.0.2.20:80' : undefined;
+      return store.get(key);
+    },
+    async setStoreValue(key, value) {
+      store.set(key, value);
     },
     async getSettings() {
       return {};
@@ -106,9 +117,15 @@ const createAwtrixNgDeviceHarness = (transport) => {
       return capabilities.has(capabilityId);
     },
     async addCapability(capabilityId) {
+      calls.addCapability.push(capabilityId);
       capabilities.add(capabilityId);
     },
-    async setCapabilityValue() {
+    async removeCapability(capabilityId) {
+      calls.removeCapability.push(capabilityId);
+      capabilities.delete(capabilityId);
+    },
+    async setCapabilityValue(capabilityId, value) {
+      calls.setCapabilityValue.push({ capabilityId, value });
       return undefined;
     },
     async setAvailable() {
@@ -119,8 +136,63 @@ const createAwtrixNgDeviceHarness = (transport) => {
     },
   });
 
-  return { awtrixNgDevice, calls, homey };
+  return {
+    awtrixNgDevice,
+    calls,
+    capabilities,
+    homey,
+    store,
+  };
 };
+
+test('synth Flow action checks the paired feature and preserves a playback failure', async () => {
+  const error = new AwtrixNgApiError({
+    method: 'POST',
+    url: 'http://192.0.2.20:80/api/v1/audio/play',
+    message: 'bad sound',
+    code: 'validationFailed',
+    field: 'fx',
+    httpStatus: 422,
+  });
+  const { awtrixNgDevice, capabilities } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport({}));
+  const calls = [];
+  awtrixNgDevice.api = {
+    async playSynthFx(fx) {
+      calls.push(fx);
+      throw error;
+    },
+  };
+
+  await assert.rejects(awtrixNgDevice.playSynthEffect('lead: c4'), /does not support/);
+  assert.deepEqual(calls, []);
+  capabilities.add('awtrixng_audio_synth');
+  await assert.rejects(awtrixNgDevice.playSynthEffect('lead: c4'), (caught) => caught === error);
+  assert.deepEqual(calls, ['lead: c4']);
+});
+
+test('header Flow device methods require both features and propagate API errors', async () => {
+  const { awtrixNgDevice, capabilities } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport({}));
+  const input = { header: 'Home', text: '21 C', icon: '-' };
+  const error = new Error('layout refused');
+  const calls = [];
+  awtrixNgDevice.api = {
+    async sendHeaderNotification(payload) {
+      calls.push(payload);
+    },
+    async putHeaderApp(name, payload) {
+      calls.push({ name, payload });
+      throw error;
+    },
+  };
+  await assert.rejects(awtrixNgDevice.sendHeaderNotification(input), /does not support/);
+  capabilities.add('awtrixng_display_16px');
+  await assert.rejects(awtrixNgDevice.sendHeaderNotification(input), /does not support/);
+  assert.deepEqual(calls, []);
+  capabilities.add('awtrixng_layout');
+  await awtrixNgDevice.sendHeaderNotification(input);
+  await assert.rejects(awtrixNgDevice.putHeaderApp('weather', input), (caught) => caught === error);
+  assert.deepEqual(calls, [input, { name: 'weather', payload: input }]);
+});
 
 test('AWTRIX NG availability state marks detected probe as available', () => {
   assert.deepEqual(toAwtrixNgAvailabilityState({
@@ -182,6 +254,54 @@ test('AWTRIX NG availability state reports wrong-shape probe as unavailable', ()
 test('AWTRIX NG error detail formatter handles non-API errors explicitly', () => {
   assert.equal(formatAwtrixNgErrorDetails(new Error('socket closed')), 'socket closed');
   assert.equal(formatAwtrixNgErrorDetails(null), 'Unknown error.');
+});
+
+test('AWTRIX NG removes the deprecated battery alarm while preserving battery percentage', async () => {
+  const { awtrixNgDevice, calls, capabilities } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport(), {
+    initialCapabilities: [
+      ...AwtrixNgBaseCapabilityIds,
+      'alarm_battery',
+    ],
+  });
+  awtrixNgDevice.api = facadeFor({});
+
+  await awtrixNgDevice.applyDeviceState({
+    ...fullDeviceState,
+    batteryPercent: 82,
+    lowBattery: true,
+  }, true);
+
+  assert.deepEqual(calls.removeCapability, ['alarm_battery']);
+  assert.equal(capabilities.has('alarm_battery'), false);
+  assert.equal(capabilities.has('measure_battery'), true);
+  assert.deepEqual(calls.setCapabilityValue.find(({ capabilityId }) => capabilityId === 'measure_battery'), {
+    capabilityId: 'measure_battery',
+    value: 82,
+  });
+});
+
+test('AWTRIX NG battery alarm migration failure is contained and retried on a later init', async () => {
+  const migrationError = new Error('remove failed');
+  const { awtrixNgDevice, calls, capabilities } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport(), {
+    initialCapabilities: [
+      ...AwtrixNgBaseCapabilityIds,
+      'alarm_battery',
+    ],
+  });
+  awtrixNgDevice.api = facadeFor({});
+  awtrixNgDevice.removeCapability = async () => {
+    throw migrationError;
+  };
+
+  await assert.doesNotReject(() => awtrixNgDevice.applyDeviceState({
+    ...fullDeviceState,
+    batteryPercent: 82,
+    lowBattery: true,
+  }, true));
+
+  assert.deepEqual(calls.error, [migrationError]);
+  assert.equal(capabilities.has('alarm_battery'), true);
+  assert.equal(capabilities.has('measure_battery'), true);
 });
 
 test('AWTRIX NG device localizes availability headers and preserves technical error details', async () => {
@@ -350,18 +470,40 @@ test('AWTRIX NG onAdded uploads bundled icons with bounded parallelism and repor
   const uploads = [];
   let activeUploads = 0;
   let maximumActiveUploads = 0;
+  let notifyConcurrencyChange = () => {};
   const { awtrixNgDevice, calls } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
 
   // device.icons is a read-only view of device.api.icons since update-plan-3 (M3).
   awtrixNgDevice.api = {
+    getBundledIconSize: async () => 8,
     icons: {
       async upload({ fileName, body }) {
         assert.equal(Buffer.isBuffer(body), true);
         uploads.push(fileName);
         activeUploads += 1;
         maximumActiveUploads = Math.max(maximumActiveUploads, activeUploads);
-        await Promise.resolve();
+        notifyConcurrencyChange();
+
+        if (maximumActiveUploads < 2 && uploads.length < expectedFiles.length) {
+          await new Promise((resolve) => {
+            const timer = setTimeout(resolve, 50);
+            const previousNotify = notifyConcurrencyChange;
+            notifyConcurrencyChange = () => {
+              previousNotify();
+              if (activeUploads > 1) {
+                clearTimeout(timer);
+                resolve();
+              }
+            };
+          });
+        } else {
+          await new Promise((resolve) => {
+            setImmediate(resolve);
+          });
+        }
+
         activeUploads -= 1;
+        notifyConcurrencyChange();
 
         if (fileName === 'homey.jpg') {
           throw uploadError;
@@ -389,4 +531,92 @@ test('AWTRIX NG onAdded uploads bundled icons with bounded parallelism and repor
   assert.equal(calls.error[0][0].error.code, 'validationFailed');
   assert.equal(calls.error[0][0].error.message, 'icon format rejected');
   assert.equal(calls.error[0][0].error.field, 'file');
+});
+
+test('AWTRIX NG uploads 16x16 GIF icons once for TC002 and keeps the original assets for other panels', async () => {
+  const iconDirectory = path.join(__dirname, '../.homeybuild/drivers/awtrixng/assets/images/icons-16');
+  const expectedFiles = fs.readdirSync(iconDirectory).sort();
+  const uploads = [];
+  const { awtrixNgDevice, store } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
+
+  awtrixNgDevice.api = {
+    getBundledIconSize: async () => 16,
+    icons: {
+      async upload({ fileName, body }) {
+        uploads.push(fileName);
+        assert.equal(Buffer.isBuffer(body), true);
+        assert.equal(body.subarray(0, 3).toString(), 'GIF');
+        assert.equal(body.readUInt16LE(6), 16);
+        assert.equal(body.readUInt16LE(8), 16);
+      },
+    },
+  };
+
+  await awtrixNgDevice.onAdded();
+  assert.deepEqual(uploads.slice().sort(), expectedFiles);
+  assert.equal(store.get('tc002BundledIconsRevision'), 1);
+
+  await awtrixNgDevice.onAdded();
+  assert.equal(uploads.length, expectedFiles.length, 'already installed icons are not uploaded again');
+});
+
+test('AWTRIX NG onDeleted stops polling and clears the icon cache timer', async () => {
+  const { awtrixNgDevice } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
+  const calls = [];
+
+  awtrixNgDevice.poll = {
+    stop() {
+      calls.push('poll.stop');
+    },
+  };
+  awtrixNgDevice.api = {
+    icons: {
+      invalidate() {
+        calls.push('icons.invalidate');
+      },
+    },
+  };
+
+  await awtrixNgDevice.onDeleted();
+
+  assert.deepEqual(calls, ['poll.stop', 'icons.invalidate']);
+});
+
+test('NG startup and normal polling reject a different device UID before state or remote writes', async () => {
+  const requests = [];
+  const foreign = { ...fullDeviceState, uid: '112233445566', version: '1.2.0' };
+  const transport = {
+    async request(request) {
+      requests.push(request);
+      return { status: 200, headers: {}, data: foreign };
+    },
+  };
+  const { awtrixNgDevice: clock, calls } = createAwtrixNgDeviceHarness(transport);
+  await clock.onInit();
+  assert.equal(calls.setAvailable.length, 0);
+  assert.equal(calls.setCapabilityValue.length, 0);
+  assert.match(calls.setUnavailable[0], /identity mismatch/);
+  assert.deepEqual(requests.map((request) => request.path), ['/api/v1/device']);
+  requests.length = 0;
+  await assert.rejects(clock.refreshDeviceState({ allowAddCapabilities: false }), /identity mismatch/);
+  assert.equal(calls.setAvailable.length, 0);
+  assert.equal(calls.setCapabilityValue.length, 0);
+  assert.deepEqual(requests.map((request) => request.method), ['GET']);
+});
+
+test('a device deleted during a normal refresh receives no availability or capability writes', async () => {
+  const { awtrixNgDevice: clock, calls } = createAwtrixNgDeviceHarness(fakeAwtrixNgTransport());
+  let release;
+  clock.api = {
+    probe: () => new Promise((resolve) => {
+      release = resolve;
+    }),
+  };
+  clock.clearOwnedButtonCallbackOnDelete = async () => {};
+  const pending = clock.refreshDeviceState({ allowAddCapabilities: false });
+  await clock.onDeleted();
+  release({ status: 'detected', device: fullDeviceState });
+  assert.equal(await pending, undefined);
+  assert.equal(calls.setAvailable.length, 0);
+  assert.equal(calls.setCapabilityValue.length, 0);
 });

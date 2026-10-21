@@ -196,6 +196,8 @@ const notification: AwtrixNgApiNotificationPayload = {
   durationMs: 5000,
   repeat: 2,
   iconMode: 'pushOnce',
+  iconGap: 0,
+  icons: [{ icon: 'homey', x: -1, y: 0 }, { icon: '2422' }],
   hold: true,
   stack: true,
   wakeup: true,
@@ -226,6 +228,8 @@ const notification: AwtrixNgApiNotificationPayload = {
 const pushedApp: AwtrixNgApiPushedAppPayload = {
   text: 'Weather',
   icon: '2422',
+  iconGap: 128,
+  icons: [],
   lifetimeMs: 60000,
   lifetimeExpiry: 'remove',
   repeat: 1,
@@ -233,6 +237,9 @@ const pushedApp: AwtrixNgApiPushedAppPayload = {
 
 // @ts-expect-error hold is notification-only and must not be valid for pushed apps.
 const pushedAppWithNotificationOnlyField: AwtrixNgApiPushedAppPayload = { text: 'Invalid', hold: true };
+
+// @ts-expect-error positioned icons require an icon string.
+const pushedAppWithoutIcon: AwtrixNgApiPushedAppPayload = { icons: [{ x: 0 }] };
 
 const indicator: AwtrixNgApiIndicatorPayload = {
   color: null,
@@ -249,6 +256,7 @@ const ok: AwtrixNgApiOkResponse = { ok: true };
 
 const awtrixNgTypeSmokeValues = {
   appsOrder,
+  pushedAppWithoutIcon,
   capabilities,
   files,
   indicator,

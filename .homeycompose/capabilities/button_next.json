@@ -1,7 +1,10 @@
 {
     "type": "boolean",
     "title": {
-        "en": "Next app"
+        "en": "Next app",
+        "de": "Nächste App",
+        "nl": "Volgende app",
+        "cs": "Další aplikace"
     },
     "getable": false,
     "setable": true,

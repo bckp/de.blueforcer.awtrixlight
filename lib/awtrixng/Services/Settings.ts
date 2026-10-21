@@ -8,6 +8,7 @@ import {
   AwtrixNgApiSettingsPatch,
   AwtrixNgApiSettingsResponse,
 } from '../Api/Types';
+import { AwtrixNgInvalidResponseError } from '../Api/InvalidResponseError';
 
 export type AwtrixNgHomeySettingValue = boolean | string | number | undefined | null;
 
@@ -15,9 +16,11 @@ export type AwtrixNgHomeySettings = Record<string, AwtrixNgHomeySettingValue>;
 
 export type AwtrixNgWritableSettingsField = keyof AwtrixNgSettingsPatchInput;
 
-export type AwtrixNgLocalSettingsField = 'address' | 'port' | 'authUser' | 'authPass';
+export type AwtrixNgLocalSettingsField = 'address' | 'port' | 'authUser' | 'authPass' | 'buttonCallbackEnabled';
 
-export type AwtrixNgHomeySettingsPatch = Partial<Record<AwtrixNgWritableSettingsField, boolean | string>>;
+export type AwtrixNgHomeySettingsPatch = Partial<Record<AwtrixNgWritableSettingsField, boolean | string | number>>;
+
+export const AwtrixNgPanelSettingsFields = ['saturation', 'gamma', 'colorCorrection', 'colorTint'] as const;
 
 export interface AwtrixNgSettingsClient {
   patchSettings(patch: AwtrixNgApiSettingsPatch): Promise<AwtrixNgApiSettingsResponse>;
@@ -35,6 +38,7 @@ const localSettingsFields = new Set<string>([
   'address',
   'authPass',
   'authUser',
+  'buttonCallbackEnabled',
   'port',
 ]);
 
@@ -44,6 +48,10 @@ export const isAwtrixNgLocalSettingsField = (field: string): field is AwtrixNgLo
 
 export const hasAwtrixNgLocalSettingsChange = (changedKeys: readonly string[]): boolean => changedKeys.some(isAwtrixNgLocalSettingsField);
 
+export const hasAwtrixNgConnectionSettingsChange = (changedKeys: readonly string[]): boolean => changedKeys.some((field) => (
+  field === 'address' || field === 'port' || field === 'authUser' || field === 'authPass'
+));
+
 export const createAwtrixNgSettingsPatchFromChangedSettings = (
   newSettings: AwtrixNgHomeySettings,
   changedKeys: readonly string[],
@@ -52,6 +60,9 @@ export const createAwtrixNgSettingsPatchFromChangedSettings = (
 
   for (const key of changedKeys) {
     if (isAwtrixNgLocalSettingsField(key)) {
+      if (key === 'buttonCallbackEnabled' && typeof newSettings[key] !== 'boolean') {
+        throw new TypeError('AWTRIX NG buttonCallbackEnabled must be a boolean.');
+      }
       continue;
     }
 
@@ -65,7 +76,7 @@ export const createAwtrixNgSettingsPatchFromChangedSettings = (
     }
 
     if (newSettings[key] !== undefined) {
-      patchInput[key] = newSettings[key];
+      patchInput[key] = (key === 'colorCorrection' || key === 'colorTint') && newSettings[key] === '' ? null : newSettings[key];
     }
   }
 
@@ -81,12 +92,28 @@ export const writeAwtrixNgSettingsPatch = (
   patch: AwtrixNgApiSettingsPatch,
 ): Promise<AwtrixNgApiSettingsResponse> => client.patchSettings(patch);
 
+const toHomeyPanelSettings = (settings: AwtrixNgApiSettingsResponse): AwtrixNgHomeySettingsPatch => {
+  const result: AwtrixNgHomeySettingsPatch = {};
+  for (const key of AwtrixNgPanelSettingsFields) {
+    const value = settings[key];
+    if (value === undefined) continue;
+    let valid: boolean;
+    if (key === 'saturation') valid = Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 100;
+    else if (key === 'gamma') valid = typeof value === 'number' && Number.isFinite(value) && value > 0;
+    else valid = value === null || (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value));
+    if (!valid) throw new AwtrixNgInvalidResponseError({ endpoint: '/api/v1/settings', expectedShape: `a valid ${key}`, actualValue: value });
+    result[key] = value === null ? '' : value;
+  }
+  return result;
+};
+
 export const toAwtrixNgHomeySettingsFromApiSettings = (settings: AwtrixNgApiSettingsResponse): AwtrixNgHomeySettingsPatch => ({
   autoBrightness: settings.autoBrightness,
   autoTransition: settings.autoTransition,
   blockNavigation: settings.blockNavigation,
   transitionEffect: settings.transitionEffect,
   uppercase: settings.uppercase,
+  ...toHomeyPanelSettings(settings),
 });
 
 export const toAwtrixNgHomeySettingsUpdate = (

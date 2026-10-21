@@ -16,6 +16,7 @@ export type AwtrixNgDebugLogger = (message?: unknown, ...optionalParams: unknown
 export interface AwtrixNgHttpTransportOptions {
   baseUrl: string;
   timeoutMs?: number;
+  maxResponseBytes?: number;
   auth?: AwtrixNgBasicAuthOptions;
   debug?: boolean;
   log?: AwtrixNgDebugLogger;
@@ -29,6 +30,8 @@ export interface AwtrixNgHttpRequest<TBody = unknown> {
   body?: TBody;
   responseType?: AwtrixNgResponseType;
   timeoutMs?: number;
+  /** RAW calls may contain secrets in any field; log only method and status. */
+  redactDebug?: boolean;
 }
 
 export interface AwtrixNgHttpSuccess<TResponse = unknown> {

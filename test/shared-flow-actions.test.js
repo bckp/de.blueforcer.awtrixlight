@@ -353,6 +353,47 @@ test('shared raw notification flow dispatches options-only payloads to AWTRIX 3 
   }]);
 });
 
+test('shared AWTRIX 3 JSON flows reject malformed and non-object options before device calls', async () => {
+  const notificationDevice = createAwtrix3Device();
+  const applicationDevice = createAwtrix3Device();
+
+  await assert.rejects(
+    () => runSharedNotificationRawAction({
+      device: notificationDevice.device,
+      options: '{invalid',
+    }),
+    /Notification options must be valid JSON\./,
+  );
+  await assert.rejects(
+    () => runSharedNotificationRawAction({
+      device: notificationDevice.device,
+      options: '[]',
+    }),
+    /Notification options must be a JSON object\./,
+  );
+  await assert.rejects(
+    () => runSharedApplicationAction({
+      device: applicationDevice.device,
+      name: 'weather',
+      msg: '',
+      options: 'null',
+    }),
+    /Custom app options must be a JSON object\./,
+  );
+  await assert.rejects(
+    () => runSharedApplicationAction({
+      device: applicationDevice.device,
+      name: 'weather',
+      msg: '',
+      options: '{invalid',
+    }),
+    /Custom app options must be valid JSON\./,
+  );
+
+  assert.deepEqual(notificationDevice.calls, []);
+  assert.deepEqual(applicationDevice.calls, []);
+});
+
 test('shared sticky notification flow dispatches to AWTRIX 3 and AWTRIX NG implementations', async () => {
   const awtrix3 = createAwtrix3Device();
   const awtrixNg = createAwtrixNgDevice();

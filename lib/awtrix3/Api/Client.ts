@@ -1,6 +1,6 @@
-import axios, { AxiosResponse } from 'axios';
-import FormData from 'form-data';
 import { Response, Status } from './Response';
+import FetchError from './FetchError';
+import { DefaultMaxResponseBytes, readLimitedResponse } from './ResponseBody';
 
 const Timeout = 10000;
 const RedactedHeaderValue = '<redacted>';
@@ -17,6 +17,7 @@ type ClientOptions = {
   user?: string;
   pass?: string;
   log?: (message?: any, ...optionalParams: any[]) => void;
+  maxResponseBytes?: number;
 }
 
 export interface RequestHeaders {
@@ -33,6 +34,8 @@ const redactAuthorization = (headers: unknown): unknown => {
 
 export default class Client {
 
+  readonly #maxResponseBytes: number;
+
   ip: string;
   debug: boolean = false;
   user: string = '';
@@ -41,6 +44,8 @@ export default class Client {
   log: (message?: any, ...optionalParams: any[]) => void;
 
   constructor(options: ClientOptions) {
+    this.#maxResponseBytes = options.maxResponseBytes ?? DefaultMaxResponseBytes;
+    if (!Number.isSafeInteger(this.#maxResponseBytes) || this.#maxResponseBytes < 1) throw new RangeError('Invalid HTTP response byte limit.');
     this.ip = options.ip;
 
     this.user = options.user || '';
@@ -63,12 +68,25 @@ export default class Client {
     this.pass = pass;
   }
 
+  #normalizeAddress(address: string): string {
+    const trimmed = address.trim();
+    const containsMultipleColons = trimmed.indexOf(':') !== trimmed.lastIndexOf(':');
+
+    if (containsMultipleColons && !trimmed.startsWith('[') && !trimmed.endsWith(']')) {
+      return `[${trimmed}]`;
+    }
+
+    return trimmed;
+  }
+
   #getApiUrl(path: string): string {
     return this.#getUrl(`api/${path}`);
   }
 
   #getUrl(path: string): string {
-    return `http://${this.ip}/${path}`;
+    const address = this.#normalizeAddress(this.ip);
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    return `http://${address}/${cleanPath}`;
   }
 
   async get(cmd: string): Promise<Response> {
@@ -80,93 +98,156 @@ export default class Client {
   }
 
   async #getRequest(url: string): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(new Error('Request Timeout')), Timeout);
     try {
       const headers = this.#getHeaders();
       this.#debugRequest('GET', url, headers);
-      const result = await axios.get(url, {
-        headers,
-        timeout: Timeout,
-        maxRedirects: 0,
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers as Record<string, string>,
+        signal: controller.signal,
+        redirect: 'manual',
       });
-      this.#debugResponse('GET', url, result);
+
+      let data;
+      const text = new TextDecoder().decode(await readLimitedResponse(response, this.#maxResponseBytes, controller));
+      try {
+        data = text ? JSON.parse(text) : undefined;
+      } catch {
+        data = text;
+      }
+
+      this.#debugResponse('GET', url, response, data);
+
+      if (!response.ok) {
+        throw new FetchError(`Request failed with status ${response.status}`, response.status);
+      }
+
       return {
-        status: statusFromHttpCode(result.status),
-        data: result.data,
+        status: statusFromHttpCode(response.status),
+        data,
       };
     } catch (error: any) {
       return this.#requestError(error, url);
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
   async post(cmd: string, data: any, headers?: RequestHeaders): Promise<Response> {
     const url: string = this.#getApiUrl(cmd);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(new Error('Request Timeout')), Timeout);
     try {
       const requestHeaders = this.#getHeaders(headers);
       this.#debugRequest('POST', url, requestHeaders, data);
-      const result = await axios.post(url, data, {
-        headers: requestHeaders,
-        timeout: Timeout,
-        maxRedirects: 0,
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: requestHeaders as Record<string, string>,
+        body: JSON.stringify(data),
+        signal: controller.signal,
+        redirect: 'manual',
       });
-      this.#debugResponse('POST', url, result);
+
+      await response.body?.cancel();
+      this.#debugResponse('POST', url, response);
+
+      if (!response.ok) {
+        throw new FetchError(`Request failed with status ${response.status}`, response.status);
+      }
+
       return {
-        status: statusFromHttpCode(result.status),
+        status: statusFromHttpCode(response.status),
       };
     } catch (error: any) {
       return this.#requestError(error, url);
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
   async upload(path: string, form: FormData): Promise<Response> {
     const url: string = this.#getUrl(path);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(new Error('Request Timeout')), Timeout);
     try {
-      const headers = this.#getHeaders(form.getHeaders());
+      const headers = this.#getHeaders();
+      // Native fetch automatically sets Content-Type with boundary for FormData
+      if ('Content-Type' in headers) {
+        delete headers['Content-Type'];
+      }
+
       this.#debugRequest('POST(upload)', url, headers);
-      const result = await axios.post(url, form, {
-        headers,
-        timeout: Timeout,
-        maxRedirects: 0,
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers as Record<string, string>,
+        body: form,
+        signal: controller.signal,
+        redirect: 'manual',
       });
-      this.#debugResponse('POST(upload)', url, result);
+
+      await response.body?.cancel();
+      this.#debugResponse('POST(upload)', url, response);
+
+      if (!response.ok) {
+        throw new FetchError(`Request failed with status ${response.status}`, response.status);
+      }
+
       return {
-        status: statusFromHttpCode(result.status),
+        status: statusFromHttpCode(response.status),
       };
     } catch (error: any) {
       return this.#requestError(error, url);
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
   #getHeaders(headers: RequestHeaders = {}): RequestHeaders {
-    headers['Content-Type'] = 'application/json';
-    headers['User-Agent'] = 'Homey/1.0';
-    headers.Accept = '*/*';
+    const result: RequestHeaders = {
+      Accept: '*/*',
+      'User-Agent': 'Homey/1.0',
+      ...headers,
+    };
+
+    const hasContentType = Object.keys(result).some((key) => key.toLowerCase() === 'content-type');
+    if (!hasContentType) {
+      result['Content-Type'] = 'application/json';
+    }
 
     if (!this.user || !this.pass) {
-      return headers;
+      return result;
     }
 
     const token = Buffer.from(`${this.user}:${this.pass}`).toString('base64');
-    headers.Authorization = `Basic ${token}`;
+    result.Authorization = `Basic ${token}`;
 
-    return headers;
+    return result;
   }
 
   #requestError(error: any, url: string): Response {
     this.#debugError('Result(error)', url, error.message || error);
 
     // Device did not respond in time
-    if (error.code === 'ECONNABORTED' || error.code === 'ERR_CANCELED') {
+    if (error.name === 'AbortError' || error.message === 'Request Timeout') {
       return {
-        status: Status.NotFound,
+        status: Status.Timeout,
+        message: 'Request Timeout',
       };
     }
 
     let message = 'unknown error';
     let status = Status.Error;
 
-    if (axios.isAxiosError(error)) {
+    if (error instanceof FetchError) {
       message = error.message;
-      status = statusFromHttpCode(error.response?.status || 500);
+      status = statusFromHttpCode(error.status || 500);
+    } else if (error instanceof Error) {
+      message = error.message;
     }
 
     return {
@@ -187,7 +268,7 @@ export default class Client {
     });
   }
 
-  #debugResponse(message: string, url: string, response?: AxiosResponse): void {
+  #debugResponse(message: string, url: string, response?: globalThis.Response, data?: any): void {
     if (!this.debug) {
       return;
     }
@@ -196,8 +277,13 @@ export default class Client {
     if (response) {
       dump.status = response.status;
       dump.statusText = response.statusText;
-      dump.data = response.data;
-      dump.headers = redactAuthorization(response.headers);
+      dump.data = data;
+
+      const headersObj: Record<string, string> = {};
+      response.headers.forEach((val: string, key: string) => {
+        headersObj[key] = val;
+      });
+      dump.headers = redactAuthorization(headersObj);
     }
     this.log({
       message,

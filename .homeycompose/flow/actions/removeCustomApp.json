@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Remove a custom app"
+    "en": "Remove a custom app",
+    "de": "Benutzerdefinierte App entfernen",
+    "nl": "Aangepaste app verwijderen",
+    "cs": "Odebrat vlastní aplikaci"
   },
   "titleFormatted": {
-    "en": "Remove custom app [[name]]"
+    "en": "Remove custom app [[name]]",
+    "de": "Benutzerdefinierte App [[name]] entfernen",
+    "nl": "Aangepaste app [[name]] verwijderen",
+    "cs": "Odebrat vlastní aplikaci [[name]]"
   },
   "hint": {
-    "en": "Legacy AWTRIX 3 remove custom app flow. Use Remove application for new flows."
+    "en": "Legacy AWTRIX 3 remove custom app flow. Use Remove application for new flows.",
+    "de": "Veralteter Flow zum Entfernen einer benutzerdefinierten App für AWTRIX 3. Verwenden Sie Applikation entfernen für neue Flows.",
+    "nl": "Verouderde flow voor het verwijderen van een aangepaste app voor AWTRIX 3. Gebruik Applicatie verwijderen voor nieuwe flows.",
+    "cs": "Zastaralý flow pro odebrání vlastní aplikace pro AWTRIX 3. Pro nové flow použijte Odebrat aplikaci."
   },
   "deprecated": true,
   "args": [
@@ -19,7 +28,10 @@
       "type": "text",
       "name": "name",
       "placeholder": {
-        "en": "app name"
+        "en": "app name",
+        "de": "App-Name",
+        "nl": "appnaam",
+        "cs": "název aplikace"
       }
     }
   ]

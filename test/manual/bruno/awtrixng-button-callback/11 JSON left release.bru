@@ -1,0 +1,30 @@
+meta {
+  name: 11 JSON left release
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{homey_base_url}}/api/app/de.blueforcer.awtrixlight/awtrixng/button/{{device_uid}}/{{callback_token}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "button": "left",
+    "state": 0,
+    "uid": "{{device_uid}}"
+  }
+}
+
+tests {
+  test("Homey accepts a JSON release edge", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.eql({ ok: true });
+  });
+}
+
+docs {
+  Expected result: HTTP 200 with {"ok":true}, but no Flow run. This verifies that numeric JSON state=0 is accepted without triggering twice.
+}

@@ -1,12 +1,21 @@
 {
   "title": {
-    "en": "Play an RTTTL melody"
+    "en": "Play an RTTTL melody",
+    "de": "RTTTL-Melodie abspielen",
+    "nl": "RTTTL-melodie afspelen",
+    "cs": "Přehrát RTTTL melodii"
   },
   "titleFormatted": {
-    "en": "Play [[rtttl]] melody"
+    "en": "Play [[rtttl]] melody",
+    "de": "RTTTL-Melodie [[rtttl]] abspielen",
+    "nl": "Speel [[rtttl]] melodie af",
+    "cs": "Přehrát melodii [[rtttl]]"
   },
   "hint": {
-    "en": "Play RTTTL melody"
+    "en": "Play RTTTL melody",
+    "de": "RTTTL-Melodie abspielen",
+    "nl": "RTTTL-melodie afspelen",
+    "cs": "Přehrát melodii ve formátu RTTTL"
   },
   "args": [
     {
@@ -18,7 +27,10 @@
       "type": "text",
       "name": "rtttl",
       "placeholder": {
-        "en": "melody"
+        "en": "melody",
+        "de": "Melodie",
+        "nl": "melodie",
+        "cs": "melodie"
       }
     }
   ]
