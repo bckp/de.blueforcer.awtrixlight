@@ -210,6 +210,10 @@ export default class AwtrixNgClient {
     return this.#request({ method: 'PUT', path: '/api/v1/apps/active', body: { name, fast } });
   }
 
+  setAppEnabled(name: string, enabled: boolean): Promise<AwtrixNgApiOkResponse> {
+    return this.#request({ method: 'PUT', path: `/api/v1/apps/${this.#pathSegment(name)}/enabled`, body: enabled });
+  }
+
   getScriptConfig(name: string): Promise<AwtrixNgApiScriptConfig> {
     return this.#request({ method: 'GET', path: `/api/v1/apps/${this.#pathSegment(name)}/config` });
   }

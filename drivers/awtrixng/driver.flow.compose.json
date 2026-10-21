@@ -961,6 +961,72 @@
       }
     },
     {
+      "id": "awtrixng_script_enable",
+      "title": {
+        "en": "Enable an installed script",
+        "cs": "Zapnout nainstalovaný skript",
+        "de": "Ein installiertes Skript aktivieren",
+        "nl": "Een geïnstalleerd script inschakelen"
+      },
+      "titleFormatted": {
+        "en": "Enable script [[script]]",
+        "cs": "Zapnout skript [[script]]",
+        "de": "Skript [[script]] aktivieren",
+        "nl": "Schakel script [[script]] in"
+      },
+      "args": [
+        {
+          "name": "script",
+          "type": "autocomplete",
+          "title": {
+            "en": "Script",
+            "cs": "Skript",
+            "de": "Skript",
+            "nl": "Script"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Enables an installed script without changing other apps or its rotation position. Does not immediately show it; use Show script for that. Requires firmware with the per-app enable API. The change survives a reboot.",
+        "cs": "Zapne nainstalovaný skript bez změny ostatních aplikací nebo jeho pozice v rotaci. Nezobrazí ho okamžitě; k tomu použijte Zobrazit skript. Vyžaduje firmware s API pro zapnutí jednotlivé aplikace. Změna zůstane po restartu.",
+        "de": "Aktiviert ein installiertes Skript, ohne andere Apps oder seine Position in der Rotation zu ändern. Zeigt es nicht sofort an; dafür Skript anzeigen verwenden. Erfordert Firmware mit API zum Aktivieren einzelner Apps. Die Änderung bleibt nach einem Neustart erhalten.",
+        "nl": "Schakelt een geïnstalleerd script in zonder andere apps of de positie in de rotatie te wijzigen. Toont het niet meteen; gebruik daarvoor Toon script. Vereist firmware met de API voor het inschakelen van afzonderlijke apps. De wijziging blijft na een herstart behouden."
+      }
+    },
+    {
+      "id": "awtrixng_script_disable",
+      "title": {
+        "en": "Disable an installed script",
+        "cs": "Vypnout nainstalovaný skript",
+        "de": "Ein installiertes Skript deaktivieren",
+        "nl": "Een geïnstalleerd script uitschakelen"
+      },
+      "titleFormatted": {
+        "en": "Disable script [[script]]",
+        "cs": "Vypnout skript [[script]]",
+        "de": "Skript [[script]] deaktivieren",
+        "nl": "Schakel script [[script]] uit"
+      },
+      "args": [
+        {
+          "name": "script",
+          "type": "autocomplete",
+          "title": {
+            "en": "Script",
+            "cs": "Skript",
+            "de": "Skript",
+            "nl": "Script"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Disables the script entirely, including background work and HTTP/MQTT callbacks. Keeps it installed and preserves other apps and its rotation position. Requires firmware with the per-app enable API. The change survives a reboot.",
+        "cs": "Úplně vypne skript včetně běhu na pozadí a HTTP/MQTT callbacků. Ponechá ho nainstalovaný a zachová ostatní aplikace i jeho pozici v rotaci. Vyžaduje firmware s API pro zapnutí jednotlivé aplikace. Změna zůstane po restartu.",
+        "de": "Deaktiviert das Skript vollständig, einschließlich Hintergrundarbeit und HTTP/MQTT-Callbacks. Es bleibt installiert; andere Apps und seine Position in der Rotation bleiben erhalten. Erfordert Firmware mit API zum Aktivieren einzelner Apps. Die Änderung bleibt nach einem Neustart erhalten.",
+        "nl": "Schakelt het script volledig uit, inclusief achtergrondtaken en HTTP/MQTT-callbacks. Het blijft geïnstalleerd; andere apps en de positie in de rotatie blijven behouden. Vereist firmware met de API voor het inschakelen van afzonderlijke apps. De wijziging blijft na een herstart behouden."
+      }
+    },
+    {
       "id": "awtrixng_brightness",
       "title": {
         "en": "Set panel brightness",

@@ -521,6 +521,10 @@ class AwtrixNgDevice extends Device {
     await this.getApi().showScript(name);
   }
 
+  async setScriptEnabled(name: string, enabled: boolean): Promise<void> {
+    await this.getApi().setScriptEnabled(name, enabled);
+  }
+
   async getManageableScripts(): Promise<{ id: string; name: string }[]> {
     return (await this.getApi().readManageableScripts()).map((script) => ({ id: script.name, name: script.meta?.name || script.name }));
   }

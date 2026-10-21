@@ -63,7 +63,32 @@ Aktuální NG driver podporuje samostatné NG flow karty pro:
 | Raw custom/pushed app | `applicationRaw`, přijímá pouze NG-shaped raw JSON object | `PUT /api/v1/apps/pushed/{name}` |
 | Odstranění custom app | společná flow karta `applicationRemove`; legacy AWTRIX 3 karta `removeCustomApp` zůstává deprecated | `DELETE /api/v1/apps/{name}` |
 | Další/předchozí app | Homey device tlačítka `button_next`, `button_prev`; samostatné AWTRIX NG flow karty se nepoužívají | `POST /api/v1/apps/next`, `POST /api/v1/apps/previous` |
+| Zapnutí/vypnutí nainstalovaného skriptu | `awtrixng_script_enable`, `awtrixng_script_disable`; zachovají instalaci a pozici v rotaci | `PUT /api/v1/apps/{name}/enabled` s JSON `true` / `false` |
 | Ikony | autocomplete a upload do `/ICONS` | `GET/POST /api/v1/files?dir=/ICONS` |
+
+### Zapnutí a vypnutí skriptů
+
+Karty **Enable an installed script** a **Disable an installed script** nabízejí i vypnuté,
+chybující a background skripty; moduly, vestavěné a pushed aplikace nenabízejí. Před zápisem
+se znovu ověří, že je skript stále nainstalovaný a scripting běží.
+
+Enable pouze zapne skript. Pro okamžité zobrazení použijte poté **Show an installed script**.
+Disable zastaví celý skript včetně `loop()` a HTTP/MQTT callbacků. Skript ani jeho uložená
+data se nemažou; ostatní aplikace a pozice v rotaci zůstávají beze změny a zapnutí/vypnutí
+přežije restart hodin. Pro pouhé opuštění on-demand skriptu stačí další/předchozí aplikace.
+
+Vyžaduje firmware s per-app enable API podle [aktuální upstream dokumentace](https://github.com/Blueforcer/awtrix-ng/blob/main/docs/reference/http.md#put-apiv1appsnameenabled),
+ověřené 2026-10-21. Minimální verze není v této dokumentaci uvedena. Lokální vendor snapshot
+tento endpoint ještě neobsahuje. Starší firmware vrátí vlastní HTTP chybu; karta ji předá
+včetně statusu, kódu, zprávy a pole. Náhradní přepis globálního seznamu `disabled` se neprovádí.
+Chyba 507 `applied, not saved yet` znamená změnu aktivní do restartu, ale neuloženou; karta
+ji také oznámí jako chybu.
+
+Ruční ověření na Homey/hodinách (dosud neprovedeno): vyberte nainstalovaný testovací skript,
+ověřte jeho vypnutí a opětovné zapnutí, zachování ostatních aplikací a pořadí, následné
+zobrazení přes Show a zachování stavu po restartu. Zvlášť ověřte on-demand a background
+skript a chybu po odstranění skriptu uloženého ve Flow. Restart a změny fyzického zařízení
+provádějte pouze se souhlasem vlastníka.
 
 ## Custom apps a názvy
 

@@ -998,6 +998,13 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     await this.#client.showApp(name, true);
   }
 
+  async setScriptEnabled(name: string, enabled: boolean): Promise<void> {
+    if (typeof enabled !== 'boolean') throw new AwtrixNgScriptValueError('enabled', 'Expected true or false.');
+    await this.requireInstalledScript(name);
+    // Use the per-app switch: rewriting the global disabled list can affect other apps.
+    await this.#client.setAppEnabled(name, enabled);
+  }
+
   deleteApp(name: string): Promise<AwtrixNgApiOkResponse> {
     return this.#client.deleteApp(name);
   }

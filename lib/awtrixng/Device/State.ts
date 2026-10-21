@@ -7,14 +7,39 @@ export type AwtrixNgHomeyBaseCapabilityId = 'button_prev'
   | 'alarm_generic.indicator2'
   | 'alarm_generic.indicator3'
   | 'awtrix_matrix'
+  | 'dim'
   | typeof AwtrixNgWeatherOverlayCapabilityId
   | 'rssi'
   | 'ip'
   | 'button.rediscover';
 
-export type AwtrixNgHomeyOptionalCapabilityId = 'measure_battery' | 'alarm_battery' | 'measure_temperature' | 'measure_humidity';
+export type AwtrixNgHomeyOptionalCapabilityId = 'measure_battery' | 'measure_temperature' | 'measure_humidity';
 
-export type AwtrixNgHomeyCapabilityId = AwtrixNgHomeyBaseCapabilityId | AwtrixNgHomeyOptionalCapabilityId;
+export const AwtrixNgFeatureCapabilityIds = {
+  knob: 'awtrixng_knob',
+  display16: 'awtrixng_display_16px',
+  audioSynth: 'awtrixng_audio_synth',
+  audioUrl: 'awtrixng_audio_url',
+  audioGroups: 'awtrixng_audio_groups',
+  audioMixer: 'awtrixng_audio_mixer',
+  audioRadio: 'awtrixng_audio_radio',
+  audioClip: 'awtrixng_audio_clip',
+  audioSpeech: 'awtrixng_audio_speech',
+  audioStored: 'awtrixng_audio_stored',
+  volume: 'awtrixng_volume',
+  alertVolume: 'awtrixng_alert_volume',
+  appVolume: 'awtrixng_app_volume',
+  radioVolume: 'awtrixng_radio_volume',
+  layout: 'awtrixng_layout',
+} as const;
+
+export type AwtrixNgHomeyFeatureCapabilityId = typeof AwtrixNgFeatureCapabilityIds[keyof typeof AwtrixNgFeatureCapabilityIds];
+
+export type AwtrixNgHomeyDeprecatedCapabilityId = 'alarm_battery';
+
+export type AwtrixNgHomeyCapabilityId = AwtrixNgHomeyBaseCapabilityId
+  | AwtrixNgHomeyOptionalCapabilityId
+  | AwtrixNgHomeyFeatureCapabilityId;
 
 export type AwtrixNgHomeyCapabilityValue = boolean | number | string;
 
@@ -24,6 +49,7 @@ export interface AwtrixNgCapabilityValueUpdate {
 }
 
 export interface AwtrixNgCapabilityUpdatePlan {
+  capabilitiesToRemove: AwtrixNgHomeyDeprecatedCapabilityId[];
   capabilitiesToAdd: AwtrixNgHomeyCapabilityId[];
   valuesToSet: AwtrixNgCapabilityValueUpdate[];
 }
@@ -39,6 +65,7 @@ export const AwtrixNgBaseCapabilityIds: readonly AwtrixNgHomeyBaseCapabilityId[]
   'alarm_generic.indicator2',
   'alarm_generic.indicator3',
   'awtrix_matrix',
+  'dim',
   AwtrixNgWeatherOverlayCapabilityId,
   'rssi',
   'ip',
@@ -58,10 +85,6 @@ const optionalCapabilityFields = [{
   field: 'batteryPercent',
   capabilityId: 'measure_battery',
   isValidValue: isValidBatteryPercent,
-}, {
-  field: 'lowBattery',
-  capabilityId: 'alarm_battery',
-  isValidValue: (value: unknown): value is boolean => typeof value === 'boolean',
 }, {
   field: 'temperature',
   capabilityId: 'measure_temperature',
@@ -84,9 +107,13 @@ const getAwtrixNgOptionalCapabilityIds = (deviceState: AwtrixNgApiDeviceStateRes
   }, [])
 );
 
-export const getAwtrixNgInitialCapabilityIds = (deviceState: AwtrixNgApiDeviceStateResponse): AwtrixNgHomeyCapabilityId[] => [
+export const getAwtrixNgInitialCapabilityIds = (
+  deviceState: AwtrixNgApiDeviceStateResponse,
+  features: readonly AwtrixNgHomeyFeatureCapabilityId[] = [],
+): AwtrixNgHomeyCapabilityId[] => [
   ...AwtrixNgBaseCapabilityIds,
   ...getAwtrixNgOptionalCapabilityIds(deviceState),
+  ...features,
 ];
 
 export const createAwtrixNgCapabilityUpdatePlan = (
@@ -94,6 +121,10 @@ export const createAwtrixNgCapabilityUpdatePlan = (
   currentCapabilities: readonly string[],
   options: AwtrixNgCapabilityUpdateOptions,
 ): AwtrixNgCapabilityUpdatePlan => {
+  const capabilitiesToRemove: AwtrixNgHomeyDeprecatedCapabilityId[] = options.allowAddCapabilities
+    && currentCapabilities.includes('alarm_battery')
+    ? ['alarm_battery']
+    : [];
   const capabilitiesToAdd: AwtrixNgHomeyCapabilityId[] = [];
   const valuesToSet: AwtrixNgCapabilityValueUpdate[] = [];
   const knownCapabilities = new Set<string>(currentCapabilities);
@@ -140,6 +171,10 @@ export const createAwtrixNgCapabilityUpdatePlan = (
     }
   }
 
+  if (Number.isInteger(deviceState.brightness) && deviceState.brightness >= 0 && deviceState.brightness <= 255) {
+    addValue('dim', deviceState.brightness / 255);
+  }
+
   for (const mapping of optionalCapabilityFields) {
     const value = deviceState[mapping.field];
 
@@ -151,6 +186,7 @@ export const createAwtrixNgCapabilityUpdatePlan = (
   }
 
   return {
+    capabilitiesToRemove,
     capabilitiesToAdd,
     valuesToSet,
   };

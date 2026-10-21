@@ -192,6 +192,20 @@ class AwtrixNgDriver extends Driver {
     }) => (await args.device.getSelectableScripts()).filter((script) => (
       script.name.toLowerCase().includes(query.toLowerCase()) || script.id.toLowerCase().includes(query.toLowerCase())
     )));
+    const scriptSwitches = [
+      { card: this.homey.flow.getActionCard('awtrixng_script_enable'), enabled: true },
+      { card: this.homey.flow.getActionCard('awtrixng_script_disable'), enabled: false },
+    ];
+    for (const { card, enabled } of scriptSwitches) {
+      card.registerRunListener(async (args: {
+        device: import('./device').default; script: { id: string };
+      }): Promise<void> => args.device.setScriptEnabled(args.script.id, enabled));
+      card.registerArgumentAutocompleteListener('script', async (query: string, args: {
+        device: import('./device').default;
+      }) => (await args.device.getManageableScripts()).filter((script) => (
+        script.name.toLowerCase().includes(query.toLowerCase()) || script.id.toLowerCase().includes(query.toLowerCase())
+      )));
+    }
     this.homey.flow.getActionCard('awtrixng_audio_fx').registerRunListener(async (args: {
       device: import('./device').default;
       fx: string;
