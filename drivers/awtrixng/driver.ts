@@ -172,6 +172,7 @@ class AwtrixNgDriver extends Driver {
     this.registerHeaderLayoutCards();
     this.registerAudioCards();
     this.registerScriptSettingsCards();
+    this.registerScriptControlCards();
     this.homey.flow.getActionCard('awtrixng_notification_dismiss_named').registerRunListener(
       async (args: { device: import('./device').default; name: string }) => args.device.dismissNamedNotification(args.name),
     );
@@ -268,6 +269,23 @@ class AwtrixNgDriver extends Driver {
         .filter((sound) => sound.name.toLowerCase().includes(query.toLowerCase()))
         .map((sound) => ({ id: sound.id, name: sound.name }))
     ));
+  }
+
+  private registerScriptControlCards(): void {
+    type ScriptArgs = { device: import('./device').default; script: { id: string } };
+    const enable = this.homey.flow.getActionCard('awtrixng_script_enable');
+    const disable = this.homey.flow.getActionCard('awtrixng_script_disable');
+    const enabled = this.homey.flow.getConditionCard('awtrixng_script_enabled');
+    enable.registerRunListener(async (args: ScriptArgs) => args.device.setScriptEnabled(args.script.id, true));
+    disable.registerRunListener(async (args: ScriptArgs) => args.device.setScriptEnabled(args.script.id, false));
+    enabled.registerRunListener(async (args: ScriptArgs) => args.device.isScriptEnabled(args.script.id));
+    for (const card of [enable, disable, enabled]) {
+      card.registerArgumentAutocompleteListener('script', async (query: string, args: ScriptArgs) => (
+        (await args.device.getManageableScripts()).filter((script) => (
+          script.name.toLowerCase().includes(query.toLowerCase()) || script.id.toLowerCase().includes(query.toLowerCase())
+        ))
+      ));
+    }
   }
 
   private registerScriptSettingsCards(): void {

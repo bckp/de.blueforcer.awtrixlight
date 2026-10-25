@@ -1,19 +1,23 @@
-# AWTRIX NG vendor documentation source
+# AWTRIX NG API source
 
-The AWTRIX NG API files in this directory are snapshots from the official upstream repository.
-
-| Local file | Upstream file |
+| Item | Value |
 |---|---|
-| `awtrixng-http-api.md` | `docs/reference/http.md` |
-| `awtrixng-http-openapi.yaml` | `docs/api/openapi.yaml` |
+| Repository | <https://github.com/Blueforcer/awtrix-ng> |
+| Snapshot commit | `40985fe6c93530bc9323fdb758fae8ce34d4b03f` |
+| Latest stable release | `v1.2.2` |
+| Snapshot date | `2026-10-25` |
 
-- Repository: <https://github.com/Blueforcer/awtrix-ng>
-- Commit: `5e1a3e438eaacde9c1e24ff79a68c8aa37406adf`
-- Firmware version: `1.0.14`
-- Snapshot date: `2026-08-05`
-- HTTP API SHA-1: `a1c2208c99dcfc94b62b81ce74540f412647df0b`
-- OpenAPI SHA-1: `004d1039d9aeb2e796d9c65d99a796b2f34b7f55`
+| Local file | Upstream file | Git blob SHA-1 |
+|---|---|---|
+| `awtrixng-http-api.md` | `docs/reference/http.md` | `6e3731028a7e70649ab5dd833b194eddd6c42472` |
+| `awtrixng-http-openapi.yaml` | `docs/api/openapi.yaml` | `ef5af58db782b44aa9899a7167bbc8c914b4e632` |
 
-When refreshing these files, update both from the same upstream commit, replace the metadata above,
-and rerun the AWTRIX NG contract and transformer tests. Relative links in the Markdown snapshot may
-point to other upstream documentation pages that are not vendored in this repository.
+Both files are unmodified upstream snapshots. Update them from the same commit.
+Relative links may refer to upstream pages that are not stored in this repository.
+
+The app implements a subset of the API. Its 35 unique NG client operations match
+this snapshot's methods and paths. Shared script values and device reboot are
+specified by the HTTP reference; they are missing from the OpenAPI path list.
+Payloads, capability checks and response handling follow the
+[NG guide](../awtrix-ng/README.md) and [JSON reference](../awtrix-ng/json-options.md).
+Legacy `fx` playback is used only with the older audio schema.

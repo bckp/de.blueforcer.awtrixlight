@@ -72,6 +72,7 @@ test('named notification Flow is scoped to NG and forwards the exact name and fa
   driver.homey = {
     flow: {
       getDeviceTriggerCard: () => ({}),
+      getConditionCard: () => ({ registerRunListener() {}, registerArgumentAutocompleteListener() {} }),
       getActionCard: (id) => ({
         registerRunListener(listener) {
           if (id === 'awtrixng_notification_dismiss_named') run = listener;

@@ -1,124 +1,21 @@
-Project-specific constraints:
+# Repository instructions
 
-- Existing AWTRIX 3 support must remain functional.
-- AWTRIX NG is a separate driver, not an in-place replacement.
-- Do not silently drop unsupported fields.
-- Do not silently emulate unsupported features.
-- Do not modify the shared driver interface before documenting the reason.
-- Do not infer API behavior only from similar endpoint names.
-- Treat documentation and actual existing code as separate sources of truth.
-- Mark undocumented assumptions explicitly.
-- Prefer explicit capability checks over no-op methods.
-- Never catch and ignore AWTRIX NG API errors.
-- Preserve HTTP status, AWTRIX NG error code, message and field where available.
+Read [docs/development.md](docs/development.md) before changing code.
 
-## Deliberate decisions — do not "fix" these
-
-Everything below looks like a defect to a static reviewer and is not one. If you believe
-one of these should change, say so explicitly and wait for a decision instead of changing
-it. Re-reporting them as findings wastes a review cycle.
-
-**Layer separation**
-
-- `lib/awtrix3` + `drivers/awtrixlight` and `lib/awtrixng` + `drivers/awtrixng` are two
-  independent drivers. Duplication between them is intentional. No shared class, no shared
-  transport, no import across the two lib layers. `app.ts` and
-  `drivers/shared-flow-actions.ts` keep their own guard copies for the same reason.
-  - Owner-approved shared infrastructure (update-plan-3, M6; existing concurrency
-    utility confirmed during the October 2026 review): `lib/shared/` may contain
-    exclusively protocol-agnostic infrastructure with no knowledge of the AWTRIX 3/NG APIs -
-    currently `Poll` (+ `TimerHost`) and the `runWithConcurrencyLimit` function in
-    `Concurrency.ts`. Anything else requires explicit owner approval.
-    `lib/shared` must not import `homey`, anything from `drivers/` or from either protocol
-    lib layer, and must not contain any protocol type (guarded by
-    `test/shared-lib-structure.test.js`).
-- Icon cache TTLs differ on purpose: AWTRIX 3 uses 120 s, NG uses 5 s because NG has a fast
-  dedicated files API.
-
-**AWTRIX NG facade (outcome of the implemented update-plan-3, doc removed after completion)**
-
-- The NG driver follows `Device → AwtrixNgApi (facade) → Client`. `lib/awtrixng/Api/Api.ts`
-  owns the client and the icon list and is the only construction path for both
-  (`fromConnection()`; the constructor stays public solely for fake-transport tests).
-  `driver.ts` probes through the static `AwtrixNgApi.probe()`.
-- Deliberate deviation from the awtrix3 `Api`: the NG facade never imports `homey` and does
-  not take the device in its constructor. It returns domain results and all Homey writes
-  (setSettings, setCapabilityValue, i18n) stay in `device.ts`, so `lib/awtrixng` stays
-  testable with a fake transport and no Homey mocks. Do not "align" it with awtrix3.
-- The driver layer imports `lib/awtrixng` only through the allowlist in
-  `test/awtrixng-lib-structure.test.js`; extend the facade instead of adding direct imports.
-- `device.client` and `device.icons` are read-only views of `device.api` kept for the flow
-  actions and the shared icon autocomplete; they are API surface, not leftovers.
-- The poll is owned by `device.ts`, not by the facade: its timer is bound to the device
-  lifecycle and its callback writes to Homey.
-- The pure functions in `Services/*`, `Device/*` and `Payload/*` stay exported functions,
-  not classes: they have isolated unit tests that import them directly, and the facade
-  calls them internally.
-
-**Error and failure contracts**
-
-- NG settings writes in `writePreparedSettingsChanges()` are sequential and fail-fast. These
-  endpoints offer no transaction; if the second write fails the first may already be applied
-  and the next save reconciles. Do not wrap them in `allSettled`.
-- Bundled icon upload failures are non-critical: every file is attempted, failures are
-  collected and logged once. Do not turn them into a thrown error.
-- Capability writes that accompany a larger operation are best-effort and must not fail it.
-  This covers `onAdded()` in both drivers and the `button.rediscover` listener: a successful
-  rediscovery is not reported as failed just because the `ip` capability write failed. They
-  are awaited with `.catch(this.error)` so nothing leaks as an unhandled rejection.
-
-**Privileged RAW HTTP access**
-
-- Owner-approved exception to the callback plan's no-Flow-token rule: the NG RAW HTTP
-  card deliberately returns unredacted device responses and firmware errors, including
-  system/callback secrets when the owner explicitly requests them. It uses the paired
-  device credentials. RAW system writes deliberately bypass managed callback ownership
-  checks. The card hint and maintainer guide must explain this privileged behavior.
-  Debug transport logs remain redacted. Do not silently redact RAW payloads or responses.
-
-**API contracts**
-
-- `indicatorOptions` sends `color: '0'` for an invalid or missing color. For indicators that
-  is the documented "turn off" value, not a fallback. `basicOptions` deliberately behaves the
-  other way and omits invalid colors.
-- `AwtrixNgApiPagePayload.scroll` is typed `AwtrixNgApiScrollPayload | AwtrixNgApiScrollMode`,
-  yet public payload validation rejects the string shorthand on purpose - the union exists for
-  the internal narrowing path in `Payload/Transformers.ts`, not as a supported input shape.
-- Text fragments require a valid `c`; `isTextFragment` rejects the whole array otherwise, so
-  the `toColor('0')` fallback inside `toText()` is unreachable. Leave it.
-- `getVersion()`, `getCapabilities()`, `toAwtrixNgRtttlPayload` and
-  `fromAwtrixNgHomeyPushedAppName` are part of the documented API surface even where unused.
-- AWTRIX NG maps `batteryPercent` to `measure_battery` but deliberately does not expose
-  `lowBattery` as `alarm_battery`: the two standard capabilities create overlapping battery
-  Flow cards. Existing NG devices remove the deprecated alarm capability during a successful
-  initialization; its removal is best-effort so it cannot make the device unavailable.
-- Deprecated flow cards and the `applicationIcon` adapter in `app.ts` stay for compatibility.
-
-**Tooling and process**
-
-- Use native `fetch` and `FormData` (requires Node.js 18+). The use of `axios` and `form-data` packages is explicitly forbidden for all new and existing code, as it was removed to optimize the project.
-- ESLint stays on 8.57.1: `eslint-config-athom` 4.0.2 (September 2026) ships typescript-eslint 8
-  and TypeScript 6 itself, which removed the former `package.json` overrides, but its peer range
-  is still `eslint <9`. ESLint 8 is upstream EOL; the ESLint 9 upgrade waits for an
-  `eslint-config-athom` release that supports it - do not force it through overrides. Keep the
-  project `typescript` range aligned with the one athom depends on so only one compiler copy is
-  installed.
-- Diagnostic messages (the identity mismatch error, the legacy `applicationIcon` adapter
-  hints) are English-only on purpose: they are logs, not user-facing UI. Localize only if
-  users ask for it.
-- Activating a connection replaces the NG icon cache deliberately. Preserving it across a
-  settings save was evaluated and skipped (plan2 H8): the cache TTL is 5 s and keeping an
-  icons instance bound to a stale client is a real risk for negligible benefit.
-
-## Known limitations — accepted, not forgotten
-
-- The two NG pairing views duplicate ~45 lines of Homey glue (`emitHomey`,
-  `createHomeyDevice`): Homey pair views cannot share scripts trivially. Consolidate only
-  with a build-step include, not by hand-editing one copy.
-- `commitConnection()` writes `baseUrl`, `address` and `port` as three separate store calls,
-  so a failure mid-way can leave a new `baseUrl` next to a stale address and port. Accepted:
-  the client is only activated after all three succeed, and `getBaseUrlFromStore()` prefers
-  `baseUrl`, so a partial write leaves a working connection with a stale address used only
-  for display and the migration fallback. Making it atomic means moving the connection under
-  a single store key, which requires changing the pairing path and migrating every device
-  paired before the change. Worth doing deliberately, not as a drive-by fix.
+- Write project documentation in simple English. Describe current behavior and rules.
+  Keep decision history, completed plans and session notes out of the documentation.
+- Use native Node.js and Homey APIs. Add a library only for a requirement that native
+  APIs cannot meet. Do not use `axios` or the `form-data` package.
+- Keep AWTRIX 3 and AWTRIX NG as separate drivers and protocol libraries.
+  Preserve existing devices, stored Flow arguments and deprecated card IDs.
+- Keep `lib/shared` limited to `Poll`, its timer interfaces and `Concurrency`.
+  Additional shared utilities require explicit owner approval.
+- Follow the NG path `Device → AwtrixNgApi → Client`. Keep Homey calls out of
+  `lib/awtrixng`. Follow the driver import allowlist and extend the facade.
+- Check firmware contracts and capabilities. Reject unsupported fields and operations
+  explicitly. Preserve HTTP status, firmware code, message and field.
+- Follow the lifecycle, write ordering, callback ownership, RAW access and compatibility
+  rules in `docs/development.md`. Do not change these contracts as incidental cleanup.
+- Keep runtime assumptions separate from hardware verification. Label unverified behavior.
+- Use the existing test, lint, Homey build and validation commands. Do not add dependencies
+  or tests for a documentation-only edit.

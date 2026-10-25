@@ -1896,6 +1896,82 @@
         }
       },
       {
+        "id": "awtrixng_script_enable",
+        "title": {
+          "en": "Enable an installed script",
+          "cs": "Zapnout nainstalovaný skript",
+          "de": "Ein installiertes Skript aktivieren",
+          "nl": "Een geïnstalleerd script inschakelen"
+        },
+        "titleFormatted": {
+          "en": "Enable script [[script]]",
+          "cs": "Zapnout skript [[script]]",
+          "de": "Skript [[script]] aktivieren",
+          "nl": "Schakel script [[script]] in"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "script",
+            "type": "autocomplete",
+            "title": {
+              "en": "Script",
+              "cs": "Skript",
+              "de": "Skript",
+              "nl": "Script"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Enables an installed script, including background scripts. To display it immediately, use Show script afterwards. The change survives a reboot.",
+          "cs": "Zapne nainstalovaný skript včetně skriptů na pozadí. Pro okamžité zobrazení pak použijte Zobrazit skript. Změna zůstane po restartu hodin.",
+          "de": "Aktiviert ein installiertes Skript, auch Hintergrundskripte. Zum sofortigen Anzeigen danach Skript anzeigen verwenden. Die Änderung bleibt nach einem Neustart erhalten.",
+          "nl": "Schakelt een geïnstalleerd script in, ook achtergrondscripts. Gebruik daarna Toon script om het direct te tonen. De wijziging blijft na een herstart behouden."
+        }
+      },
+      {
+        "id": "awtrixng_script_disable",
+        "title": {
+          "en": "Disable an installed script",
+          "cs": "Vypnout nainstalovaný skript",
+          "de": "Ein installiertes Skript deaktivieren",
+          "nl": "Een geïnstalleerd script uitschakelen"
+        },
+        "titleFormatted": {
+          "en": "Disable script [[script]]",
+          "cs": "Vypnout skript [[script]]",
+          "de": "Skript [[script]] deaktivieren",
+          "nl": "Schakel script [[script]] uit"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "script",
+            "type": "autocomplete",
+            "title": {
+              "en": "Script",
+              "cs": "Skript",
+              "de": "Skript",
+              "nl": "Script"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Stops the entire script, including background work and HTTP/MQTT callbacks. Keeps it installed and preserves its rotation position. The change survives a reboot.",
+          "cs": "Zastaví celý skript včetně běhu na pozadí a HTTP/MQTT callbacků. Skript zůstane nainstalovaný a zachová si pozici v rotaci. Změna zůstane po restartu hodin.",
+          "de": "Stoppt das gesamte Skript einschließlich Hintergrundarbeit und HTTP/MQTT-Callbacks. Es bleibt installiert und behält seine Position in der Rotation. Die Änderung bleibt nach einem Neustart erhalten.",
+          "nl": "Stopt het hele script, inclusief achtergrondtaken en HTTP/MQTT-callbacks. Het blijft geïnstalleerd en behoudt zijn positie in de rotatie. De wijziging blijft na een herstart behouden."
+        }
+      },
+      {
         "id": "awtrixng_brightness",
         "title": {
           "en": "Set panel brightness",
@@ -2812,6 +2888,46 @@
             "filter": "driver_id=awtrixng&capabilities=awtrixng_audio_groups"
           }
         ]
+      }
+    ],
+    "conditions": [
+      {
+        "id": "awtrixng_script_enabled",
+        "title": {
+          "en": "A script !{{is|is not}} enabled",
+          "cs": "Skript !{{je|není}} zapnutý",
+          "de": "Ein Skript ist !{{aktiviert|deaktiviert}}",
+          "nl": "Een script is !{{ingeschakeld|uitgeschakeld}}"
+        },
+        "titleFormatted": {
+          "en": "Script [[script]] !{{is|is not}} enabled",
+          "cs": "Skript [[script]] !{{je|není}} zapnutý",
+          "de": "Skript [[script]] ist !{{aktiviert|deaktiviert}}",
+          "nl": "Script [[script]] is !{{ingeschakeld|uitgeschakeld}}"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=awtrixng"
+          },
+          {
+            "name": "script",
+            "type": "autocomplete",
+            "title": {
+              "en": "Script",
+              "cs": "Skript",
+              "de": "Skript",
+              "nl": "Script"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Checks the script's current enabled state on the clock, including background scripts. An enabled script does not have to be visible on the display.",
+          "cs": "Ověří aktuální zapnutí skriptu na hodinách včetně skriptů na pozadí. Zapnutý skript nemusí být právě zobrazený na displeji.",
+          "de": "Prüft den aktuellen Aktivierungsstatus des Skripts auf der Uhr, auch bei Hintergrundskripten. Ein aktiviertes Skript muss nicht auf dem Display sichtbar sein.",
+          "nl": "Controleert de huidige ingeschakelde status van het script op de klok, ook voor achtergrondscripts. Een ingeschakeld script hoeft niet zichtbaar te zijn op het display."
+        }
       }
     ]
   },

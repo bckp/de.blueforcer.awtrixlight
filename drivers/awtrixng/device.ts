@@ -521,6 +521,14 @@ class AwtrixNgDevice extends Device {
     await this.getApi().showScript(name);
   }
 
+  async setScriptEnabled(name: string, enabled: boolean): Promise<void> {
+    await this.getApi().setScriptEnabled(name, enabled);
+  }
+
+  async isScriptEnabled(name: string): Promise<boolean> {
+    return this.getApi().isScriptEnabled(name);
+  }
+
   async getManageableScripts(): Promise<{ id: string; name: string }[]> {
     return (await this.getApi().readManageableScripts()).map((script) => ({ id: script.name, name: script.meta?.name || script.name }));
   }
@@ -1063,7 +1071,7 @@ class AwtrixNgDevice extends Device {
    * getConnectionCandidateFromSettings() stays a one-off migration.
    *
    * The write is deferred: Homey keeps the submitted settings pending for the whole onSettings()
-   * call, so setSettings() must not run inside the handler (docs/awtrix-ng/06-user-maintainer-guide.md).
+   * call, so setSettings() must not run inside the handler (docs/development.md).
    * It is best effort - the store remains the authoritative source and a failed sync only means the
    * next local settings change falls back to the store again.
    */

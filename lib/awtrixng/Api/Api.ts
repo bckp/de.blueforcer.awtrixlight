@@ -913,11 +913,13 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     return getAwtrixNgManageableScripts(await this.#client.getApps());
   }
 
-  private async requireInstalledScript(name: string): Promise<void> {
+  private async requireInstalledScript(name: string): Promise<AwtrixNgApiAppInventoryItem> {
     assertAwtrixNgScriptName(name);
-    if (!(await this.readManageableScripts()).some((script) => script.name === name)) {
+    const script = (await this.readManageableScripts()).find((item) => item.name === name);
+    if (script === undefined) {
       throw new AwtrixNgScriptValueError('name', 'No installed script with this name.');
     }
+    return script;
   }
 
   private async readScriptConfig(name: string) {
@@ -996,6 +998,24 @@ export default class AwtrixNgApi implements AwtrixNgFlowActionClient {
     const scripts = await this.readSelectableScripts();
     if (!scripts.some((script) => script.name === name)) throw new Error(`Script ${name} is unavailable, disabled, incompatible or has an error.`);
     await this.#client.showApp(name, true);
+  }
+
+  async setScriptEnabled(name: string, enabled: boolean): Promise<void> {
+    if (typeof enabled !== 'boolean') throw new AwtrixNgScriptValueError('enabled', 'Expected true or false.');
+    await this.requireInstalledScript(name);
+    // The per-app switch preserves other apps and the script's rotation position.
+    const result = await this.#client.setAppEnabled(name, enabled);
+    if (!isPlainObject(result) || result.ok !== true) {
+      throw new AwtrixNgInvalidResponseError({ endpoint: `/api/v1/apps/${name}/enabled`, expectedShape: 'an ok true response', actualValue: result });
+    }
+  }
+
+  async isScriptEnabled(name: string): Promise<boolean> {
+    const script = await this.requireInstalledScript(name);
+    if (typeof script.enabled !== 'boolean') {
+      throw new AwtrixNgInvalidResponseError({ endpoint: '/api/v1/apps', expectedShape: 'a script with an enabled boolean', actualValue: script });
+    }
+    return script.enabled;
   }
 
   deleteApp(name: string): Promise<AwtrixNgApiOkResponse> {

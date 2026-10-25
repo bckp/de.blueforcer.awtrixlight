@@ -32,6 +32,7 @@ test('NG script Flow searches names and forwards the native script ID; failures 
   driver.homey = {
     flow: {
       getDeviceTriggerCard: () => ({}),
+      getConditionCard: () => ({ registerRunListener() {}, registerArgumentAutocompleteListener() {} }),
       getActionCard: (id) => ({
         registerRunListener: (listener) => runs.set(id, listener),
         registerArgumentAutocompleteListener: (arg, listener) => completions.set(id, listener),
@@ -68,6 +69,7 @@ test('NG audio Flow listeners resolve Soundboard metadata and call the selected 
   driver.homey = {
     flow: {
       getDeviceTriggerCard: () => ({}),
+      getConditionCard: () => ({ registerRunListener() {}, registerArgumentAutocompleteListener() {} }),
       getActionCard: (id) => ({
         registerRunListener: (listener) => runs.set(id, listener),
         registerArgumentAutocompleteListener: (arg, listener) => completions.set(id, listener),
@@ -104,6 +106,7 @@ test('NG header Flow listeners forward content, optional duration and icon autoc
         registerRunListener: (listener) => runs.set(id, listener),
         registerArgumentAutocompleteListener: (arg, listener) => completions.set(id, listener),
       }),
+      getConditionCard: () => ({ registerRunListener() {}, registerArgumentAutocompleteListener() {} }),
     },
   };
   await driver.onInit();
@@ -216,6 +219,7 @@ test('driver validates the device before firing exactly one matching pressed tri
     homey: {
       flow: {
         getDeviceTriggerCard: (id) => triggers.get(id),
+        getConditionCard: () => ({ registerRunListener() {}, registerArgumentAutocompleteListener() {} }),
         getActionCard: () => ({ registerRunListener() {}, registerArgumentAutocompleteListener() {} }),
       },
     },
@@ -268,6 +272,7 @@ test('knob callback routes press and each signed turn only to a knob-capable dev
     homey: {
       flow: {
         getDeviceTriggerCard: (id) => cards[id],
+        getConditionCard: () => ({ registerRunListener() {}, registerArgumentAutocompleteListener() {} }),
         getActionCard: () => ({ registerRunListener() {}, registerArgumentAutocompleteListener() {} }),
       },
     },
@@ -310,6 +315,7 @@ test('driver returns before Flow completion and reports a rejected trigger', asy
             rejectTrigger = reject;
           }),
         }),
+        getConditionCard: () => ({ registerRunListener() {}, registerArgumentAutocompleteListener() {} }),
         getActionCard: () => ({ registerRunListener() {}, registerArgumentAutocompleteListener() {} }),
       },
     },
@@ -381,6 +387,7 @@ test('driver routes all physical buttons to only the selected NG device Flow car
       flow: {
         getDeviceTriggerCard: (id) => cards[id],
         getActionCard: () => ({ registerRunListener() {}, registerArgumentAutocompleteListener() {} }),
+        getConditionCard: () => ({ registerRunListener() {}, registerArgumentAutocompleteListener() {} }),
       },
     },
     getDevice({ id }) {
