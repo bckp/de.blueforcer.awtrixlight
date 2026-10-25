@@ -3,6 +3,7 @@ interface AppApiContext {
     drivers: {
       getDriver(id: string): {
         handleButtonCallback(input: { uid: unknown; token: unknown; body: unknown }): Promise<boolean>;
+        handleMessage(input: { uid: unknown; body: unknown }): Promise<void>;
       };
     };
   };
@@ -18,4 +19,9 @@ const awtrixNgButtonCallback = async ({ homey, params, body }: AppApiContext): P
   }),
 });
 
-module.exports = { awtrixNgButtonCallback };
+const awtrixNgMessage = async ({ homey, params, body }: AppApiContext): Promise<{ ok: true }> => {
+  await homey.drivers.getDriver('awtrixng').handleMessage({ uid: params?.uid, body });
+  return { ok: true };
+};
+
+module.exports = { awtrixNgButtonCallback, awtrixNgMessage };

@@ -299,6 +299,43 @@
         }
       ],
       "$filter": "capabilities=awtrixng_audio_groups"
+    },
+    {
+      "id": "awtrixng_message_received",
+      "title": {
+        "en": "Message received",
+        "cs": "Zpráva přijata",
+        "de": "Nachricht empfangen",
+        "nl": "Bericht ontvangen"
+      },
+      "hint": {
+        "en": "Receives event and data from a script through the Homey API. Event is text; Data is JSON text. See the app documentation for the HTTP request.",
+        "cs": "Přijímá event a data ze skriptu přes API Homey. Event je text, Data je JSON jako text. HTTP požadavek je popsaný v dokumentaci aplikace.",
+        "de": "Empfängt event und data aus einem Skript über die Homey-API. Event ist Text; Data ist JSON-Text. Die HTTP-Anfrage ist in der App-Dokumentation beschrieben.",
+        "nl": "Ontvangt event en data van een script via de Homey-API. Event is tekst; Data is JSON-tekst. Zie de appdocumentatie voor het HTTP-verzoek."
+      },
+      "tokens": [
+        {
+          "name": "event",
+          "type": "string",
+          "title": {
+            "en": "Event",
+            "cs": "Událost",
+            "de": "Ereignis",
+            "nl": "Gebeurtenis"
+          }
+        },
+        {
+          "name": "data",
+          "type": "string",
+          "title": {
+            "en": "Data",
+            "cs": "Data",
+            "de": "Daten",
+            "nl": "Gegevens"
+          }
+        }
+      ]
     }
   ],
   "conditions": [

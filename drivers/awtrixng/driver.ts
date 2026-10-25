@@ -20,6 +20,7 @@ import {
 import runWithConcurrencyLimit from '../../lib/shared/Concurrency';
 import { isRecord, toValidTcpPort } from '../../lib/awtrixng/Support/Guards';
 import { AwtrixNgButton, parseAwtrixNgButtonCallback } from './button-callback';
+import { parseAwtrixNgMessage } from './message';
 import {
   getSoundboardMp3s, getSoundboardAudioFiles, resolveSoundboardMp3Url, resolveSoundboardClipUrl, SoundboardAppId,
 } from './soundboard';
@@ -160,8 +161,11 @@ class AwtrixNgDriver extends Driver {
 
   #knobTurnedTrigger?: FlowCardTriggerDevice;
 
+  #messageReceivedTrigger?: FlowCardTriggerDevice;
+
   async onInit(): Promise<void> {
     this.log('AwtrixNgDriver has been initialized');
+    this.#messageReceivedTrigger = this.homey.flow.getDeviceTriggerCard('awtrixng_message_received');
     this.#buttonTriggers = {
       left: this.homey.flow.getDeviceTriggerCard('awtrixng_button_left_pressed'),
       middle: this.homey.flow.getDeviceTriggerCard('awtrixng_button_middle_pressed'),
@@ -344,6 +348,17 @@ class AwtrixNgDriver extends Driver {
         return args.device.icons.find(query);
       });
     }
+  }
+
+  /** Homey authenticates the message route before calling this adapter. */
+  async handleMessage(input: { uid: unknown; body: unknown }): Promise<void> {
+    if (typeof input.uid !== 'string' || input.uid.length === 0) throw new TypeError('A clock UID is required.');
+    const tokens = parseAwtrixNgMessage(input.body);
+    const device = this.getDevice({ id: input.uid });
+    if (device === undefined) throw new Error('No paired AWTRIX NG clock with this UID.');
+    if (this.#messageReceivedTrigger === undefined) throw new Error('Message trigger is not ready.');
+    // Acknowledge receipt without waiting for the user's Flow to finish.
+    this.#messageReceivedTrigger.trigger(device, tokens).catch(() => this.error('AWTRIX NG message Flow delivery failed.'));
   }
 
   /** Public adapter entrypoint used solely by the public App API route. */

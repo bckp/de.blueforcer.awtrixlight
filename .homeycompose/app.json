@@ -26,6 +26,11 @@
     "homey:app:com.athom.soundboard"
   ],
   "api": {
+    "awtrixNgMessage": {
+      "method": "POST",
+      "path": "/awtrixng/message/:uid",
+      "public": false
+    },
     "awtrixNgButtonCallback": {
       "method": "POST",
       "path": "/awtrixng/button/:uid/:token",

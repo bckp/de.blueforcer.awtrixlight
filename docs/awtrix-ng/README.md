@@ -179,6 +179,52 @@ The callback URL contains a device token and travels over local HTTP. Keep it
 private. If the token is lost, disable the integration, clear `buttonCallback` in
 the clock's system configuration, then enable the integration again.
 
+## Messages from scripts
+
+The **Message received** device trigger receives an event from a Berry script.
+It provides two text tokens: **Event** and **Data**. Data contains serialized JSON;
+parse it with HomeyScript or another tool if needed.
+
+Send `POST /api/app/de.blueforcer.awtrixlight/awtrixng/message/<clock-uid>` to
+Homey's local address, with `Content-Type: application/json` and this body:
+
+```json
+{"event":"washing_done","data":{"program":"cotton","minutes":65}}
+```
+
+Use the AWTRIX `uid` that was paired with Homey. Only that device's Flows fire.
+`event` must be non-empty text, up to 128 UTF-8 bytes. `data` is required and may
+contain any JSON value, including `null`, `false`, zero, arrays and empty strings.
+The message accepts only these two fields and is limited to 16 KiB of UTF-8 JSON.
+
+The endpoint uses [Homey's standard API authentication](https://apps.developer.homey.app/advanced/web-api).
+Supply a Homey API key with access to this app in `Authorization: Bearer <key>`.
+Create the key in Homey's API Keys settings where supported; it is not an AWTRIX
+device credential. No token or extra setting is stored by this app. Keep the key
+private and use HTTPS where available.
+
+In Berry, send the request from an event handler or `loop()`, not `draw()`:
+
+```berry
+import json
+
+http.post("http://HOMEY/api/app/de.blueforcer.awtrixlight/awtrixng/message/CLOCK_UID",
+          json.dump({'event': "washing_done", 'data': {'program': "cotton", 'minutes': 65}}),
+          / body, status -> print(status),
+          {'headers': {'Content-Type': "application/json",
+                       'Authorization': "Bearer HOMEY_API_KEY"}})
+```
+
+Replace the address, clock UID and API key. Berry's
+[HTTP methods](https://github.com/Blueforcer/awtrix-ng/blob/40985fe6c93530bc9323fdb758fae8ce34d4b03f/docs/guides/scripting/network.md#methods-headers-and-a-request-body)
+return immediately and deliver the HTTP status to the callback.
+
+A successful request returns `{"ok":true}` after submitting the trigger. It does
+not wait for the user's Flow to finish. Invalid messages and unknown devices fail
+the request. There is no stored message history or automatic retry; sending the
+same message again triggers another event. The app does not parse Data into extra
+Flow tokens or add JSON-reading action cards.
+
 ## State Flow triggers
 
 | Trigger | Output tokens |
