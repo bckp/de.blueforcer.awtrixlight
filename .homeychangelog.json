@@ -182,5 +182,8 @@
   },
   "2.3.8": {
     "en": "Play MP3 now uses autocomplete"
+  },
+  "2.3.9": {
+    "en": "Enable/Disable script flow card, ability to receive message from awtrixng"
   }
 }
